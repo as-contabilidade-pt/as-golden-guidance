@@ -14,7 +14,7 @@ export function Hero() {
         height={1280}
         className="absolute inset-0 h-full w-full object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/75 to-ink/10" aria-hidden />
+      <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/80 to-ink/10" aria-hidden />
       <div className="absolute inset-0 bg-gradient-to-t from-ink via-transparent to-ink/50" aria-hidden />
 
       <div className="relative mx-auto w-full max-w-6xl px-6 py-32">
@@ -38,7 +38,7 @@ export function Hero() {
             <GoldLink href="#servicos">Ver serviços</GoldLink>
             <a
               href="#contactos"
-              className="inline-flex items-center justify-center rounded-full bg-cream/5 px-7 py-3.5 text-sm text-cream/80 transition-colors hover:bg-cream/10 hover:text-gold"
+              className="inline-flex items-center justify-center rounded-full border border-cream/20 bg-cream/5 px-7 py-3.5 text-sm text-cream/90 transition-all hover:bg-cream/10 hover:text-gold"
             >
               Falar connosco
             </a>
