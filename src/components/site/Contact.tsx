@@ -1,6 +1,6 @@
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
 import { Section, SectionHeading } from "./Section";
-import { whatsappUrl, WhatsAppIcon } from "@/lib/whatsapp";
+import { whatsappUrl, WhatsAppIcon } from "@/lib/whatsapp.tsx";
 
 export function Contact() {
   return (

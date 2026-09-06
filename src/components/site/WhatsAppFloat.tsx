@@ -1,4 +1,4 @@
-import { whatsappUrl, WhatsAppIcon } from "@/lib/whatsapp";
+import { whatsappUrl, WhatsAppIcon } from "@/lib/whatsapp.tsx";
 
 export function WhatsAppFloat() {
   return (
