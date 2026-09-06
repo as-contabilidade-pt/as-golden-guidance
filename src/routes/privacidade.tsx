@@ -61,25 +61,25 @@ const sections = [
 
 function PrivacidadePage() {
   return (
-    <div className="min-h-screen bg-ink">
+    <div className="min-h-screen bg-background">
       <Header />
 
       <main className="pt-36 pb-24">
         <div className="mx-auto max-w-3xl px-6">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm text-cream/60 transition-colors hover:bg-gold/10 hover:text-gold"
+            className="inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/5 px-4 py-2 text-sm text-ink/70 transition-colors hover:border-gold/40 hover:text-gold"
           >
             <ChevronLeft className="h-4 w-4" />
             Voltar ao site
           </Link>
 
-          <h1 className="mt-8 font-sans text-4xl font-semibold tracking-tight text-cream md:text-5xl">
+          <h1 className="mt-8 font-serif text-4xl tracking-tight text-foreground md:text-5xl">
             Política de Privacidade
           </h1>
 
           <p className="mt-4 text-lg text-gold">A sua privacidade é importante para nós.</p>
-          <p className="mt-4 leading-relaxed text-cream/70">
+          <p className="mt-4 leading-relaxed text-muted-foreground">
             A AS | Contabilidade, Fiscalidade e Gestão, especializada em serviços de contabilidade, valoriza a confiança que deposita em nós e está comprometida em proteger a privacidade dos seus dados pessoais. Esta Política de Privacidade explica como recolhemos, usamos e protegemos as suas informações pessoais.
           </p>
 
@@ -87,31 +87,31 @@ function PrivacidadePage() {
             {sections.map((s, i) => (
               <section
                 key={s.title}
-                className="rounded-[1.75rem] border border-gold/10 bg-cream/[0.03] p-7 backdrop-blur-sm transition-colors hover:border-gold/20"
+                className="soft-card p-7 transition-all duration-300 hover:border-gold/35"
               >
                 <div className="flex items-baseline gap-4">
-                  <span className="font-sans text-sm font-semibold text-gold">
+                  <span className="font-serif text-sm font-semibold text-gold">
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <h2 className="font-sans text-xl font-semibold text-cream">
+                  <h2 className="font-serif text-xl text-foreground">
                     {s.title}
                   </h2>
                 </div>
-                <p className="mt-4 leading-relaxed text-cream/70">{s.content}</p>
+                <p className="mt-4 leading-relaxed text-muted-foreground">{s.content}</p>
               </section>
             ))}
           </div>
 
-          <div className="mt-14 rounded-[1.75rem] border border-gold/20 bg-gold/10 p-8 text-center">
-            <p className="leading-relaxed text-cream/80">
+          <div className="mt-14 rounded-[1.75rem] border border-gold/25 bg-gold/10 p-8 text-center">
+            <p className="leading-relaxed text-ink/80">
               Agradecemos por escolher a AS | Contabilidade, Fiscalidade e Gestão como o seu parceiro de confiança em serviços de contabilidade. A sua privacidade é importante para nós, e estamos aqui para garantir que os seus dados pessoais sejam tratados com o máximo cuidado e respeito.
             </p>
-            <p className="mt-4 text-sm text-cream/60">
+            <p className="mt-4 text-sm text-ink/60">
               Se tiver alguma dúvida ou preocupação sobre a nossa política de privacidade ou o tratamento dos seus dados, não hesite em contactar-nos. Estamos à sua disposição para esclarecer todas as suas questões.
             </p>
           </div>
 
-          <p className="mt-12 text-center text-xs text-cream/40">
+          <p className="mt-12 text-center text-xs text-muted-foreground/60">
             Última atualização: 6 de setembro de 2026.
           </p>
         </div>
