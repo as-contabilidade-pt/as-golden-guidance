@@ -26,13 +26,13 @@ export function Header() {
       <div
         className={`mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-full px-5 py-3 transition-all duration-500 ${
           scrolled
-            ? "border border-gold/20 bg-ink/85 backdrop-blur-xl"
+            ? "border border-gold/25 bg-cream/90 backdrop-blur-xl shadow-[0_8px_30px_-12px_color-mix(in_oklab,var(--ink)_12%,transparent)]"
             : "border border-transparent bg-transparent"
         }`}
       >
         <a href="/#inicio" className="flex min-w-0 items-center gap-3">
           <Logo size={38} />
-          <span className="hidden font-serif text-base text-cream sm:block">
+          <span className="hidden font-serif text-base text-ink sm:block">
             AS
             <span className="ml-2 font-sans text-xs text-gold">Contabilidade</span>
           </span>
@@ -43,14 +43,14 @@ export function Header() {
             <a
               key={l.href}
               href={l.href}
-              className="text-sm text-cream/80 transition-colors hover:text-gold"
+              className="text-sm text-ink/70 transition-colors hover:text-gold"
             >
               {l.label}
             </a>
           ))}
           <Link
             to="/login"
-            className="rounded-full bg-gold px-6 py-2.5 text-sm font-medium text-ink transition-opacity hover:opacity-90"
+            className="rounded-full bg-gold px-6 py-2.5 text-sm font-medium text-ink transition-all hover:bg-gold-deep"
           >
             Área de Cliente
           </Link>
@@ -67,14 +67,14 @@ export function Header() {
       </div>
 
       {open ? (
-        <div className="mx-auto mt-3 max-w-6xl rounded-[2rem] border border-gold/20 bg-ink/95 px-6 py-6 backdrop-blur-xl lg:hidden">
+        <div className="mx-auto mt-3 max-w-6xl rounded-[2rem] border border-gold/25 bg-cream/97 px-6 py-6 shadow-[0_12px_40px_-12px_color-mix(in_oklab,var(--ink)_12%,transparent)] backdrop-blur-xl lg:hidden">
           <nav className="flex flex-col gap-4">
             {links.map((l) => (
               <a
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className="text-sm text-cream/85"
+                className="text-sm text-ink/80"
               >
                 {l.label}
               </a>

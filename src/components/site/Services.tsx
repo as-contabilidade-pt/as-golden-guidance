@@ -45,7 +45,7 @@ const servicos = [
 
 export function Services() {
   return (
-    <Section id="servicos" className="relative bg-ink">
+    <Section id="servicos" className="relative bg-background">
       <div className="relative">
         <SectionHeading overline="O que fazemos" title="Serviços" />
 
@@ -95,8 +95,8 @@ export function Services() {
                   strokeWidth={2}
                 />
               </div>
-              <h3 className="mt-6 font-serif text-xl text-cream">{title}</h3>
-              <p className="mt-3 text-sm leading-relaxed text-cream/60">{text}</p>
+              <h3 className="mt-6 font-serif text-xl text-foreground">{title}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{text}</p>
             </article>
           ))}
         </div>

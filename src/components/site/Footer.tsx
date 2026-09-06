@@ -20,7 +20,7 @@ const uteis = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-gold/25 bg-ink px-6 py-16">
+    <footer className="border-t border-gold/20 bg-ink px-6 py-16">
       <div className="mx-auto max-w-6xl">
         <div className="grid grid-cols-1 gap-12 md:grid-cols-3">
           <div>

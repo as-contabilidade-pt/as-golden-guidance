@@ -6,7 +6,7 @@ export function Contact() {
   return (
     <Section id="contactos" className="relative bg-ink-soft">
       <div className="relative">
-        <SectionHeading overline="Fale connosco" title="Vamos falar sobre o seu negócio" />
+        <SectionHeading overline="Fale connosco" title="Vamos falar sobre o seu negócio" light />
         <p className="mx-auto mt-6 max-w-xl text-center text-sm leading-loose text-cream/65 sm:text-base">
           A forma mais rápida é pelo WhatsApp — respondemos em minutos, em horário útil.
         </p>
@@ -35,7 +35,7 @@ export function Contact() {
 
           <a
             href="tel:+351965378291"
-            className="soft-card group p-8 transition-all duration-300 hover:-translate-y-1 hover:border-gold/45"
+            className="soft-card-dark group p-8 transition-all duration-300 hover:-translate-y-1 hover:border-gold/45"
           >
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gold/10 text-gold">
               <Phone className="h-5 w-5" strokeWidth={1.5} />
@@ -49,7 +49,7 @@ export function Contact() {
 
           <a
             href="mailto:geral@as-contabilidade.pt"
-            className="soft-card group p-8 transition-all duration-300 hover:-translate-y-1 hover:border-gold/45"
+            className="soft-card-dark group p-8 transition-all duration-300 hover:-translate-y-1 hover:border-gold/45"
           >
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gold/10 text-gold">
               <Mail className="h-5 w-5" strokeWidth={1.5} />
