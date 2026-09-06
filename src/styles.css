@@ -39,6 +39,7 @@
   --color-cream: var(--cream);
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
+  --color-surface: var(--surface);
 }
 
 :root {
@@ -46,31 +47,34 @@
 
 
 
-  /* Paleta elegante clássica */
+  /* Paleta elegante: preto, branco quente e dourado */
   --ink: oklch(0.145 0 0); /* #0a0a0a */
   --ink-soft: oklch(0.21 0.004 60);
   --gold: oklch(0.73 0.121 88); /* #c9a227 */
   --gold-deep: oklch(0.66 0.113 87);
   --cream: oklch(0.958 0.014 90); /* #f5f2ea */
+  --white: oklch(1 0 0);
+  --surface: oklch(0.94 0.006 90);
 
-  --background: var(--ink);
-  --foreground: var(--cream);
-  --card: var(--ink-soft);
-  --card-foreground: var(--cream);
-  --popover: var(--ink-soft);
-  --popover-foreground: var(--cream);
+  /* Tema claro por defeito */
+  --background: var(--cream);
+  --foreground: var(--ink);
+  --card: var(--white);
+  --card-foreground: var(--ink);
+  --popover: var(--white);
+  --popover-foreground: var(--ink);
   --primary: var(--gold);
   --primary-foreground: var(--ink);
-  --secondary: oklch(0.26 0.006 80);
-  --secondary-foreground: var(--cream);
-  --muted: oklch(0.26 0.006 80);
-  --muted-foreground: oklch(0.75 0.012 85);
+  --secondary: var(--surface);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface);
+  --muted-foreground: oklch(0.45 0.012 85);
   --accent: var(--gold);
   --accent-foreground: var(--ink);
   --destructive: oklch(0.58 0.2 27);
   --destructive-foreground: var(--cream);
   --border: oklch(0.73 0.121 88 / 25%);
-  --input: oklch(0.73 0.121 88 / 30%);
+  --input: oklch(0.73 0.121 88 / 35%);
   --ring: var(--gold);
 }
 
@@ -150,10 +154,16 @@
 
 @utility soft-card {
   border-radius: 1.75rem;
+  border: 1px solid color-mix(in oklab, var(--gold) 22%, transparent);
+  background: color-mix(in oklab, var(--white) 92%, transparent);
+  box-shadow: 0 4px 24px -12px color-mix(in oklab, var(--ink) 12%, transparent);
+}
+
+@utility soft-card-dark {
+  border-radius: 1.75rem;
   border: 1px solid color-mix(in oklab, var(--gold) 18%, transparent);
   background: color-mix(in oklab, var(--ink-soft) 70%, transparent);
 }
-
 
 @utility text-gradient-gold {
   background-image: linear-gradient(
@@ -180,4 +190,3 @@
 @utility animate-fade-up {
   animation: fade-up 1s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-
