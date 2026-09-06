@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Plus, UserRound } from "lucide-react";
+import { CheckCircle2, Loader2, Plus, UserRound } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
 import {
   createClient,
   listClients,
   listPendingUnlockRequests,
   decideUnlockRequest,
+  listRecentSubmissions,
 } from "@/lib/portal.functions";
 import { formatDateTimePt, monthLabel } from "@/lib/portal";
 
@@ -130,6 +131,8 @@ function AdminPage() {
           </div>
         </form>
       ) : null}
+
+      <RecentSubmissions />
 
       <UnlockRequests />
 
@@ -284,5 +287,61 @@ function Field({
         className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
       />
     </label>
+  );
+}
+
+
+type SubmissionRow = {
+  id: string;
+  full_name: string;
+  nif: string;
+  year: number;
+  month: number;
+  submitted_at: string;
+  document_count: number;
+};
+
+function RecentSubmissions() {
+  const fetchRecent = useServerFn(listRecentSubmissions);
+  const [rows, setRows] = useState<SubmissionRow[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        setRows((await fetchRecent()) as unknown as SubmissionRow[]);
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [fetchRecent]);
+
+  return (
+    <section className="mt-10">
+      <h2 className="mb-4 font-serif text-2xl text-foreground">Submissões Recentes</h2>
+      {rows.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-gold/30 px-6 py-8 text-center text-sm text-muted-foreground">
+          Ainda não existem submissões de documentação.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {rows.map((r) => (
+            <div key={r.id} className="soft-card flex flex-wrap items-center gap-4 px-5 py-4">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
+                <CheckCircle2 className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-serif text-lg text-foreground">
+                  {r.full_name} · {monthLabel(r.month)} {r.year}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  NIF {r.nif} · {r.document_count} documento(s) · submetida em{" "}
+                  {formatDateTimePt(r.submitted_at)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
