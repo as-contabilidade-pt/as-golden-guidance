@@ -1,20 +1,20 @@
 import { Logo } from "./Logo";
 
 const legais = [
-  { label: "Termos e Condições", href: "#" },
-  { label: "Política de Privacidade", href: "#" },
-  { label: "Livro de Reclamações", href: "https://www.livroreclamacoes.pt/inicio" },
+  { label: "Termos e Condições", href: "/termos" },
+  { label: "Política de Privacidade", href: "/privacidade" },
+  { label: "Livro de Reclamações", href: "https://www.livroreclamacoes.pt/Inicio/" },
   {
     label: "Resolução Alternativa de Litígios",
-    href: "https://www.consumidor.gov.pt/parceiros/sistema-de-defesa-do-consumidor/entidades-de-resolucao-alternativa-de-litigios-de-consumo.aspx",
+    href: "https://dgpj.justica.gov.pt/Resolucao-de-Litigios/Arbitragem/Centros-de-Arbitragem-apoiados",
   },
 ];
 
 const uteis = [
-  { label: "Portal das Finanças", href: "https://www.portaldasfinancas.gov.pt" },
-  { label: "Ordem dos Contabilistas Certificados", href: "https://www.occ.pt" },
-  { label: "ePortugal", href: "https://eportugal.gov.pt" },
-  { label: "Segurança Social Direta", href: "https://www.seg-social.pt/inicio" },
+  { label: "Portal das Finanças", href: "https://www.portaldasfinancas.gov.pt/at/html/index.html" },
+  { label: "Ordem dos Contabilistas Certificados", href: "https://portal.occ.pt/" },
+  { label: "ePortugal", href: "https://www.gov.pt/" },
+  { label: "Segurança Social Direta", href: "https://app.seg-social.pt/sso/login?service=https%3A%2F%2Fapp.seg-social.pt%2Fptss%2Fcaslogin" },
 ];
 
 export function Footer() {
