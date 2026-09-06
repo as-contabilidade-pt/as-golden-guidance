@@ -19,13 +19,32 @@ async function isAdmin(context: { supabase: any; userId: string }) {
   return data === true;
 }
 
+async function monthIsSubmitted(
+  context: { supabase: any },
+  userId: string,
+  year: number,
+  month: number,
+) {
+  const { data } = await context.supabase
+    .from("month_submissions")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("year", year)
+    .eq("month", month)
+    .maybeSingle();
+  return Boolean(data);
+}
+
 async function monthIsWritable(
   context: { supabase: any },
   userId: string,
   year: number,
   month: number,
 ) {
-  if (!isMonthPastDeadline(year, month)) return true;
+  const pastDeadline = isMonthPastDeadline(year, month);
+  const submitted = await monthIsSubmitted(context, userId, year, month);
+  if (!pastDeadline && !submitted) return true;
+
   const { data } = await context.supabase
     .from("unlock_requests")
     .select("id")
