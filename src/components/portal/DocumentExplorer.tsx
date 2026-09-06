@@ -6,6 +6,7 @@ import {
   FileText,
   Folder,
   Loader2,
+  CheckCircle2,
   Lock,
   Trash2,
   Upload,
@@ -22,6 +23,7 @@ import {
   formatDatePt,
   formatDateTimePt,
   DECLARATION_TEXT,
+  SUBMISSION_DECLARATION_TEXT,
   type CategorySlug,
 } from "@/lib/portal";
 import {
@@ -33,6 +35,8 @@ import {
   reserveDocument,
   listUnlockRequests,
   createUnlockRequest,
+  listMonthSubmissions,
+  submitMonth,
 } from "@/lib/portal.functions";
 
 type Doc = {
@@ -42,6 +46,14 @@ type Doc = {
   storage_path: string;
   size_bytes: number | null;
   created_at: string;
+};
+
+type MonthSubmission = {
+  id: string;
+  year: number;
+  month: number;
+  submitted_at: string;
+  document_count: number;
 };
 
 type UnlockRequest = {
@@ -76,6 +88,9 @@ export function DocumentExplorer({
   const [showForm, setShowForm] = useState(false);
   const [reason, setReason] = useState("");
   const [accepted, setAccepted] = useState(false);
+  const [submissions, setSubmissions] = useState<MonthSubmission[]>([]);
+  const [showSubmit, setShowSubmit] = useState(false);
+  const [submitAccepted, setSubmitAccepted] = useState(false);
 
   const fetchCounts = useServerFn(countsForYear);
   const fetchDocs = useServerFn(listDocuments);
@@ -85,6 +100,20 @@ export function DocumentExplorer({
   const download = useServerFn(getDownloadUrl);
   const fetchRequests = useServerFn(listUnlockRequests);
   const submitRequest = useServerFn(createUnlockRequest);
+  const fetchSubmissions = useServerFn(listMonthSubmissions);
+  const sendSubmission = useServerFn(submitMonth);
+
+  const loadSubmissions = useCallback(async () => {
+    try {
+      setSubmissions(
+        (await fetchSubmissions({
+          data: { year, ...(clientId ? { clientId } : {}) },
+        })) as MonthSubmission[],
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [fetchSubmissions, year, clientId]);
 
   const loadRequests = useCallback(async () => {
     try {
@@ -130,16 +159,41 @@ export function DocumentExplorer({
     void loadRequests();
   }, [loadRequests]);
 
+  useEffect(() => {
+    void loadSubmissions();
+  }, [loadSubmissions]);
+
+  function submissionFor(m: number) {
+    return submissions.find((s) => s.month === m) ?? null;
+  }
+
   function requestFor(m: number) {
     return requests.find((r) => r.month === m && r.status !== "fechado") ?? null;
   }
 
   function monthLocked(m: number) {
-    if (!isMonthPastDeadline(year, m)) return false;
+    if (!isMonthPastDeadline(year, m) && !submissionFor(m)) return false;
     return requestFor(m)?.status !== "aprovado";
   }
 
   const currentRequest = month !== null ? requestFor(month) : null;
+  const currentSubmission = month !== null ? submissionFor(month) : null;
+
+  async function onSubmitMonth() {
+    if (month === null) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await sendSubmission({ data: { year, month, declarationAccepted: true as const } });
+      setShowSubmit(false);
+      setSubmitAccepted(false);
+      await loadSubmissions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível submeter a documentação.");
+    } finally {
+      setBusy(false);
+    }
+  }
   const locked = month !== null && !readOnly && monthLocked(month);
 
   async function onSubmitRequest(e: React.FormEvent) {
@@ -298,22 +352,107 @@ export function DocumentExplorer({
               <FolderCard
                 key={name}
                 title={name}
-                meta={`${counts[`${i + 1}`] ?? 0} documento(s)`}
+                meta={
+                  submissionFor(i + 1)
+                    ? `${counts[`${i + 1}`] ?? 0} documento(s) · submetida em ${formatDatePt(
+                        submissionFor(i + 1)!.submitted_at,
+                      )}`
+                    : `${counts[`${i + 1}`] ?? 0} documento(s)`
+                }
                 locked={monthLocked(i + 1)}
                 onClick={() => setMonth(i + 1)}
               />
             ))}
           </div>
         ) : category === null ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {CATEGORIES.map((c) => (
-              <FolderCard
-                key={c.slug}
-                title={c.label}
-                meta={`${counts[`${month}:${c.slug}`] ?? 0} documento(s)`}
-                onClick={() => setCategory(c.slug)}
-              />
-            ))}
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {CATEGORIES.map((c) => (
+                <FolderCard
+                  key={c.slug}
+                  title={c.label}
+                  meta={`${counts[`${month}:${c.slug}`] ?? 0} documento(s)`}
+                  onClick={() => setCategory(c.slug)}
+                />
+              ))}
+            </div>
+
+            {currentSubmission ? (
+              <div className="soft-card flex flex-wrap items-center gap-4 p-6">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
+                  <CheckCircle2 className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-serif text-lg text-foreground">
+                    Documentação de {monthLabel(month)} {year} submetida com sucesso em{" "}
+                    {formatDateTimePt(currentSubmission.submitted_at)}.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {currentSubmission.document_count} documento(s) submetido(s). A pasta está em
+                    modo de visualização.
+                  </p>
+                </div>
+              </div>
+            ) : !readOnly && !monthLocked(month) ? (
+              <div className="soft-card p-6">
+                {showSubmit ? (
+                  <div className="space-y-4">
+                    <p className="font-serif text-xl text-foreground">Confirmar submissão</p>
+                    <label className="flex items-start gap-3 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={submitAccepted}
+                        onChange={(e) => setSubmitAccepted(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 accent-[color:var(--gold)]"
+                      />
+                      <span>{SUBMISSION_DECLARATION_TEXT}</span>
+                    </label>
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        disabled={!submitAccepted || busy}
+                        onClick={() => void onSubmitMonth()}
+                        className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-50"
+                      >
+                        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                        Confirmar Submissão
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowSubmit(false);
+                          setSubmitAccepted(false);
+                        }}
+                        className="rounded-full border border-ink/15 px-6 py-3 text-sm text-foreground transition-colors hover:border-gold hover:text-gold"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-serif text-xl text-foreground">
+                        Submeter a documentação de {monthLabel(month)} {year}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {(counts[`${month}`] ?? 0) > 0
+                          ? "Depois de submeter, a pasta fica em modo de visualização."
+                          : "É necessário anexar pelo menos um documento antes de submeter."}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={(counts[`${month}`] ?? 0) === 0}
+                      onClick={() => setShowSubmit(true)}
+                      className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="h-4 w-4" /> Submeter Documentação do Mês
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
         ) : (
           <div>
@@ -326,7 +465,11 @@ export function DocumentExplorer({
                   <div className="min-w-0 flex-1">
                     <p className="font-serif text-lg text-foreground">Pasta bloqueada</p>
                     <p className="text-xs text-muted-foreground">
-                      Bloqueada desde {formatDatePt(lockDate(year, month))}. Pode consultar e
+                      Bloqueada desde{" "}
+                      {currentSubmission
+                        ? formatDatePt(currentSubmission.submitted_at)
+                        : formatDatePt(lockDate(year, month))}
+                      . Pode consultar e
                       descarregar os documentos, mas não adicionar ou remover.
                     </p>
                   </div>
