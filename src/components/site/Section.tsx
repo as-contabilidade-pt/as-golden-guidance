@@ -12,14 +12,17 @@ export function SectionHeading({
   return (
     <div className={align === "center" ? "text-center" : "text-left"}>
       {overline ? (
-        <p className="tracking-wider-caps text-[0.68rem] text-gold">{overline}</p>
+        <span
+          className={`inline-flex rounded-full border border-gold/25 bg-gold/10 px-4 py-1.5 text-[0.68rem] font-medium tracking-wide text-gold ${
+            align === "center" ? "mx-auto" : ""
+          }`}
+        >
+          {overline}
+        </span>
       ) : null}
-      <h2 className="mt-4 font-serif text-3xl text-cream sm:text-4xl md:text-[2.75rem]">
+      <h2 className="mt-5 font-serif text-3xl leading-tight text-cream sm:text-4xl md:text-[2.85rem]">
         {title}
       </h2>
-      <div
-        className={`gold-rule mt-6 w-24 ${align === "center" ? "mx-auto" : ""}`}
-      />
     </div>
   );
 }

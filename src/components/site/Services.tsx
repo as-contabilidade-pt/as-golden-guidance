@@ -44,23 +44,20 @@ const servicos = [
 export function Services() {
   return (
     <Section id="servicos" className="relative bg-ink">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent" aria-hidden />
       <div className="relative">
         <SectionHeading overline="O que fazemos" title="Serviços" />
 
-        <div className="mt-16 grid grid-cols-1 gap-px border border-gold/15 bg-gold/15 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {servicos.map(({ icon: Icon, title, text }) => (
             <article
               key={title}
-              className="group relative bg-ink p-9 transition-colors duration-500 hover:bg-ink-soft"
+              className="soft-card group p-8 transition-all duration-300 hover:-translate-y-1 hover:border-gold/45"
             >
-              <span className="absolute inset-x-0 top-0 h-px scale-x-0 bg-gradient-to-r from-transparent via-gold to-transparent transition-transform duration-500 group-hover:scale-x-100" aria-hidden />
-              <Icon
-                className="h-7 w-7 text-gold transition-transform duration-500 group-hover:-translate-y-1"
-                strokeWidth={1}
-              />
-              <h3 className="mt-7 font-serif text-xl text-cream">{title}</h3>
-              <p className="mt-4 text-sm leading-relaxed text-cream/60">{text}</p>
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gold/10 text-gold transition-colors group-hover:bg-gold group-hover:text-ink">
+                <Icon className="h-5 w-5" strokeWidth={1.5} />
+              </span>
+              <h3 className="mt-6 font-serif text-xl text-cream">{title}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-cream/60">{text}</p>
             </article>
           ))}
         </div>
@@ -68,4 +65,3 @@ export function Services() {
     </Section>
   );
 }
-
