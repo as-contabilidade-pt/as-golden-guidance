@@ -5,9 +5,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-serif: "Playfair Display", Georgia, serif;
-  --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
 }
+
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 2px);
@@ -41,7 +42,9 @@
 }
 
 :root {
-  --radius: 0.125rem;
+  --radius: 1.25rem;
+
+
 
   /* Paleta elegante clássica */
   --ink: oklch(0.145 0 0); /* #0a0a0a */
@@ -89,8 +92,10 @@
   h3,
   h4 {
     font-family: var(--font-serif);
-    font-weight: 400;
+    font-weight: 500;
+    letter-spacing: -0.02em;
   }
+
 
   html {
     scroll-behavior: smooth;
@@ -139,8 +144,16 @@
 
 @utility tracking-wider-caps {
   text-transform: uppercase;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.16em;
+  font-weight: 500;
 }
+
+@utility soft-card {
+  border-radius: 1.75rem;
+  border: 1px solid color-mix(in oklab, var(--gold) 18%, transparent);
+  background: color-mix(in oklab, var(--ink-soft) 70%, transparent);
+}
+
 
 @utility text-gradient-gold {
   background-image: linear-gradient(
