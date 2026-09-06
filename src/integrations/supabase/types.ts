@@ -113,6 +113,54 @@ export type Database = {
         }
         Relationships: []
       }
+      unlock_requests: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          declaration_accepted: boolean
+          id: string
+          month: number
+          nif: string
+          reason: string
+          status: Database["public"]["Enums"]["unlock_status"]
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          declaration_accepted?: boolean
+          id?: string
+          month: number
+          nif: string
+          reason: string
+          status?: Database["public"]["Enums"]["unlock_status"]
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          declaration_accepted?: boolean
+          id?: string
+          month?: number
+          nif?: string
+          reason?: string
+          status?: Database["public"]["Enums"]["unlock_status"]
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -155,6 +203,7 @@ export type Database = {
         | "extratos_bancarios"
         | "documentos_salarios"
         | "outros_documentos"
+      unlock_status: "pendente" | "aprovado" | "rejeitado" | "fechado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -290,6 +339,7 @@ export const Constants = {
         "documentos_salarios",
         "outros_documentos",
       ],
+      unlock_status: ["pendente", "aprovado", "rejeitado", "fechado"],
     },
   },
 } as const
