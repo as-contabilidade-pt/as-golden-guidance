@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TermosRouteImport } from './routes/termos'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDocumentosRouteImport } from './routes/_authenticated/documentos'
 
 const IndexRoute = IndexRouteImport.update({
@@ -40,6 +41,11 @@ const TermosRoute = TermosRouteImport.update({
   path: '/termos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDocumentosRoute = AuthenticatedDocumentosRouteImport.update({
   id: '/documentos',
   path: '/documentos',
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/documentos': typeof AuthenticatedDocumentosRoute
 }
 export interface FileRoutesByTo {
@@ -58,6 +65,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/documentos': typeof AuthenticatedDocumentosRoute
 }
 export interface FileRoutesById {
@@ -67,13 +75,15 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/documentos': typeof AuthenticatedDocumentosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/privacidade' | '/termos' | '/documentos'
+  fullPaths:
+    '/' | '/login' | '/privacidade' | '/termos' | '/admin' | '/documentos'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/privacidade' | '/termos' | '/documentos'
+  to: '/' | '/login' | '/privacidade' | '/termos' | '/admin' | '/documentos'
   id:
     | '__root__'
     | '/'
@@ -81,6 +91,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacidade'
     | '/termos'
+    | '/_authenticated/admin'
     | '/_authenticated/documentos'
   fileRoutesById: FileRoutesById
 }
@@ -129,6 +140,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/documentos': {
       id: '/_authenticated/documentos'
       path: '/documentos'
@@ -140,10 +158,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDocumentosRoute: typeof AuthenticatedDocumentosRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDocumentosRoute: AuthenticatedDocumentosRoute,
 }
 
