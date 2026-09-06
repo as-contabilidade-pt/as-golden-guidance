@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Menu } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Logo } from "./Logo";
 
 const links = [
@@ -22,37 +22,35 @@ export function Header() {
   }, []);
 
   return (
-    <header
-      className={`fixed inset-x-0 top-0 z-50 transition-colors duration-500 ${
-        scrolled
-          ? "border-b border-gold/25 bg-ink/95 backdrop-blur"
-          : "border-b border-transparent bg-transparent"
-      }`}
-    >
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <a href="/#inicio" className="flex items-center gap-3">
-          <Logo size={40} />
+    <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4">
+      <div
+        className={`mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-full px-5 py-3 transition-all duration-500 ${
+          scrolled
+            ? "border border-gold/20 bg-ink/85 backdrop-blur-xl"
+            : "border border-transparent bg-transparent"
+        }`}
+      >
+        <a href="/#inicio" className="flex min-w-0 items-center gap-3">
+          <Logo size={38} />
           <span className="hidden font-serif text-base text-cream sm:block">
             AS
-            <span className="ml-2 font-sans text-[0.6rem] tracking-wider-caps text-gold">
-              Contabilidade
-            </span>
+            <span className="ml-2 font-sans text-xs text-gold">Contabilidade</span>
           </span>
         </a>
 
-        <nav className="hidden items-center gap-9 lg:flex">
+        <nav className="hidden items-center gap-8 lg:flex">
           {links.map((l) => (
             <a
               key={l.href}
               href={l.href}
-              className="text-[0.68rem] tracking-wider-caps text-cream/80 transition-colors hover:text-gold"
+              className="text-sm text-cream/80 transition-colors hover:text-gold"
             >
               {l.label}
             </a>
           ))}
           <Link
             to="/login"
-            className="border border-gold px-6 py-2.5 text-[0.66rem] tracking-wider-caps text-gold transition-colors hover:bg-gold hover:text-ink"
+            className="rounded-full bg-gold px-6 py-2.5 text-sm font-medium text-ink transition-opacity hover:opacity-90"
           >
             Área de Cliente
           </Link>
@@ -62,21 +60,21 @@ export function Header() {
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? "Fechar menu" : "Abrir menu"}
-          className="text-gold lg:hidden"
+          className="shrink-0 rounded-full bg-gold/10 p-2.5 text-gold lg:hidden"
         >
-          {open ? <Menu className="h-6 w-6 rotate-90" /> : <Menu className="h-6 w-6" />}
+          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 
       {open ? (
-        <div className="border-t border-gold/20 bg-ink px-6 py-6 lg:hidden">
-          <nav className="flex flex-col gap-5">
+        <div className="mx-auto mt-3 max-w-6xl rounded-[2rem] border border-gold/20 bg-ink/95 px-6 py-6 backdrop-blur-xl lg:hidden">
+          <nav className="flex flex-col gap-4">
             {links.map((l) => (
               <a
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className="text-[0.7rem] tracking-wider-caps text-cream/85"
+                className="text-sm text-cream/85"
               >
                 {l.label}
               </a>
@@ -84,7 +82,7 @@ export function Header() {
             <Link
               to="/login"
               onClick={() => setOpen(false)}
-              className="mt-2 border border-gold px-6 py-3 text-center text-[0.68rem] tracking-wider-caps text-gold"
+              className="mt-2 rounded-full bg-gold px-6 py-3 text-center text-sm font-medium text-ink"
             >
               Área de Cliente
             </Link>

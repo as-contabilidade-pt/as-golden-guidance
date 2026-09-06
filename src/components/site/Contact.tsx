@@ -6,7 +6,32 @@ import { GoldButton } from "./GoldButton";
 import { contactSchema, submitContactMessage } from "@/lib/contact.functions";
 
 const inputClass =
-  "w-full border border-gold/30 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/35 focus:border-gold focus:outline-none";
+  "w-full rounded-2xl border border-gold/25 bg-ink/40 px-5 py-3.5 text-sm text-cream placeholder:text-cream/35 transition-colors focus:border-gold/70 focus:outline-none";
+
+const infos = [
+  {
+    icon: Clock,
+    label: "Horário",
+    value: "8h30 — 12h30 | 14h00 — 18h00",
+  },
+  {
+    icon: Phone,
+    label: "Telefone",
+    value: "965 378 291",
+    href: "tel:+351965378291",
+  },
+  {
+    icon: Mail,
+    label: "Email",
+    value: "geral@as-contabilidade.pt",
+    href: "mailto:geral@as-contabilidade.pt",
+  },
+  {
+    icon: MapPin,
+    label: "Morada",
+    value: "Av. José Gonçalves Pais, nº21, 3515-146 Viseu",
+  },
+];
 
 export function Contact() {
   const submit = useServerFn(submitContactMessage);
@@ -49,72 +74,52 @@ export function Contact() {
 
   return (
     <Section id="contactos" className="relative bg-ink-soft">
-      <div className="deco-pattern absolute inset-0 opacity-25" aria-hidden />
       <div className="relative">
         <SectionHeading overline="Fale connosco" title="Contactos" />
 
-        <div className="mt-16 grid grid-cols-1 gap-14 lg:grid-cols-2">
-          <ul className="space-y-8">
-            <li className="flex gap-4">
-              <Clock className="mt-1 h-5 w-5 shrink-0 text-gold" strokeWidth={1} />
-              <div>
-                <p className="text-[0.62rem] tracking-wider-caps text-gold">Horário</p>
-                <p className="mt-2 text-sm text-cream/75">8h30 — 12h30 | 14h00 — 18h00</p>
+        <div className="mt-14 grid grid-cols-1 gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-1">
+            {infos.map(({ icon: Icon, label, value, href }) => (
+              <div
+                key={label}
+                className="soft-card flex items-start gap-4 p-6 transition-colors hover:border-gold/40"
+              >
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gold/10 text-gold">
+                  <Icon className="h-5 w-5" strokeWidth={1.5} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-gold">{label}</p>
+                  {href ? (
+                    <a
+                      href={href}
+                      className="mt-1.5 block text-sm text-cream/75 transition-colors hover:text-gold"
+                    >
+                      {value}
+                    </a>
+                  ) : (
+                    <p className="mt-1.5 text-sm leading-relaxed text-cream/75">{value}</p>
+                  )}
+                </div>
               </div>
-            </li>
-            <li className="flex gap-4">
-              <Phone className="mt-1 h-5 w-5 shrink-0 text-gold" strokeWidth={1} />
-              <div>
-                <p className="text-[0.62rem] tracking-wider-caps text-gold">Telefone</p>
-                <a
-                  href="tel:+351965378291"
-                  className="mt-2 block text-sm text-cream/75 hover:text-gold"
-                >
-                  965 378 291
-                </a>
-              </div>
-            </li>
-            <li className="flex gap-4">
-              <Mail className="mt-1 h-5 w-5 shrink-0 text-gold" strokeWidth={1} />
-              <div>
-                <p className="text-[0.62rem] tracking-wider-caps text-gold">Email</p>
-                <a
-                  href="mailto:geral@as-contabilidade.pt"
-                  className="mt-2 block text-sm text-cream/75 hover:text-gold"
-                >
-                  geral@as-contabilidade.pt
-                </a>
-              </div>
-            </li>
-            <li className="flex gap-4">
-              <MapPin className="mt-1 h-5 w-5 shrink-0 text-gold" strokeWidth={1} />
-              <div>
-                <p className="text-[0.62rem] tracking-wider-caps text-gold">Morada</p>
-                <p className="mt-2 text-sm text-cream/75">
-                  Av. José Gonçalves Pais, nº21
-                  <br />
-                  3515-146 Viseu
-                </p>
-              </div>
-            </li>
-          </ul>
+            ))}
+          </div>
 
-          <form onSubmit={onSubmit} className="border border-gold/25 p-8">
+          <form
+            onSubmit={onSubmit}
+            className="soft-card rounded-[2rem] p-7 sm:p-9"
+          >
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
                 <label
                   htmlFor="firstName"
-                  className="mb-2 block text-[0.6rem] tracking-wider-caps text-cream/60"
+                  className="mb-2 block text-xs text-cream/60"
                 >
                   Nome
                 </label>
                 <input id="firstName" name="firstName" required className={inputClass} />
               </div>
               <div>
-                <label
-                  htmlFor="lastName"
-                  className="mb-2 block text-[0.6rem] tracking-wider-caps text-cream/60"
-                >
+                <label htmlFor="lastName" className="mb-2 block text-xs text-cream/60">
                   Último Nome
                 </label>
                 <input id="lastName" name="lastName" required className={inputClass} />
@@ -122,10 +127,7 @@ export function Contact() {
             </div>
 
             <div className="mt-5">
-              <label
-                htmlFor="email"
-                className="mb-2 block text-[0.6rem] tracking-wider-caps text-cream/60"
-              >
+              <label htmlFor="email" className="mb-2 block text-xs text-cream/60">
                 Email
               </label>
               <input
@@ -138,10 +140,7 @@ export function Contact() {
             </div>
 
             <div className="mt-5">
-              <label
-                htmlFor="message"
-                className="mb-2 block text-[0.6rem] tracking-wider-caps text-cream/60"
-              >
+              <label htmlFor="message" className="mb-2 block text-xs text-cream/60">
                 Mensagem
               </label>
               <textarea
