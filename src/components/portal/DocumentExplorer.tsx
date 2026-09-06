@@ -6,6 +6,7 @@ import {
   FileText,
   Folder,
   Loader2,
+  Lock,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -16,6 +17,11 @@ import {
   availableYears,
   categoryLabel,
   monthLabel,
+  isMonthPastDeadline,
+  lockDate,
+  formatDatePt,
+  formatDateTimePt,
+  DECLARATION_TEXT,
   type CategorySlug,
 } from "@/lib/portal";
 import {
@@ -25,6 +31,8 @@ import {
   getDownloadUrl,
   listDocuments,
   reserveDocument,
+  listUnlockRequests,
+  createUnlockRequest,
 } from "@/lib/portal.functions";
 
 type Doc = {
@@ -34,6 +42,17 @@ type Doc = {
   storage_path: string;
   size_bytes: number | null;
   created_at: string;
+};
+
+type UnlockRequest = {
+  id: string;
+  year: number;
+  month: number;
+  reason: string;
+  status: "pendente" | "aprovado" | "rejeitado" | "fechado";
+  admin_note: string | null;
+  created_at: string;
+  decided_at: string | null;
 };
 
 export function DocumentExplorer({
@@ -53,6 +72,10 @@ export function DocumentExplorer({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [requests, setRequests] = useState<UnlockRequest[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [reason, setReason] = useState("");
+  const [accepted, setAccepted] = useState(false);
 
   const fetchCounts = useServerFn(countsForYear);
   const fetchDocs = useServerFn(listDocuments);
@@ -60,6 +83,20 @@ export function DocumentExplorer({
   const confirm = useServerFn(confirmDocument);
   const remove = useServerFn(deleteDocument);
   const download = useServerFn(getDownloadUrl);
+  const fetchRequests = useServerFn(listUnlockRequests);
+  const submitRequest = useServerFn(createUnlockRequest);
+
+  const loadRequests = useCallback(async () => {
+    try {
+      setRequests(
+        (await fetchRequests({
+          data: { year, ...(clientId ? { clientId } : {}) },
+        })) as UnlockRequest[],
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [fetchRequests, year, clientId]);
 
   const loadCounts = useCallback(async () => {
     try {
@@ -88,6 +125,42 @@ export function DocumentExplorer({
   useEffect(() => {
     void loadCounts();
   }, [loadCounts]);
+
+  useEffect(() => {
+    void loadRequests();
+  }, [loadRequests]);
+
+  function requestFor(m: number) {
+    return requests.find((r) => r.month === m && r.status !== "fechado") ?? null;
+  }
+
+  function monthLocked(m: number) {
+    if (!isMonthPastDeadline(year, m)) return false;
+    return requestFor(m)?.status !== "aprovado";
+  }
+
+  const currentRequest = month !== null ? requestFor(month) : null;
+  const locked = month !== null && !readOnly && monthLocked(month);
+
+  async function onSubmitRequest(e: React.FormEvent) {
+    e.preventDefault();
+    if (month === null || !accepted) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await submitRequest({
+        data: { year, month, reason, declarationAccepted: true as const },
+      });
+      setReason("");
+      setAccepted(false);
+      setShowForm(false);
+      await loadRequests();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível enviar o pedido.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     void loadDocs();
@@ -226,6 +299,7 @@ export function DocumentExplorer({
                 key={name}
                 title={name}
                 meta={`${counts[`${i + 1}`] ?? 0} documento(s)`}
+                locked={monthLocked(i + 1)}
                 onClick={() => setMonth(i + 1)}
               />
             ))}
@@ -243,7 +317,93 @@ export function DocumentExplorer({
           </div>
         ) : (
           <div>
-            {!readOnly ? (
+            {locked ? (
+              <div className="soft-card p-6">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
+                    <Lock className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-serif text-lg text-foreground">Pasta bloqueada</p>
+                    <p className="text-xs text-muted-foreground">
+                      Bloqueada desde {formatDatePt(lockDate(year, month))}. Pode consultar e
+                      descarregar os documentos, mas não adicionar ou remover.
+                    </p>
+                  </div>
+                </div>
+
+                {currentRequest ? (
+                  <div className="mt-4 rounded-2xl border border-gold/25 bg-gold/5 px-5 py-4 text-sm">
+                    <p className="text-foreground">
+                      Pedido de desbloqueio{" "}
+                      <strong className="text-gold">
+                        {currentRequest.status === "pendente"
+                          ? "pendente"
+                          : currentRequest.status === "aprovado"
+                            ? "aprovado"
+                            : "rejeitado"}
+                      </strong>{" "}
+                      · enviado a {formatDateTimePt(currentRequest.created_at)}
+                    </p>
+                    {currentRequest.decided_at ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Decisão em {formatDateTimePt(currentRequest.decided_at)}
+                        {currentRequest.admin_note ? ` · ${currentRequest.admin_note}` : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : showForm ? (
+                  <form onSubmit={onSubmitRequest} className="mt-5 space-y-4">
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium text-foreground/80">
+                        Motivo da entrega fora de prazo
+                      </span>
+                      <textarea
+                        required
+                        rows={4}
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
+                      />
+                    </label>
+                    <label className="flex items-start gap-3 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={accepted}
+                        onChange={(e) => setAccepted(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 accent-[color:var(--gold)]"
+                      />
+                      <span>{DECLARATION_TEXT}</span>
+                    </label>
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="submit"
+                        disabled={!accepted || busy}
+                        className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-50"
+                      >
+                        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                        Enviar pedido
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowForm(false)}
+                        className="rounded-full border border-ink/15 px-6 py-3 text-sm text-foreground transition-colors hover:border-gold hover:text-gold"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(true)}
+                    className="mt-5 inline-flex items-center gap-2 rounded-full border border-gold px-6 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink"
+                  >
+                    Pedir desbloqueio para entrega fora de prazo
+                  </button>
+                )}
+              </div>
+            ) : !readOnly ? (
               <div className="soft-card flex flex-col items-center gap-3 p-8 text-center">
                 <p className="text-sm text-muted-foreground">
                   Envie os seus documentos em PDF. Cada documento recebe um número automático.
@@ -303,7 +463,7 @@ export function DocumentExplorer({
                       >
                         <Download className="h-4 w-4" /> Descarregar
                       </button>
-                      {!readOnly ? (
+                      {!readOnly && !locked ? (
                         <button
                           type="button"
                           onClick={() => void handleDelete(d.id)}
@@ -329,10 +489,12 @@ function FolderCard({
   title,
   meta,
   onClick,
+  locked = false,
 }: {
   title: string;
   meta: string;
   onClick: () => void;
+  locked?: boolean;
 }) {
   return (
     <button
@@ -341,13 +503,16 @@ function FolderCard({
       className="soft-card group flex items-center gap-4 p-5 text-left transition-transform hover:-translate-y-0.5"
     >
       <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/15 text-gold">
-        <Folder className="h-5 w-5" />
+        {locked ? <Lock className="h-5 w-5" /> : <Folder className="h-5 w-5" />}
       </span>
       <span className="min-w-0">
         <span className="block truncate font-serif text-lg text-foreground group-hover:text-gold">
           {title}
         </span>
-        <span className="block text-xs text-muted-foreground">{meta}</span>
+        <span className="block text-xs text-muted-foreground">
+          {meta}
+          {locked ? " · bloqueada" : ""}
+        </span>
       </span>
     </button>
   );
