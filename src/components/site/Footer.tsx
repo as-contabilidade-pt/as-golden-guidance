@@ -39,18 +39,30 @@ export function Footer() {
             <p className="text-sm font-medium text-gold">Informação legal</p>
 
             <ul className="mt-5 space-y-3">
-              {legais.map((l) => (
-                <li key={l.label}>
-                  <a
-                    href={l.href}
-                    target={l.href.startsWith("http") ? "_blank" : undefined}
-                    rel="noopener noreferrer"
-                    className="text-xs text-cream/60 transition-colors hover:text-gold"
-                  >
-                    {l.label}
-                  </a>
-                </li>
-              ))}
+              {legais.map((l) => {
+                const isExternal = l.href.startsWith("http");
+                return (
+                  <li key={l.label}>
+                    {isExternal ? (
+                      <a
+                        href={l.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-cream/60 transition-colors hover:text-gold"
+                      >
+                        {l.label}
+                      </a>
+                    ) : (
+                      <Link
+                        to={l.href}
+                        className="text-xs text-cream/60 transition-colors hover:text-gold"
+                      >
+                        {l.label}
+                      </Link>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
