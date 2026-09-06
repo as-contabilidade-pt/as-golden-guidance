@@ -184,7 +184,7 @@ function UnlockRequests() {
 
   const load = useCallback(async () => {
     try {
-      setRows((await fetchRequests()) as UnlockRow[]);
+      setRows((await fetchRequests()) as unknown as UnlockRow[]);
     } catch {
       /* ignore */
     }
