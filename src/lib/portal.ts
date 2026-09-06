@@ -37,3 +37,27 @@ export function availableYears() {
   for (let y = current; y >= current - 4; y--) years.push(y);
   return years;
 }
+
+/** Data em que a pasta de um mês fica bloqueada: dia 11 do mês seguinte. */
+export function lockDate(year: number, month: number) {
+  const y = month === 12 ? year + 1 : year;
+  const m = month === 12 ? 1 : month + 1;
+  return new Date(y, m - 1, 11, 0, 0, 0, 0);
+}
+
+export function isMonthPastDeadline(year: number, month: number, now: Date = new Date()) {
+  return now.getTime() >= lockDate(year, month).getTime();
+}
+
+export function formatDatePt(value: string | Date) {
+  const d = typeof value === "string" ? new Date(value) : value;
+  return d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+export function formatDateTimePt(value: string | Date) {
+  const d = typeof value === "string" ? new Date(value) : value;
+  return `${formatDatePt(d)} ${d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+export const DECLARATION_TEXT =
+  "Declaro que a entrega de documentação fora do prazo estabelecido pode ter consequências ao nível do cumprimento das obrigações fiscais e/ou contributivas, e assumo essa responsabilidade.";
