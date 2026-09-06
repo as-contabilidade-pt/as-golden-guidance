@@ -5,7 +5,7 @@ import { DocumentExplorer } from "@/components/portal/DocumentExplorer";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { getClient } from "@/lib/portal.functions";
 
-export const Route = createFileRoute("/_authenticated/admin/cliente/$clientId")({
+export const Route = createFileRoute("/_authenticated/admin_/cliente/$clientId")({
   component: AdminClientPage,
   head: () => ({
     meta: [

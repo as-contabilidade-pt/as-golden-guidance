@@ -17,7 +17,7 @@ import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDocumentosRouteImport } from './routes/_authenticated/documentos'
-import { Route as AuthenticatedAdminClienteClientIdRouteImport } from './routes/_authenticated/admin.cliente.$clientId'
+import { Route as AuthenticatedAdminClienteClientIdRouteImport } from './routes/_authenticated/admin_.cliente.$clientId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -60,9 +60,9 @@ const AuthenticatedDocumentosRoute = AuthenticatedDocumentosRouteImport.update({
 } as any)
 const AuthenticatedAdminClienteClientIdRoute =
   AuthenticatedAdminClienteClientIdRouteImport.update({
-    id: '/cliente/$clientId',
-    path: '/cliente/$clientId',
-    getParentRoute: () => AuthenticatedAdminRoute,
+    id: '/admin_/cliente/$clientId',
+    path: '/admin/cliente/$clientId',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -71,7 +71,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
-  '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/admin': typeof AuthenticatedAdminRoute
   '/documentos': typeof AuthenticatedDocumentosRoute
   '/admin/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
 }
@@ -81,7 +81,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
-  '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/admin': typeof AuthenticatedAdminRoute
   '/documentos': typeof AuthenticatedDocumentosRoute
   '/admin/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
 }
@@ -93,9 +93,9 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
-  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/documentos': typeof AuthenticatedDocumentosRoute
-  '/_authenticated/admin/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
+  '/_authenticated/admin_/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -128,7 +128,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/_authenticated/admin'
     | '/_authenticated/documentos'
-    | '/_authenticated/admin/cliente/$clientId'
+    | '/_authenticated/admin_/cliente/$clientId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -198,36 +198,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDocumentosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin/cliente/$clientId': {
-      id: '/_authenticated/admin/cliente/$clientId'
-      path: '/cliente/$clientId'
+    '/_authenticated/admin_/cliente/$clientId': {
+      id: '/_authenticated/admin_/cliente/$clientId'
+      path: '/admin/cliente/$clientId'
       fullPath: '/admin/cliente/$clientId'
       preLoaderRoute: typeof AuthenticatedAdminClienteClientIdRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
-interface AuthenticatedAdminRouteChildren {
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedDocumentosRoute: typeof AuthenticatedDocumentosRoute
   AuthenticatedAdminClienteClientIdRoute: typeof AuthenticatedAdminClienteClientIdRoute
 }
 
-const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedDocumentosRoute: AuthenticatedDocumentosRoute,
   AuthenticatedAdminClienteClientIdRoute:
     AuthenticatedAdminClienteClientIdRoute,
-}
-
-const AuthenticatedAdminRouteWithChildren =
-  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
-
-interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
-  AuthenticatedDocumentosRoute: typeof AuthenticatedDocumentosRoute
-}
-
-const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
-  AuthenticatedDocumentosRoute: AuthenticatedDocumentosRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

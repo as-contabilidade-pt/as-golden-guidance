@@ -11,8 +11,8 @@ export function PortalShell({
   children,
 }: {
   title: string;
-  subtitle?: string;
-  action?: ReactNode;
+  subtitle?: string | undefined;
+  action?: ReactNode | undefined;
   children: ReactNode;
 }) {
   const navigate = useNavigate();
