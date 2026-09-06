@@ -71,27 +71,27 @@ const sections = [
 
 function TermosPage() {
   return (
-    <div className="min-h-screen bg-ink">
+    <div className="min-h-screen bg-background">
       <Header />
 
       <main className="pt-36 pb-24">
         <div className="mx-auto max-w-3xl px-6">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm text-cream/60 transition-colors hover:bg-gold/10 hover:text-gold"
+            className="inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/5 px-4 py-2 text-sm text-ink/70 transition-colors hover:border-gold/40 hover:text-gold"
           >
             <ChevronLeft className="h-4 w-4" />
             Voltar ao site
           </Link>
 
-          <h1 className="mt-8 font-sans text-4xl font-semibold tracking-tight text-cream md:text-5xl">
+          <h1 className="mt-8 font-serif text-4xl tracking-tight text-foreground md:text-5xl">
             Termos e Condições
           </h1>
 
-          <p className="mt-4 text-cream/60">
+          <p className="mt-4 text-muted-foreground">
             Bem-vindo à AS | Contabilidade, Fiscalidade e Gestão.
           </p>
-          <p className="mt-4 leading-relaxed text-cream/70">
+          <p className="mt-4 leading-relaxed text-muted-foreground">
             Ao utilizar os nossos serviços, concorda automaticamente em cumprir e aceitar os seguintes termos e condições, além de qualquer legislação aplicável. Se não concordar com qualquer parte destes termos, por favor, não utilize os nossos serviços.
           </p>
 
@@ -99,22 +99,22 @@ function TermosPage() {
             {sections.map((s, i) => (
               <section
                 key={s.title}
-                className="rounded-[1.75rem] border border-gold/10 bg-cream/[0.03] p-7 backdrop-blur-sm transition-colors hover:border-gold/20"
+                className="soft-card p-7 transition-all duration-300 hover:border-gold/35"
               >
                 <div className="flex items-baseline gap-4">
-                  <span className="font-sans text-sm font-semibold text-gold">
+                  <span className="font-serif text-sm font-semibold text-gold">
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <h2 className="font-sans text-xl font-semibold text-cream">
+                  <h2 className="font-serif text-xl text-foreground">
                     {s.title}
                   </h2>
                 </div>
-                <p className="mt-4 leading-relaxed text-cream/70">{s.content}</p>
+                <p className="mt-4 leading-relaxed text-muted-foreground">{s.content}</p>
               </section>
             ))}
           </div>
 
-          <p className="mt-12 text-center text-xs text-cream/40">
+          <p className="mt-12 text-center text-xs text-muted-foreground/60">
             Última atualização: 6 de setembro de 2026.
           </p>
         </div>
