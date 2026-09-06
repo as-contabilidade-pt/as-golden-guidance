@@ -4,10 +4,12 @@ export function SectionHeading({
   overline,
   title,
   align = "center",
+  light = false,
 }: {
   overline?: string;
   title: string;
   align?: "center" | "left";
+  light?: boolean;
 }) {
   return (
     <div className={align === "center" ? "text-center" : "text-left"}>
@@ -20,7 +22,11 @@ export function SectionHeading({
           {overline}
         </span>
       ) : null}
-      <h2 className="mt-5 font-serif text-3xl leading-tight text-cream sm:text-4xl md:text-[2.85rem]">
+      <h2
+        className={`mt-5 font-serif text-3xl leading-tight sm:text-4xl md:text-[2.85rem] ${
+          light ? "text-cream" : "text-foreground"
+        }`}
+      >
         {title}
       </h2>
     </div>
