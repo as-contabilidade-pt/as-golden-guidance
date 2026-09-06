@@ -4,6 +4,16 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@theme {
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-cream: var(--cream);
+  --color-ink: var(--ink);
+}
+
+
 /*
  * Design system definition.
  *
