@@ -3,7 +3,13 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Plus, UserRound } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { createClient, listClients } from "@/lib/portal.functions";
+import {
+  createClient,
+  listClients,
+  listPendingUnlockRequests,
+  decideUnlockRequest,
+} from "@/lib/portal.functions";
+import { formatDateTimePt, monthLabel } from "@/lib/portal";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
@@ -125,6 +131,9 @@ function AdminPage() {
         </form>
       ) : null}
 
+      <UnlockRequests />
+
+      <h2 className="mb-4 mt-10 font-serif text-2xl text-foreground">Clientes</h2>
       <div className="space-y-3">
         {clients.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-gold/30 px-6 py-10 text-center text-sm text-muted-foreground">
@@ -153,6 +162,103 @@ function AdminPage() {
         )}
       </div>
     </PortalShell>
+  );
+}
+
+type UnlockRow = {
+  id: string;
+  full_name: string;
+  nif: string;
+  year: number;
+  month: number;
+  reason: string;
+  status: "pendente" | "aprovado";
+  created_at: string;
+};
+
+function UnlockRequests() {
+  const fetchRequests = useServerFn(listPendingUnlockRequests);
+  const decide = useServerFn(decideUnlockRequest);
+  const [rows, setRows] = useState<UnlockRow[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setRows((await fetchRequests()) as UnlockRow[]);
+    } catch {
+      /* ignore */
+    }
+  }, [fetchRequests]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function act(id: string, decision: "aprovado" | "rejeitado" | "fechado") {
+    setBusyId(id);
+    try {
+      await decide({ data: { id, decision } });
+      await load();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (rows.length === 0) return null;
+
+  return (
+    <section className="mb-10">
+      <h2 className="mb-4 font-serif text-2xl text-foreground">Pedidos de desbloqueio</h2>
+      <div className="space-y-3">
+        {rows.map((r) => (
+          <div key={r.id} className="soft-card p-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-serif text-lg text-foreground">{r.full_name}</span>
+              <span className="text-xs text-muted-foreground">NIF {r.nif}</span>
+              <span className="rounded-full bg-gold/15 px-3 py-1 text-xs text-gold">
+                {monthLabel(r.month)} {r.year}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {r.status === "pendente" ? "Pendente" : "Desbloqueada"} ·{" "}
+                {formatDateTimePt(r.created_at)}
+              </span>
+            </div>
+            <p className="mt-3 text-sm text-foreground/80">{r.reason}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {r.status === "pendente" ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={busyId === r.id}
+                    onClick={() => void act(r.id, "aprovado")}
+                    className="rounded-full bg-gold px-5 py-2.5 text-xs font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
+                  >
+                    Aprovar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyId === r.id}
+                    onClick={() => void act(r.id, "rejeitado")}
+                    className="rounded-full border border-ink/15 px-5 py-2.5 text-xs text-foreground transition-colors hover:border-destructive hover:text-destructive disabled:opacity-60"
+                  >
+                    Rejeitar
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busyId === r.id}
+                  onClick={() => void act(r.id, "fechado")}
+                  className="rounded-full border border-ink/15 px-5 py-2.5 text-xs text-foreground transition-colors hover:border-gold hover:text-gold disabled:opacity-60"
+                >
+                  Voltar a bloquear
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
