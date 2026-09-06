@@ -44,20 +44,23 @@ const servicos = [
 export function Services() {
   return (
     <Section id="servicos" className="relative bg-ink">
-      <div className="linen-pattern absolute inset-0 opacity-40" aria-hidden />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent" aria-hidden />
       <div className="relative">
         <SectionHeading overline="O que fazemos" title="Serviços" />
 
-        <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-16 grid grid-cols-1 gap-px border border-gold/15 bg-gold/15 md:grid-cols-2 lg:grid-cols-3">
           {servicos.map(({ icon: Icon, title, text }) => (
             <article
               key={title}
-              className="group border border-gold/25 bg-ink-soft/60 p-8 transition-colors duration-300 hover:border-gold/70"
+              className="group relative bg-ink p-9 transition-colors duration-500 hover:bg-ink-soft"
             >
-              <Icon className="h-8 w-8 text-gold" strokeWidth={1} />
-              <h3 className="mt-6 font-serif text-xl text-cream">{title}</h3>
-              <div className="gold-rule mt-4 w-12" />
-              <p className="mt-4 text-sm leading-relaxed text-cream/65">{text}</p>
+              <span className="absolute inset-x-0 top-0 h-px scale-x-0 bg-gradient-to-r from-transparent via-gold to-transparent transition-transform duration-500 group-hover:scale-x-100" aria-hidden />
+              <Icon
+                className="h-7 w-7 text-gold transition-transform duration-500 group-hover:-translate-y-1"
+                strokeWidth={1}
+              />
+              <h3 className="mt-7 font-serif text-xl text-cream">{title}</h3>
+              <p className="mt-4 text-sm leading-relaxed text-cream/60">{text}</p>
             </article>
           ))}
         </div>
@@ -65,3 +68,4 @@ export function Services() {
     </Section>
   );
 }
+
