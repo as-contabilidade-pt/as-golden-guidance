@@ -116,8 +116,9 @@ export function Contact() {
                     <p className="mt-1.5 text-sm leading-relaxed text-cream/75">{value}</p>
                   )}
                 </div>
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
 
           <form
