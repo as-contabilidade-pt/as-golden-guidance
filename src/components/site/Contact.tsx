@@ -4,6 +4,7 @@ import { Clock, Phone, Mail, MapPin } from "lucide-react";
 import { Section, SectionHeading } from "./Section";
 import { GoldButton } from "./GoldButton";
 import { contactSchema, submitContactMessage } from "@/lib/contact.functions";
+import contactImage from "@/assets/contact-office.jpg";
 
 const inputClass =
   "w-full rounded-2xl border border-gold/25 bg-ink/40 px-5 py-3.5 text-sm text-cream placeholder:text-cream/35 transition-colors focus:border-gold/70 focus:outline-none";
@@ -78,12 +79,27 @@ export function Contact() {
         <SectionHeading overline="Fale connosco" title="Contactos" />
 
         <div className="mt-14 grid grid-cols-1 gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-1">
-            {infos.map(({ icon: Icon, label, value, href }) => (
-              <div
-                key={label}
-                className="soft-card flex items-start gap-4 p-6 transition-colors hover:border-gold/40"
-              >
+          <div>
+            <div className="relative overflow-hidden rounded-[2rem]">
+              <img
+                src={contactImage}
+                alt="Sala de espera do escritório ao entardecer, com poltronas creme e vista sobre a cidade"
+                width={1280}
+                height={960}
+                loading="lazy"
+                className="h-56 w-full object-cover sm:h-64"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/20 to-transparent" />
+              <p className="absolute bottom-5 left-6 max-w-xs font-serif text-lg leading-snug text-cream">
+                Estamos em Viseu, de portas abertas para si.
+              </p>
+            </div>
+            <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+              {infos.map(({ icon: Icon, label, value, href }) => (
+                <div
+                  key={label}
+                  className="soft-card flex items-start gap-4 p-6 transition-colors hover:border-gold/40"
+                >
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gold/10 text-gold">
                   <Icon className="h-5 w-5" strokeWidth={1.5} />
                 </span>
@@ -100,8 +116,9 @@ export function Contact() {
                     <p className="mt-1.5 text-sm leading-relaxed text-cream/75">{value}</p>
                   )}
                 </div>
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
 
           <form
