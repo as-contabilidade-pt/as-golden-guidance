@@ -35,7 +35,8 @@ export function Footer() {
           </div>
 
           <div>
-            <p className="text-[0.6rem] tracking-wider-caps text-gold">Informação legal</p>
+            <p className="text-sm font-medium text-gold">Informação legal</p>
+
             <ul className="mt-5 space-y-3">
               {legais.map((l) => (
                 <li key={l.label}>
@@ -53,7 +54,8 @@ export function Footer() {
           </div>
 
           <div>
-            <p className="text-[0.6rem] tracking-wider-caps text-gold">Links úteis</p>
+            <p className="text-sm font-medium text-gold">Links úteis</p>
+
             <ul className="mt-5 space-y-3">
               {uteis.map((l) => (
                 <li key={l.label}>
@@ -71,10 +73,11 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="gold-rule mt-14" />
-        <p className="mt-8 text-center text-[0.65rem] tracking-wider-caps text-cream/40">
+        <div className="mt-14 h-px bg-gold/15" />
+        <p className="mt-8 text-center text-xs text-cream/40">
           © 2026 AS — Contabilidade, Fiscalidade e Gestão
         </p>
+
       </div>
     </footer>
   );
