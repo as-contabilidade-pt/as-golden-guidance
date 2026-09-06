@@ -10,13 +10,27 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as DefinirPasswordRouteImport } from './routes/definir-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TermosRouteImport } from './routes/termos'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedDocumentosRouteImport } from './routes/_authenticated/documentos'
+import { Route as AuthenticatedAdminClienteClientIdRouteImport } from './routes/_authenticated/admin_.cliente.$clientId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DefinirPasswordRoute = DefinirPasswordRouteImport.update({
+  id: '/definir-password',
+  path: '/definir-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -34,36 +48,93 @@ const TermosRoute = TermosRouteImport.update({
   path: '/termos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDocumentosRoute = AuthenticatedDocumentosRouteImport.update({
+  id: '/documentos',
+  path: '/documentos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminClienteClientIdRoute =
+  AuthenticatedAdminClienteClientIdRouteImport.update({
+    id: '/admin_/cliente/$clientId',
+    path: '/admin/cliente/$clientId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/definir-password': typeof DefinirPasswordRoute
   '/login': typeof LoginRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/documentos': typeof AuthenticatedDocumentosRoute
+  '/admin/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/definir-password': typeof DefinirPasswordRoute
   '/login': typeof LoginRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/documentos': typeof AuthenticatedDocumentosRoute
+  '/admin/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/definir-password': typeof DefinirPasswordRoute
   '/login': typeof LoginRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/documentos': typeof AuthenticatedDocumentosRoute
+  '/_authenticated/admin_/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/privacidade' | '/termos'
+  fullPaths:
+    | '/'
+    | '/definir-password'
+    | '/login'
+    | '/privacidade'
+    | '/termos'
+    | '/admin'
+    | '/documentos'
+    | '/admin/cliente/$clientId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/privacidade' | '/termos'
-  id: '__root__' | '/' | '/login' | '/privacidade' | '/termos'
+  to:
+    | '/'
+    | '/definir-password'
+    | '/login'
+    | '/privacidade'
+    | '/termos'
+    | '/admin'
+    | '/documentos'
+    | '/admin/cliente/$clientId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/definir-password'
+    | '/login'
+    | '/privacidade'
+    | '/termos'
+    | '/_authenticated/admin'
+    | '/_authenticated/documentos'
+    | '/_authenticated/admin_/cliente/$clientId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  DefinirPasswordRoute: typeof DefinirPasswordRoute
   LoginRoute: typeof LoginRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   TermosRoute: typeof TermosRoute
@@ -76,6 +147,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/definir-password': {
+      id: '/definir-password'
+      path: '/definir-password'
+      fullPath: '/definir-password'
+      preLoaderRoute: typeof DefinirPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -99,11 +184,50 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/documentos': {
+      id: '/_authenticated/documentos'
+      path: '/documentos'
+      fullPath: '/documentos'
+      preLoaderRoute: typeof AuthenticatedDocumentosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin_/cliente/$clientId': {
+      id: '/_authenticated/admin_/cliente/$clientId'
+      path: '/admin/cliente/$clientId'
+      fullPath: '/admin/cliente/$clientId'
+      preLoaderRoute: typeof AuthenticatedAdminClienteClientIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedDocumentosRoute: typeof AuthenticatedDocumentosRoute
+  AuthenticatedAdminClienteClientIdRoute: typeof AuthenticatedAdminClienteClientIdRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedDocumentosRoute: AuthenticatedDocumentosRoute,
+  AuthenticatedAdminClienteClientIdRoute:
+    AuthenticatedAdminClienteClientIdRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  DefinirPasswordRoute: DefinirPasswordRoute,
   LoginRoute: LoginRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   TermosRoute: TermosRoute,
