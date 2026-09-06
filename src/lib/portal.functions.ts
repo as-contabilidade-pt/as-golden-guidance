@@ -415,3 +415,116 @@ export const decideUnlockRequest = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/* ------------------------- Submissão final do mês ------------------------- */
+
+export const listMonthSubmissions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ clientId: z.string().uuid().optional(), year: z.number().int() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const admin = await isAdmin(context);
+    const target = admin && data.clientId ? data.clientId : context.userId;
+    const { data: rows, error } = await context.supabase
+      .from("month_submissions")
+      .select("id, year, month, submitted_at, document_count")
+      .eq("user_id", target)
+      .eq("year", data.year)
+      .order("month", { ascending: true });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const submitMonth = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        year: z.number().int(),
+        month: z.number().int().min(1).max(12),
+        declarationAccepted: z.literal(true),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { count, error: countError } = await context.supabase
+      .from("documents")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", context.userId)
+      .eq("year", data.year)
+      .eq("month", data.month);
+    if (countError) throw new Error(countError.message);
+    if (!count) {
+      throw new Error("Anexe pelo menos um documento antes de submeter o mês.");
+    }
+
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("full_name, nif, email")
+      .eq("id", context.userId)
+      .maybeSingle();
+
+    const { data: row, error } = await context.supabase
+      .from("month_submissions")
+      .insert({
+        user_id: context.userId,
+        nif: profile?.nif ?? "",
+        year: data.year,
+        month: data.month,
+        declaration_accepted: true,
+        document_count: count,
+      })
+      .select("id, year, month, submitted_at, document_count")
+      .single();
+    if (error) {
+      if (error.message.includes("duplicate")) {
+        throw new Error("Esta documentação já foi submetida.");
+      }
+      throw new Error(error.message);
+    }
+
+    try {
+      const { notifyAdminOfSubmission } = await import("@/lib/submission-email.server");
+      await notifyAdminOfSubmission({
+        fullName: profile?.full_name ?? "Cliente",
+        nif: profile?.nif ?? "",
+        year: data.year,
+        month: data.month,
+        submittedAt: row.submitted_at as string,
+        documentCount: count,
+      });
+    } catch (e) {
+      console.error("[submitMonth] falha ao notificar a administradora:", e);
+    }
+
+    return row;
+  });
+
+export const listRecentSubmissions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { data: rows, error } = await context.supabase
+      .from("month_submissions")
+      .select("id, user_id, nif, year, month, submitted_at, document_count")
+      .order("submitted_at", { ascending: false })
+      .limit(20);
+    if (error) throw new Error(error.message);
+
+    const ids = Array.from(new Set((rows ?? []).map((r: { user_id: string }) => r.user_id)));
+    let names: Record<string, string> = {};
+    if (ids.length > 0) {
+      const { data: profiles } = await context.supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", ids);
+      names = Object.fromEntries(
+        (profiles ?? []).map((p: { id: string; full_name: string }) => [p.id, p.full_name]),
+      );
+    }
+    return (rows ?? []).map((r: { user_id: string }) => ({
+      ...r,
+      full_name: names[r.user_id] ?? "Cliente",
+    }));
+  });
