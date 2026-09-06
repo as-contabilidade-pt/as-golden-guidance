@@ -1,73 +1,93 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Logo } from "@/components/site/Logo";
-
-const title = "Área de Cliente | AS Contabilidade, Fiscalidade e Gestão";
-const description =
-  "Área reservada aos clientes da AS — Contabilidade, Fiscalidade e Gestão. Acesso disponível em breve.";
+import { useState, type FormEvent } from "react";
 
 export const Route = createFileRoute("/login")({
+  component: LoginPage,
   head: () => ({
     meta: [
-      { title },
-      { name: "description", content: description },
-      { property: "og:title", content: title },
-      { property: "og:description", content: description },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "robots", content: "noindex" },
+      { title: "Área de Cliente — AS Contabilidade" },
+      {
+        name: "description",
+        content:
+          "Área de Cliente da AS — Contabilidade, Fiscalidade e Gestão, em Viseu. Entre para consultar documentos e contactar o seu contabilista.",
+      },
     ],
   }),
-  component: LoginPage,
 });
 
-const inputClass =
-  "w-full rounded-2xl border border-gold/25 bg-ink/40 px-5 py-3.5 text-sm text-cream/60 placeholder:text-cream/30 focus:outline-none";
-
 function LoginPage() {
-  return (
-    <div className="relative flex min-h-screen items-center justify-center bg-ink px-6 py-24">
-      <div className="relative w-full max-w-md rounded-[2.5rem] border border-gold/20 bg-ink-soft/70 px-8 py-12">
-        <div className="flex flex-col items-center text-center">
-          <Logo size={56} />
-          <h1 className="mt-8 font-serif text-3xl text-cream">Área de Cliente</h1>
-          <p className="mt-4 text-sm leading-relaxed text-cream/60">
-            O acesso reservado a clientes, com envio de documentos e consulta de
-            informação, estará disponível em breve.
-          </p>
-        </div>
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-        <form className="mt-10 space-y-5" aria-disabled>
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    window.alert("A Área de Cliente ainda não está disponível.");
+  }
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-background px-6 py-24">
+      <div className="w-full max-w-md rounded-[2.5rem] bg-card p-10 shadow-[0_24px_70px_-24px_color-mix(in_oklab,var(--ink)_12%,transparent)] ring-1 ring-gold/15 sm:p-12">
+        <Link
+          to="/"
+          className="inline-flex rounded-full bg-secondary px-4 py-1.5 text-[0.65rem] font-medium uppercase tracking-wider text-foreground/70 transition-colors hover:text-gold"
+        >
+          ← Voltar ao site
+        </Link>
+
+        <h1 className="mt-6 font-serif text-3xl text-foreground sm:text-4xl">
+          Área de Cliente
+        </h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Em breve poderá aceder aos seus documentos e comunicar connosco de forma
+          segura.
+        </p>
+
+        <form onSubmit={handleSubmit} className="mt-10 space-y-5">
           <div>
-            <label htmlFor="email" className="mb-2 block text-xs text-cream/50">
+            <label htmlFor="email" className="mb-2 block text-xs font-medium text-foreground/80">
               Email
             </label>
-            <input id="email" type="email" disabled className={inputClass} />
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/50 focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
+              placeholder="nome@empresa.pt"
+            />
           </div>
           <div>
-            <label htmlFor="password" className="mb-2 block text-xs text-cream/50">
+            <label htmlFor="password" className="mb-2 block text-xs font-medium text-foreground/80">
               Palavra-passe
             </label>
-            <input id="password" type="password" disabled className={inputClass} />
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/50 focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
+              placeholder="••••••••"
+            />
           </div>
           <button
-            type="button"
-            disabled
-            className="w-full rounded-full border border-gold/40 px-8 py-3.5 text-sm text-gold/50"
+            type="submit"
+            className="w-full rounded-full bg-gold py-3.5 text-sm font-medium text-ink transition-all hover:bg-gold-deep"
           >
-            Entrar — Em breve
+            Entrar
           </button>
         </form>
 
-        <div className="mt-10 text-center">
-          <Link
-            to="/"
-            className="text-sm text-cream/50 transition-colors hover:text-gold"
-          >
-            Voltar ao site
-          </Link>
-        </div>
+        <p className="mt-8 text-center text-xs text-muted-foreground/80">
+          Em caso de dúvida, contacte-nos pelo{" "}
+          <a href="tel:+351965378291" className="text-gold underline underline-offset-2">
+            965 378 291
+          </a>{" "}
+          ou{" "}
+          <a href="mailto:geral@as-contabilidade.pt" className="text-gold underline underline-offset-2">
+            email
+          </a>.
+        </p>
       </div>
-    </div>
+    </main>
   );
 }
-
