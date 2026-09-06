@@ -86,6 +86,45 @@ export type Database = {
         }
         Relationships: []
       }
+      month_submissions: {
+        Row: {
+          created_at: string
+          declaration_accepted: boolean
+          document_count: number
+          id: string
+          month: number
+          nif: string
+          submitted_at: string
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          declaration_accepted?: boolean
+          document_count?: number
+          id?: string
+          month: number
+          nif?: string
+          submitted_at?: string
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          declaration_accepted?: boolean
+          document_count?: number
+          id?: string
+          month?: number
+          nif?: string
+          submitted_at?: string
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
