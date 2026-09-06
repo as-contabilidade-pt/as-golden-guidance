@@ -4,6 +4,7 @@ import { Clock, Phone, Mail, MapPin } from "lucide-react";
 import { Section, SectionHeading } from "./Section";
 import { GoldButton } from "./GoldButton";
 import { contactSchema, submitContactMessage } from "@/lib/contact.functions";
+import contactImage from "@/assets/contact-office.jpg";
 
 const inputClass =
   "w-full rounded-2xl border border-gold/25 bg-ink/40 px-5 py-3.5 text-sm text-cream placeholder:text-cream/35 transition-colors focus:border-gold/70 focus:outline-none";
