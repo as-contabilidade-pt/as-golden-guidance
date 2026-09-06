@@ -14,8 +14,9 @@ export function Hero() {
         height={1280}
         className="absolute inset-0 h-full w-full object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/30" aria-hidden />
-      <div className="absolute inset-0 bg-gradient-to-t from-ink via-transparent to-ink/60" aria-hidden />
+      <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/75 to-ink/10" aria-hidden />
+      <div className="absolute inset-0 bg-gradient-to-t from-ink via-transparent to-ink/50" aria-hidden />
+
 
       <div className="relative mx-auto w-full max-w-6xl px-6 py-32">
         <div className="max-w-2xl animate-fade-up">
