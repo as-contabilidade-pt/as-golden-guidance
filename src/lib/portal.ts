@@ -61,3 +61,6 @@ export function formatDateTimePt(value: string | Date) {
 
 export const DECLARATION_TEXT =
   "Declaro que a entrega de documentação fora do prazo estabelecido pode ter consequências ao nível do cumprimento das obrigações fiscais e/ou contributivas, e assumo essa responsabilidade.";
+
+export const SUBMISSION_DECLARATION_TEXT =
+  "Declaro que a documentação entregue está completa, que não oculto documentos necessários à execução da contabilidade, e que tenho conhecimento de que devo manter o arquivo dos documentos originais nos termos das normas fiscais aplicáveis.";
