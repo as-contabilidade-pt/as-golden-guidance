@@ -67,14 +67,14 @@ export function Header() {
       </div>
 
       {open ? (
-        <div className="mx-auto mt-3 max-w-6xl rounded-[2rem] border border-gold/20 bg-ink/95 px-6 py-6 backdrop-blur-xl lg:hidden">
+        <div className="mx-auto mt-3 max-w-6xl rounded-[2rem] border border-gold/25 bg-cream/97 px-6 py-6 shadow-[0_12px_40px_-12px_color-mix(in_oklab,var(--ink)_12%,transparent)] backdrop-blur-xl lg:hidden">
           <nav className="flex flex-col gap-4">
             {links.map((l) => (
               <a
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className="text-sm text-cream/85"
+                className="text-sm text-ink/80"
               >
                 {l.label}
               </a>
