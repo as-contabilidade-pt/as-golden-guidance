@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, Loader2, Plus, UserRound } from "lucide-react";
+import { CheckCircle2, FileSpreadsheet, Loader2, Plus, UserRound } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
 import {
   createClient,
