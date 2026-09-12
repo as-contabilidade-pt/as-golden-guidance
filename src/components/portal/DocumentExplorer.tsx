@@ -562,19 +562,38 @@ export function DocumentExplorer({
                   className="hidden"
                   onChange={(e) => void handleFiles(e.target.files)}
                 />
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => inputRef.current?.click()}
-                  className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
-                >
-                  {busy ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                  Enviar PDF
-                </button>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => inputRef.current?.click()}
+                    className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
+                  >
+                    {busy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    Enviar PDF
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setShowScan(true)}
+                    className="inline-flex items-center gap-2 rounded-full border border-gold px-6 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink disabled:opacity-60"
+                  >
+                    <Camera className="h-4 w-4" />
+                    Digitalizar Documento
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  A digitalização usa a câmara do telemóvel e cria automaticamente um PDF.
+                </p>
+                <ScanDialog
+                  open={showScan}
+                  onClose={() => setShowScan(false)}
+                  onReady={(file) => handleFiles([file])}
+                />
               </div>
             ) : null}
 
