@@ -17,6 +17,7 @@ import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDocumentosRouteImport } from './routes/_authenticated/documentos'
+import { Route as AuthenticatedAdminExtratosRouteImport } from './routes/_authenticated/admin_.extratos'
 import { Route as AuthenticatedAdminClienteClientIdRouteImport } from './routes/_authenticated/admin_.cliente.$clientId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -58,6 +59,12 @@ const AuthenticatedDocumentosRoute = AuthenticatedDocumentosRouteImport.update({
   path: '/documentos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminExtratosRoute =
+  AuthenticatedAdminExtratosRouteImport.update({
+    id: '/admin_/extratos',
+    path: '/admin/extratos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminClienteClientIdRoute =
   AuthenticatedAdminClienteClientIdRouteImport.update({
     id: '/admin_/cliente/$clientId',
@@ -73,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/documentos': typeof AuthenticatedDocumentosRoute
+  '/admin/extratos': typeof AuthenticatedAdminExtratosRoute
   '/admin/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
 }
 export interface FileRoutesByTo {
@@ -83,6 +91,7 @@ export interface FileRoutesByTo {
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/documentos': typeof AuthenticatedDocumentosRoute
+  '/admin/extratos': typeof AuthenticatedAdminExtratosRoute
   '/admin/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
 }
 export interface FileRoutesById {
@@ -95,6 +104,7 @@ export interface FileRoutesById {
   '/termos': typeof TermosRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/documentos': typeof AuthenticatedDocumentosRoute
+  '/_authenticated/admin_/extratos': typeof AuthenticatedAdminExtratosRoute
   '/_authenticated/admin_/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
 }
 export interface FileRouteTypes {
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/admin'
     | '/documentos'
+    | '/admin/extratos'
     | '/admin/cliente/$clientId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/admin'
     | '/documentos'
+    | '/admin/extratos'
     | '/admin/cliente/$clientId'
   id:
     | '__root__'
@@ -128,6 +140,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/_authenticated/admin'
     | '/_authenticated/documentos'
+    | '/_authenticated/admin_/extratos'
     | '/_authenticated/admin_/cliente/$clientId'
   fileRoutesById: FileRoutesById
 }
@@ -198,6 +211,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDocumentosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin_/extratos': {
+      id: '/_authenticated/admin_/extratos'
+      path: '/admin/extratos'
+      fullPath: '/admin/extratos'
+      preLoaderRoute: typeof AuthenticatedAdminExtratosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin_/cliente/$clientId': {
       id: '/_authenticated/admin_/cliente/$clientId'
       path: '/admin/cliente/$clientId'
@@ -211,12 +231,14 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDocumentosRoute: typeof AuthenticatedDocumentosRoute
+  AuthenticatedAdminExtratosRoute: typeof AuthenticatedAdminExtratosRoute
   AuthenticatedAdminClienteClientIdRoute: typeof AuthenticatedAdminClienteClientIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDocumentosRoute: AuthenticatedDocumentosRoute,
+  AuthenticatedAdminExtratosRoute: AuthenticatedAdminExtratosRoute,
   AuthenticatedAdminClienteClientIdRoute:
     AuthenticatedAdminClienteClientIdRoute,
 }
