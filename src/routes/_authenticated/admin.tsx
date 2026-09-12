@@ -94,13 +94,21 @@ function AdminPage() {
       title="Painel de Administração"
       subtitle="Clientes da AS | Contabilidade, Fiscalidade e Gestão."
       action={
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep"
-        >
-          <Plus className="h-4 w-4" /> Novo cliente
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            to="/admin/extratos"
+            className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-3 text-sm font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
+          >
+            <FileSpreadsheet className="h-4 w-4" /> Conversor de Extratos
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep"
+          >
+            <Plus className="h-4 w-4" /> Novo cliente
+          </button>
+        </div>
       }
     >
       {notice ? (
