@@ -10,7 +10,9 @@ import {
   Lock,
   Trash2,
   Upload,
+  Camera,
 } from "lucide-react";
+import { ScanDialog } from "@/components/portal/ScanDialog";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CATEGORIES,
@@ -91,6 +93,7 @@ export function DocumentExplorer({
   const [submissions, setSubmissions] = useState<MonthSubmission[]>([]);
   const [showSubmit, setShowSubmit] = useState(false);
   const [submitAccepted, setSubmitAccepted] = useState(false);
+  const [showScan, setShowScan] = useState(false);
 
   const fetchCounts = useServerFn(countsForYear);
   const fetchDocs = useServerFn(listDocuments);
@@ -220,7 +223,7 @@ export function DocumentExplorer({
     void loadDocs();
   }, [loadDocs]);
 
-  async function handleFiles(files: FileList | null) {
+  async function handleFiles(files: FileList | File[] | null) {
     if (!files || month === null || category === null) return;
     setError(null);
     setBusy(true);
