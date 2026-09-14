@@ -3,13 +3,12 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isMonthPastDeadline } from "@/lib/portal";
 
-const categoryEnum = z.enum([
-  "faturas_compras",
-  "faturas_vendas",
-  "extratos_bancarios",
-  "documentos_salarios",
-  "outros_documentos",
-]);
+const categoryEnum = z
+  .string()
+  .min(1)
+  .max(60)
+  .regex(/^[a-z0-9_]+$/, "Categoria inválida.");
+
 
 async function isAdmin(context: { supabase: any; userId: string }) {
   const { data } = await context.supabase.rpc("has_role", {
