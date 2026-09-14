@@ -52,6 +52,8 @@ type Doc = {
   storage_path: string;
   size_bytes: number | null;
   created_at: string;
+  supplier: string | null;
+  doc_date: string | null;
 };
 
 type MonthSubmission = {
@@ -83,7 +85,10 @@ export function DocumentExplorer({
   const years = availableYears();
   const [year, setYear] = useState(years[0]!);
   const [month, setMonth] = useState<number | null>(null);
-  const [category, setCategory] = useState<CategorySlug | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [supplier, setSupplier] = useState("");
+  const [docDate, setDocDate] = useState(todayInputValue());
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(false);
