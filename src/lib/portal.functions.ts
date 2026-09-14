@@ -545,3 +545,99 @@ export const listRecentSubmissions = createServerFn({ method: "GET" })
       full_name: names[r.user_id] ?? "Cliente",
     }));
   });
+
+/* ---------------------- Categorias de documentos ---------------------- */
+
+function slugify(label: string) {
+  return label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 60);
+}
+
+export const listCategories = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("document_categories")
+      .select("id, slug, label, position")
+      .order("position", { ascending: true })
+      .order("label", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const createCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ label: z.string().trim().min(2).max(60) }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const slug = slugify(data.label);
+    if (!slug) throw new Error("Indique um nome válido para a categoria.");
+
+    const { count } = await context.supabase
+      .from("document_categories")
+      .select("id", { count: "exact", head: true });
+
+    const { data: row, error } = await context.supabase
+      .from("document_categories")
+      .insert({ slug, label: data.label.trim(), position: (count ?? 0) + 1 })
+      .select("id, slug, label, position")
+      .single();
+    if (error) {
+      if (error.message.includes("duplicate")) throw new Error("Já existe uma categoria com este nome.");
+      throw new Error(error.message);
+    }
+    return row;
+  });
+
+export const updateCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), label: z.string().trim().min(2).max(60) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { error } = await context.supabase
+      .from("document_categories")
+      .update({ label: data.label.trim() })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+
+    const { data: cat, error: catError } = await context.supabase
+      .from("document_categories")
+      .select("slug")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (catError) throw new Error(catError.message);
+    if (!cat) throw new Error("Categoria não encontrada.");
+
+    const { count, error: countError } = await context.supabase
+      .from("documents")
+      .select("id", { count: "exact", head: true })
+      .eq("category", cat.slug);
+    if (countError) throw new Error(countError.message);
+    if ((count ?? 0) > 0) {
+      throw new Error(
+        `Não é possível remover: existem ${count} documento(s) nesta categoria. O histórico é preservado.`,
+      );
+    }
+
+    const { error } = await context.supabase
+      .from("document_categories")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
