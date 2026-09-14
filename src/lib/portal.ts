@@ -23,13 +23,38 @@ export const MONTHS = [
   "Dezembro",
 ] as const;
 
-export function categoryLabel(slug: string) {
-  return CATEGORIES.find((c) => c.slug === slug)?.label ?? slug;
+export function categoryLabel(slug: string, categories?: { slug: string; label: string }[]) {
+  const list = categories ?? CATEGORIES;
+  return list.find((c) => c.slug === slug)?.label ?? slug;
 }
 
 export function monthLabel(month: number) {
   return MONTHS[month - 1] ?? String(month);
 }
+
+/** Data de hoje no formato aceite por <input type="date"> (AAAA-MM-DD). */
+export function todayInputValue(now: Date = new Date()) {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+}
+
+/** Converte AAAA-MM-DD em DD-MM-AAAA (formato usado no nome do documento). */
+export function dashedDatePt(value: string) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : value;
+}
+
+/** Nome completo do documento: "{numero} {fornecedor} {data}" (ex: "05-01 EDP 10-05-2026"). */
+export function documentDisplayName(
+  label: string,
+  supplier?: string | null,
+  docDate?: string | null,
+) {
+  return [label, supplier?.trim() || null, docDate ? dashedDatePt(docDate.slice(0, 10)) : null]
+    .filter(Boolean)
+    .join(" ");
+}
+
 
 export function availableYears() {
   const current = new Date().getFullYear();
