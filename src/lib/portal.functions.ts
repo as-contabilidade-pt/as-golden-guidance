@@ -527,17 +527,22 @@ export const submitMonth = createServerFn({ method: "POST" })
     }
 
     try {
-      const { notifyAdminOfSubmission } = await import("@/lib/submission-email.server");
-      await notifyAdminOfSubmission({
+      const { notifyAdminOfSubmission, notifyClientOfSubmission } = await import(
+        "@/lib/submission-email.server"
+      );
+      const info = {
         fullName: profile?.full_name ?? "Cliente",
         nif: profile?.nif ?? "",
+        ...(profile?.email ? { email: profile.email as string } : {}),
         year: data.year,
         month: data.month,
         submittedAt: row.submitted_at as string,
         documentCount: count,
-      });
+      };
+      await notifyAdminOfSubmission(info);
+      await notifyClientOfSubmission(info);
     } catch (e) {
-      console.error("[submitMonth] falha ao notificar a administradora:", e);
+      console.error("[submitMonth] falha ao enviar as notificações:", e);
     }
 
     return row;
