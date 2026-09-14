@@ -114,6 +114,19 @@ export function DocumentExplorer({
   const submitRequest = useServerFn(createUnlockRequest);
   const fetchSubmissions = useServerFn(listMonthSubmissions);
   const sendSubmission = useServerFn(submitMonth);
+  const fetchCategories = useServerFn(listCategories);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        setCategories((await fetchCategories()) as unknown as Category[]);
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [fetchCategories]);
+
+
 
   const loadSubmissions = useCallback(async () => {
     try {
