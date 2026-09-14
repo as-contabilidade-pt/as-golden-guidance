@@ -420,16 +420,41 @@ export const decideUnlockRequest = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
-    const { error } = await context.supabase
+    const decidedAt = new Date().toISOString();
+    const { data: row, error } = await context.supabase
       .from("unlock_requests")
       .update({
         status: data.decision,
         admin_note: data.note ?? null,
         decided_by: context.userId,
-        decided_at: new Date().toISOString(),
+        decided_at: decidedAt,
       })
-      .eq("id", data.id);
+      .eq("id", data.id)
+      .select("user_id, nif, year, month, reason")
+      .single();
     if (error) throw new Error(error.message);
+
+    try {
+      const { data: profile } = await context.supabase
+        .from("profiles")
+        .select("full_name, email, nif")
+        .eq("id", row.user_id)
+        .maybeSingle();
+      const { notifyUnlockDecision } = await import("@/lib/submission-email.server");
+      await notifyUnlockDecision({
+        fullName: profile?.full_name ?? "Cliente",
+        nif: profile?.nif ?? row.nif ?? "",
+        ...(profile?.email ? { email: profile.email as string } : {}),
+        year: row.year,
+        month: row.month,
+        reason: row.reason,
+        decision: data.decision,
+        decidedAt,
+      });
+    } catch (e) {
+      console.error("[decideUnlockRequest] falha ao enviar comprovativo:", e);
+    }
+
     return { ok: true };
   });
 
