@@ -585,18 +585,53 @@ export function DocumentExplorer({
                 )}
               </div>
             ) : !readOnly ? (
-              <div className="soft-card flex flex-col items-center gap-3 p-8 text-center">
+              <div className="soft-card flex flex-col gap-4 p-6 sm:p-8">
                 <p className="text-sm text-muted-foreground">
                   Envie os seus documentos em PDF. Cada documento recebe um número automático.
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block text-left">
+                    <span className="mb-2 block text-xs font-medium text-foreground/80">
+                      Fornecedor
+                    </span>
+                    <input
+                      type="text"
+                      value={supplier}
+                      onChange={(e) => setSupplier(e.target.value)}
+                      placeholder="Ex: EDP"
+                      className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
+                    />
+                  </label>
+                  <label className="block text-left">
+                    <span className="mb-2 block text-xs font-medium text-foreground/80">
+                      Data do documento
+                    </span>
+                    <input
+                      type="date"
+                      value={docDate}
+                      onChange={(e) => setDocDate(e.target.value)}
+                      className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
+                    />
+                  </label>
+                </div>
+                <p className="text-left text-xs text-muted-foreground">
+                  Nome final do documento:{" "}
+                  <span className="text-gold">
+                    {documentDisplayName(
+                      `${String(month).padStart(2, "0")}-NN`,
+                      supplier || "Fornecedor",
+                      docDate,
+                    )}
+                  </span>
                 </p>
                 <input
                   ref={inputRef}
                   type="file"
                   accept="application/pdf"
-                  multiple
                   className="hidden"
                   onChange={(e) => void handleFiles(e.target.files)}
                 />
+
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <button
                     type="button"
