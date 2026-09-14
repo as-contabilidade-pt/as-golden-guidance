@@ -21,7 +21,7 @@ const principios = [
 
 export function Principles() {
   return (
-    <Section id="principios" className="relative bg-secondary">
+    <Section id="principios" className="relative bg-background">
       <div className="grid items-center gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
         <div className="relative order-2 lg:order-1">
           <img
