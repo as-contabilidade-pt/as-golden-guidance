@@ -88,7 +88,9 @@ export const listDocuments = createServerFn({ method: "POST" })
 
     const { data: rows, error } = await context.supabase
       .from("documents")
-      .select("id, label, original_name, storage_path, size_bytes, created_at")
+      .select(
+        "id, label, original_name, storage_path, size_bytes, created_at, supplier, doc_date",
+      )
       .eq("user_id", target)
       .eq("year", data.year)
       .eq("month", data.month)
@@ -124,7 +126,13 @@ export const countsForYear = createServerFn({ method: "POST" })
 export const reserveDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    listSchema.extend({ originalName: z.string().min(1).max(200) }).parse(d),
+    listSchema
+      .extend({
+        originalName: z.string().min(1).max(200),
+        supplier: z.string().trim().min(1).max(80),
+        docDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data do documento inválida."),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const admin = await isAdmin(context);
