@@ -248,6 +248,14 @@ export function DocumentExplorer({
   async function handleFiles(files: FileList | File[] | null) {
     if (!files || month === null || category === null) return;
     setError(null);
+    if (!supplier.trim()) {
+      setError("Indique o fornecedor do documento antes de enviar.");
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(docDate)) {
+      setError("Indique a data do documento.");
+      return;
+    }
     setBusy(true);
     try {
       for (const file of Array.from(files)) {
@@ -260,6 +268,8 @@ export function DocumentExplorer({
             month,
             category,
             originalName: file.name,
+            supplier: supplier.trim(),
+            docDate,
             ...(clientId ? { clientId } : {}),
           },
         })) as { id: string; storage_path: string };
@@ -276,6 +286,8 @@ export function DocumentExplorer({
         }
         await confirm({ data: { id: reserved.id, sizeBytes: file.size } });
       }
+      setSupplier("");
+      setDocDate(todayInputValue());
       await loadDocs();
       await loadCounts();
     } catch (e) {
@@ -285,6 +297,7 @@ export function DocumentExplorer({
       if (inputRef.current) inputRef.current.value = "";
     }
   }
+
 
   async function handleDownload(id: string) {
     try {
