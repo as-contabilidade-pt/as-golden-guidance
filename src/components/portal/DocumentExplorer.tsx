@@ -15,7 +15,6 @@ import {
 import { ScanDialog } from "@/components/portal/ScanDialog";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  CATEGORIES,
   MONTHS,
   availableYears,
   categoryLabel,
@@ -24,9 +23,10 @@ import {
   lockDate,
   formatDatePt,
   formatDateTimePt,
+  documentDisplayName,
+  todayInputValue,
   DECLARATION_TEXT,
   SUBMISSION_DECLARATION_TEXT,
-  type CategorySlug,
 } from "@/lib/portal";
 import {
   confirmDocument,
@@ -39,7 +39,11 @@ import {
   createUnlockRequest,
   listMonthSubmissions,
   submitMonth,
+  listCategories,
 } from "@/lib/portal.functions";
+
+type Category = { id: string; slug: string; label: string; position: number };
+
 
 type Doc = {
   id: string;
