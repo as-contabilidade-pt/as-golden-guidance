@@ -3,13 +3,12 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isMonthPastDeadline } from "@/lib/portal";
 
-const categoryEnum = z.enum([
-  "faturas_compras",
-  "faturas_vendas",
-  "extratos_bancarios",
-  "documentos_salarios",
-  "outros_documentos",
-]);
+const categoryEnum = z
+  .string()
+  .min(1)
+  .max(60)
+  .regex(/^[a-z0-9_]+$/, "Categoria inválida.");
+
 
 async function isAdmin(context: { supabase: any; userId: string }) {
   const { data } = await context.supabase.rpc("has_role", {
@@ -89,7 +88,9 @@ export const listDocuments = createServerFn({ method: "POST" })
 
     const { data: rows, error } = await context.supabase
       .from("documents")
-      .select("id, label, original_name, storage_path, size_bytes, created_at")
+      .select(
+        "id, label, original_name, storage_path, size_bytes, created_at, supplier, doc_date",
+      )
       .eq("user_id", target)
       .eq("year", data.year)
       .eq("month", data.month)
@@ -125,7 +126,13 @@ export const countsForYear = createServerFn({ method: "POST" })
 export const reserveDocument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    listSchema.extend({ originalName: z.string().min(1).max(200) }).parse(d),
+    listSchema
+      .extend({
+        originalName: z.string().min(1).max(200),
+        supplier: z.string().trim().min(1).max(80),
+        docDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data do documento inválida."),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const admin = await isAdmin(context);
@@ -138,6 +145,14 @@ export const reserveDocument = createServerFn({ method: "POST" })
     if (!data.originalName.toLowerCase().endsWith(".pdf")) {
       throw new Error("Apenas são aceites ficheiros PDF.");
     }
+
+    const { data: cat } = await context.supabase
+      .from("document_categories")
+      .select("slug")
+      .eq("slug", data.category)
+      .maybeSingle();
+    if (!cat) throw new Error("Esta categoria já não existe.");
+
 
     for (let attempt = 0; attempt < 8; attempt++) {
       const { count, error: countError } = await context.supabase
@@ -164,8 +179,10 @@ export const reserveDocument = createServerFn({ method: "POST" })
           label,
           original_name: data.originalName,
           storage_path: storagePath,
+          supplier: data.supplier.trim(),
+          doc_date: data.docDate,
         })
-        .select("id, label, storage_path")
+        .select("id, label, storage_path, supplier, doc_date")
         .single();
 
       if (!error && inserted) return inserted;
@@ -403,16 +420,41 @@ export const decideUnlockRequest = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
-    const { error } = await context.supabase
+    const decidedAt = new Date().toISOString();
+    const { data: row, error } = await context.supabase
       .from("unlock_requests")
       .update({
         status: data.decision,
         admin_note: data.note ?? null,
         decided_by: context.userId,
-        decided_at: new Date().toISOString(),
+        decided_at: decidedAt,
       })
-      .eq("id", data.id);
+      .eq("id", data.id)
+      .select("user_id, nif, year, month, reason")
+      .single();
     if (error) throw new Error(error.message);
+
+    try {
+      const { data: profile } = await context.supabase
+        .from("profiles")
+        .select("full_name, email, nif")
+        .eq("id", row.user_id)
+        .maybeSingle();
+      const { notifyUnlockDecision } = await import("@/lib/submission-email.server");
+      await notifyUnlockDecision({
+        fullName: profile?.full_name ?? "Cliente",
+        nif: profile?.nif ?? row.nif ?? "",
+        ...(profile?.email ? { email: profile.email as string } : {}),
+        year: row.year,
+        month: row.month,
+        reason: row.reason,
+        decision: data.decision,
+        decidedAt,
+      });
+    } catch (e) {
+      console.error("[decideUnlockRequest] falha ao enviar comprovativo:", e);
+    }
+
     return { ok: true };
   });
 
@@ -485,17 +527,22 @@ export const submitMonth = createServerFn({ method: "POST" })
     }
 
     try {
-      const { notifyAdminOfSubmission } = await import("@/lib/submission-email.server");
-      await notifyAdminOfSubmission({
+      const { notifyAdminOfSubmission, notifyClientOfSubmission } = await import(
+        "@/lib/submission-email.server"
+      );
+      const info = {
         fullName: profile?.full_name ?? "Cliente",
         nif: profile?.nif ?? "",
+        ...(profile?.email ? { email: profile.email as string } : {}),
         year: data.year,
         month: data.month,
         submittedAt: row.submitted_at as string,
         documentCount: count,
-      });
+      };
+      await notifyAdminOfSubmission(info);
+      await notifyClientOfSubmission(info);
     } catch (e) {
-      console.error("[submitMonth] falha ao notificar a administradora:", e);
+      console.error("[submitMonth] falha ao enviar as notificações:", e);
     }
 
     return row;
@@ -527,4 +574,100 @@ export const listRecentSubmissions = createServerFn({ method: "GET" })
       ...r,
       full_name: names[r.user_id] ?? "Cliente",
     }));
+  });
+
+/* ---------------------- Categorias de documentos ---------------------- */
+
+function slugify(label: string) {
+  return label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 60);
+}
+
+export const listCategories = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("document_categories")
+      .select("id, slug, label, position")
+      .order("position", { ascending: true })
+      .order("label", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const createCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ label: z.string().trim().min(2).max(60) }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const slug = slugify(data.label);
+    if (!slug) throw new Error("Indique um nome válido para a categoria.");
+
+    const { count } = await context.supabase
+      .from("document_categories")
+      .select("id", { count: "exact", head: true });
+
+    const { data: row, error } = await context.supabase
+      .from("document_categories")
+      .insert({ slug, label: data.label.trim(), position: (count ?? 0) + 1 })
+      .select("id, slug, label, position")
+      .single();
+    if (error) {
+      if (error.message.includes("duplicate")) throw new Error("Já existe uma categoria com este nome.");
+      throw new Error(error.message);
+    }
+    return row;
+  });
+
+export const updateCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), label: z.string().trim().min(2).max(60) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { error } = await context.supabase
+      .from("document_categories")
+      .update({ label: data.label.trim() })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+
+    const { data: cat, error: catError } = await context.supabase
+      .from("document_categories")
+      .select("slug")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (catError) throw new Error(catError.message);
+    if (!cat) throw new Error("Categoria não encontrada.");
+
+    const { count, error: countError } = await context.supabase
+      .from("documents")
+      .select("id", { count: "exact", head: true })
+      .eq("category", cat.slug);
+    if (countError) throw new Error(countError.message);
+    if ((count ?? 0) > 0) {
+      throw new Error(
+        `Não é possível remover: existem ${count} documento(s) nesta categoria. O histórico é preservado.`,
+      );
+    }
+
+    const { error } = await context.supabase
+      .from("document_categories")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

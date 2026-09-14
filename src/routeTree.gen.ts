@@ -19,6 +19,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedDocumentosRouteImport } from './routes/_authenticated/documentos'
 import { Route as AuthenticatedAdminExtratosRouteImport } from './routes/_authenticated/admin_.extratos'
 import { Route as AuthenticatedAdminClienteClientIdRouteImport } from './routes/_authenticated/admin_.cliente.$clientId'
+import { Route as AuthenticatedAdminDefinicoesCategoriasRouteImport } from './routes/_authenticated/admin_.definicoes.categorias'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -71,6 +72,12 @@ const AuthenticatedAdminClienteClientIdRoute =
     path: '/admin/cliente/$clientId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminDefinicoesCategoriasRoute =
+  AuthenticatedAdminDefinicoesCategoriasRouteImport.update({
+    id: '/admin_/definicoes/categorias',
+    path: '/admin/definicoes/categorias',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/documentos': typeof AuthenticatedDocumentosRoute
   '/admin/extratos': typeof AuthenticatedAdminExtratosRoute
   '/admin/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
+  '/admin/definicoes/categorias': typeof AuthenticatedAdminDefinicoesCategoriasRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -93,6 +101,7 @@ export interface FileRoutesByTo {
   '/documentos': typeof AuthenticatedDocumentosRoute
   '/admin/extratos': typeof AuthenticatedAdminExtratosRoute
   '/admin/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
+  '/admin/definicoes/categorias': typeof AuthenticatedAdminDefinicoesCategoriasRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -106,6 +115,7 @@ export interface FileRoutesById {
   '/_authenticated/documentos': typeof AuthenticatedDocumentosRoute
   '/_authenticated/admin_/extratos': typeof AuthenticatedAdminExtratosRoute
   '/_authenticated/admin_/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
+  '/_authenticated/admin_/definicoes/categorias': typeof AuthenticatedAdminDefinicoesCategoriasRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/documentos'
     | '/admin/extratos'
     | '/admin/cliente/$clientId'
+    | '/admin/definicoes/categorias'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/documentos'
     | '/admin/extratos'
     | '/admin/cliente/$clientId'
+    | '/admin/definicoes/categorias'
   id:
     | '__root__'
     | '/'
@@ -142,6 +154,7 @@ export interface FileRouteTypes {
     | '/_authenticated/documentos'
     | '/_authenticated/admin_/extratos'
     | '/_authenticated/admin_/cliente/$clientId'
+    | '/_authenticated/admin_/definicoes/categorias'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -225,6 +238,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminClienteClientIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin_/definicoes/categorias': {
+      id: '/_authenticated/admin_/definicoes/categorias'
+      path: '/admin/definicoes/categorias'
+      fullPath: '/admin/definicoes/categorias'
+      preLoaderRoute: typeof AuthenticatedAdminDefinicoesCategoriasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -233,6 +253,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDocumentosRoute: typeof AuthenticatedDocumentosRoute
   AuthenticatedAdminExtratosRoute: typeof AuthenticatedAdminExtratosRoute
   AuthenticatedAdminClienteClientIdRoute: typeof AuthenticatedAdminClienteClientIdRoute
+  AuthenticatedAdminDefinicoesCategoriasRoute: typeof AuthenticatedAdminDefinicoesCategoriasRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -241,6 +262,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminExtratosRoute: AuthenticatedAdminExtratosRoute,
   AuthenticatedAdminClienteClientIdRoute:
     AuthenticatedAdminClienteClientIdRoute,
+  AuthenticatedAdminDefinicoesCategoriasRoute:
+    AuthenticatedAdminDefinicoesCategoriasRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

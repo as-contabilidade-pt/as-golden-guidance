@@ -15,7 +15,6 @@ import {
 import { ScanDialog } from "@/components/portal/ScanDialog";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  CATEGORIES,
   MONTHS,
   availableYears,
   categoryLabel,
@@ -24,9 +23,10 @@ import {
   lockDate,
   formatDatePt,
   formatDateTimePt,
+  documentDisplayName,
+  todayInputValue,
   DECLARATION_TEXT,
   SUBMISSION_DECLARATION_TEXT,
-  type CategorySlug,
 } from "@/lib/portal";
 import {
   confirmDocument,
@@ -39,7 +39,11 @@ import {
   createUnlockRequest,
   listMonthSubmissions,
   submitMonth,
+  listCategories,
 } from "@/lib/portal.functions";
+
+type Category = { id: string; slug: string; label: string; position: number };
+
 
 type Doc = {
   id: string;
@@ -48,6 +52,8 @@ type Doc = {
   storage_path: string;
   size_bytes: number | null;
   created_at: string;
+  supplier: string | null;
+  doc_date: string | null;
 };
 
 type MonthSubmission = {
@@ -79,7 +85,10 @@ export function DocumentExplorer({
   const years = availableYears();
   const [year, setYear] = useState(years[0]!);
   const [month, setMonth] = useState<number | null>(null);
-  const [category, setCategory] = useState<CategorySlug | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [supplier, setSupplier] = useState("");
+  const [docDate, setDocDate] = useState(todayInputValue());
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(false);
@@ -105,6 +114,19 @@ export function DocumentExplorer({
   const submitRequest = useServerFn(createUnlockRequest);
   const fetchSubmissions = useServerFn(listMonthSubmissions);
   const sendSubmission = useServerFn(submitMonth);
+  const fetchCategories = useServerFn(listCategories);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        setCategories((await fetchCategories()) as unknown as Category[]);
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [fetchCategories]);
+
+
 
   const loadSubmissions = useCallback(async () => {
     try {
@@ -226,6 +248,14 @@ export function DocumentExplorer({
   async function handleFiles(files: FileList | File[] | null) {
     if (!files || month === null || category === null) return;
     setError(null);
+    if (!supplier.trim()) {
+      setError("Indique o fornecedor do documento antes de enviar.");
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(docDate)) {
+      setError("Indique a data do documento.");
+      return;
+    }
     setBusy(true);
     try {
       for (const file of Array.from(files)) {
@@ -238,6 +268,8 @@ export function DocumentExplorer({
             month,
             category,
             originalName: file.name,
+            supplier: supplier.trim(),
+            docDate,
             ...(clientId ? { clientId } : {}),
           },
         })) as { id: string; storage_path: string };
@@ -254,6 +286,8 @@ export function DocumentExplorer({
         }
         await confirm({ data: { id: reserved.id, sizeBytes: file.size } });
       }
+      setSupplier("");
+      setDocDate(todayInputValue());
       await loadDocs();
       await loadCounts();
     } catch (e) {
@@ -263,6 +297,7 @@ export function DocumentExplorer({
       if (inputRef.current) inputRef.current.value = "";
     }
   }
+
 
   async function handleDownload(id: string) {
     try {
@@ -317,7 +352,7 @@ export function DocumentExplorer({
           <>
             <ChevronRight className="h-4 w-4 text-gold/60" />
             <span className="rounded-full bg-gold/15 px-4 py-1.5 text-xs font-medium text-gold">
-              {categoryLabel(category)}
+              {categoryLabel(category, categories)}
             </span>
           </>
         ) : null}
@@ -370,7 +405,7 @@ export function DocumentExplorer({
         ) : category === null ? (
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {CATEGORIES.map((c) => (
+              {categories.map((c) => (
                 <FolderCard
                   key={c.slug}
                   title={c.label}
@@ -550,22 +585,57 @@ export function DocumentExplorer({
                 )}
               </div>
             ) : !readOnly ? (
-              <div className="soft-card flex flex-col items-center gap-3 p-8 text-center">
+              <div className="soft-card flex flex-col gap-4 p-6 sm:p-8">
                 <p className="text-sm text-muted-foreground">
                   Envie os seus documentos em PDF. Cada documento recebe um número automático.
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block text-left">
+                    <span className="mb-2 block text-xs font-medium text-foreground/80">
+                      Fornecedor
+                    </span>
+                    <input
+                      type="text"
+                      value={supplier}
+                      onChange={(e) => setSupplier(e.target.value)}
+                      placeholder="Ex: EDP"
+                      className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
+                    />
+                  </label>
+                  <label className="block text-left">
+                    <span className="mb-2 block text-xs font-medium text-foreground/80">
+                      Data do documento
+                    </span>
+                    <input
+                      type="date"
+                      value={docDate}
+                      onChange={(e) => setDocDate(e.target.value)}
+                      className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
+                    />
+                  </label>
+                </div>
+                <p className="text-left text-xs text-muted-foreground">
+                  Nome final do documento:{" "}
+                  <span className="text-gold">
+                    {documentDisplayName(
+                      `${String(month).padStart(2, "0")}-NN`,
+                      supplier || "Fornecedor",
+                      docDate,
+                    )}
+                  </span>
                 </p>
                 <input
                   ref={inputRef}
                   type="file"
                   accept="application/pdf"
-                  multiple
                   className="hidden"
                   onChange={(e) => void handleFiles(e.target.files)}
                 />
+
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <button
                     type="button"
-                    disabled={busy}
+                    disabled={busy || !supplier.trim() || !docDate}
                     onClick={() => inputRef.current?.click()}
                     className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
                   >
@@ -578,7 +648,7 @@ export function DocumentExplorer({
                   </button>
                   <button
                     type="button"
-                    disabled={busy}
+                    disabled={busy || !supplier.trim() || !docDate}
                     onClick={() => setShowScan(true)}
                     className="inline-flex items-center gap-2 rounded-full border border-gold px-6 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink disabled:opacity-60"
                   >
@@ -614,7 +684,9 @@ export function DocumentExplorer({
                       <FileText className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-serif text-lg text-foreground">{d.label}</p>
+                      <p className="font-serif text-lg text-foreground">
+                        {documentDisplayName(d.label, d.supplier, d.doc_date)}
+                      </p>
                       <p className="truncate text-xs text-muted-foreground">
                         {d.original_name} ·{" "}
                         {new Date(d.created_at).toLocaleDateString("pt-PT")}

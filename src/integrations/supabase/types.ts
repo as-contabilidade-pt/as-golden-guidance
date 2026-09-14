@@ -41,10 +41,38 @@ export type Database = {
         }
         Relationships: []
       }
+      document_categories: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          position: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          position?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          position?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
-          category: Database["public"]["Enums"]["doc_category"]
+          category: string
           created_at: string
+          doc_date: string | null
           id: string
           label: string
           month: number
@@ -52,13 +80,15 @@ export type Database = {
           seq: number
           size_bytes: number | null
           storage_path: string
+          supplier: string
           updated_at: string
           user_id: string
           year: number
         }
         Insert: {
-          category: Database["public"]["Enums"]["doc_category"]
+          category: string
           created_at?: string
+          doc_date?: string | null
           id?: string
           label: string
           month: number
@@ -66,13 +96,15 @@ export type Database = {
           seq: number
           size_bytes?: number | null
           storage_path: string
+          supplier?: string
           updated_at?: string
           user_id: string
           year: number
         }
         Update: {
-          category?: Database["public"]["Enums"]["doc_category"]
+          category?: string
           created_at?: string
+          doc_date?: string | null
           id?: string
           label?: string
           month?: number
@@ -80,6 +112,7 @@ export type Database = {
           seq?: number
           size_bytes?: number | null
           storage_path?: string
+          supplier?: string
           updated_at?: string
           user_id?: string
           year?: number
