@@ -146,6 +146,14 @@ export const reserveDocument = createServerFn({ method: "POST" })
       throw new Error("Apenas são aceites ficheiros PDF.");
     }
 
+    const { data: cat } = await context.supabase
+      .from("document_categories")
+      .select("slug")
+      .eq("slug", data.category)
+      .maybeSingle();
+    if (!cat) throw new Error("Esta categoria já não existe.");
+
+
     for (let attempt = 0; attempt < 8; attempt++) {
       const { count, error: countError } = await context.supabase
         .from("documents")
@@ -171,8 +179,10 @@ export const reserveDocument = createServerFn({ method: "POST" })
           label,
           original_name: data.originalName,
           storage_path: storagePath,
+          supplier: data.supplier.trim(),
+          doc_date: data.docDate,
         })
-        .select("id, label, storage_path")
+        .select("id, label, storage_path, supplier, doc_date")
         .single();
 
       if (!error && inserted) return inserted;
