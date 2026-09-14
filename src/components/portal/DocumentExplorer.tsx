@@ -405,7 +405,7 @@ export function DocumentExplorer({
         ) : category === null ? (
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {CATEGORIES.map((c) => (
+              {categories.map((c) => (
                 <FolderCard
                   key={c.slug}
                   title={c.label}
