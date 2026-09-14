@@ -635,7 +635,7 @@ export function DocumentExplorer({
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <button
                     type="button"
-                    disabled={busy}
+                    disabled={busy || !supplier.trim() || !docDate}
                     onClick={() => inputRef.current?.click()}
                     className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
                   >
@@ -648,7 +648,7 @@ export function DocumentExplorer({
                   </button>
                   <button
                     type="button"
-                    disabled={busy}
+                    disabled={busy || !supplier.trim() || !docDate}
                     onClick={() => setShowScan(true)}
                     className="inline-flex items-center gap-2 rounded-full border border-gold px-6 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink disabled:opacity-60"
                   >
@@ -684,7 +684,9 @@ export function DocumentExplorer({
                       <FileText className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-serif text-lg text-foreground">{d.label}</p>
+                      <p className="font-serif text-lg text-foreground">
+                        {documentDisplayName(d.label, d.supplier, d.doc_date)}
+                      </p>
                       <p className="truncate text-xs text-muted-foreground">
                         {d.original_name} ·{" "}
                         {new Date(d.created_at).toLocaleDateString("pt-PT")}
