@@ -65,7 +65,7 @@ export function Services() {
         <SectionHeading overline="O que fazemos" title="Serviços" />
 
         <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.45fr)_minmax(0,0.78fr)] lg:grid-rows-3 lg:items-stretch">
-          <div className="group relative min-h-96 overflow-hidden rounded-[2rem] md:col-span-2 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:min-h-[44rem]">
+          <div className="group relative min-h-96 overflow-hidden rounded-[2rem] md:col-span-2 lg:col-span-1 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:min-h-[44rem]">
             <img
               src={servicesImage}
               alt="Mãos a rever documentos financeiros com caneta dourada e gráficos no computador"
