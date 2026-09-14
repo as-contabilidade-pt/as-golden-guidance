@@ -352,7 +352,7 @@ export function DocumentExplorer({
           <>
             <ChevronRight className="h-4 w-4 text-gold/60" />
             <span className="rounded-full bg-gold/15 px-4 py-1.5 text-xs font-medium text-gold">
-              {categoryLabel(category)}
+              {categoryLabel(category, categories)}
             </span>
           </>
         ) : null}
