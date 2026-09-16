@@ -344,6 +344,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      verify_reminder_token: { Args: { _token: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "cliente"
