@@ -1,7 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { isMonthPastDeadline } from "@/lib/portal";
+import {
+  isMonthPastDeadline,
+  buildUnlockDeclaration,
+  buildSubmissionDeclaration,
+} from "@/lib/portal";
 
 const categoryEnum = z
   .string()
@@ -16,6 +20,30 @@ async function isAdmin(context: { supabase: any; userId: string }) {
     _role: "admin",
   });
   return data === true;
+}
+
+/** Dados da ficha do cliente usados no preenchimento automático das declarações. */
+async function clientIdentity(context: { supabase: any }, userId: string) {
+  const { data: record } = await context.supabase
+    .from("client_records")
+    .select("name, nif, email, responsible_name, folder_active, client_number")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const { data: profile } = await context.supabase
+    .from("profiles")
+    .select("full_name, nif, email")
+    .eq("id", userId)
+    .maybeSingle();
+
+  return {
+    companyName: record?.name || profile?.full_name || "",
+    nif: record?.nif || profile?.nif || "",
+    email: record?.email || profile?.email || "",
+    responsibleName: record?.responsible_name || "",
+    clientNumber: record?.client_number || "",
+    folderActive: record ? Boolean(record.folder_active) : true,
+  };
 }
 
 async function monthIsSubmitted(
