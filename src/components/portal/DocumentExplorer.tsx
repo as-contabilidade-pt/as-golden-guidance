@@ -11,6 +11,7 @@ import {
   Trash2,
   Upload,
   Camera,
+  AlertTriangle,
 } from "lucide-react";
 import { ScanDialog } from "@/components/portal/ScanDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +27,9 @@ import {
   documentDisplayName,
   todayInputValue,
   DECLARATION_TEXT,
+  DECLARATION_CHECKBOX,
   SUBMISSION_DECLARATION_TEXT,
+  SUBMISSION_DECLARATION_CHECKBOX,
 } from "@/lib/portal";
 import {
   confirmDocument,
@@ -40,7 +43,9 @@ import {
   listMonthSubmissions,
   submitMonth,
   listCategories,
+  getMyClientIdentity,
 } from "@/lib/portal.functions";
+
 
 type Category = { id: string; slug: string; label: string; position: number };
 
@@ -54,7 +59,10 @@ type Doc = {
   created_at: string;
   supplier: string | null;
   doc_date: string | null;
+  late?: boolean | null;
+  late_submitted_at?: string | null;
 };
+
 
 type MonthSubmission = {
   id: string;
@@ -103,6 +111,12 @@ export function DocumentExplorer({
   const [showSubmit, setShowSubmit] = useState(false);
   const [submitAccepted, setSubmitAccepted] = useState(false);
   const [showScan, setShowScan] = useState(false);
+  const [identity, setIdentity] = useState<{
+    companyName: string;
+    nif: string;
+    responsibleName: string;
+  } | null>(null);
+  const [responsibleName, setResponsibleName] = useState("");
 
   const fetchCounts = useServerFn(countsForYear);
   const fetchDocs = useServerFn(listDocuments);
@@ -115,6 +129,7 @@ export function DocumentExplorer({
   const fetchSubmissions = useServerFn(listMonthSubmissions);
   const sendSubmission = useServerFn(submitMonth);
   const fetchCategories = useServerFn(listCategories);
+  const fetchIdentity = useServerFn(getMyClientIdentity);
 
   useEffect(() => {
     void (async () => {
@@ -125,6 +140,24 @@ export function DocumentExplorer({
       }
     })();
   }, [fetchCategories]);
+
+  useEffect(() => {
+    if (readOnly) return;
+    void (async () => {
+      try {
+        const info = (await fetchIdentity()) as unknown as {
+          companyName: string;
+          nif: string;
+          responsibleName: string;
+        };
+        setIdentity(info);
+        setResponsibleName(info.responsibleName ?? "");
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [fetchIdentity, readOnly]);
+
 
 
 
@@ -209,7 +242,14 @@ export function DocumentExplorer({
     setBusy(true);
     setError(null);
     try {
-      await sendSubmission({ data: { year, month, declarationAccepted: true as const } });
+      await sendSubmission({
+        data: {
+          year,
+          month,
+          responsibleName: responsibleName.trim(),
+          declarationAccepted: true as const,
+        },
+      });
       setShowSubmit(false);
       setSubmitAccepted(false);
       await loadSubmissions();
@@ -228,8 +268,15 @@ export function DocumentExplorer({
     setError(null);
     try {
       await submitRequest({
-        data: { year, month, reason, declarationAccepted: true as const },
+        data: {
+          year,
+          month,
+          reason,
+          responsibleName: responsibleName.trim(),
+          declarationAccepted: true as const,
+        },
       });
+
       setReason("");
       setAccepted(false);
       setShowForm(false);
@@ -436,15 +483,46 @@ export function DocumentExplorer({
                 {showSubmit ? (
                   <div className="space-y-4">
                     <p className="font-serif text-xl text-foreground">Confirmar submissão</p>
-                    <label className="flex items-start gap-3 text-xs text-muted-foreground">
+                    <div className="rounded-2xl border border-gold/20 bg-background px-5 py-4 text-xs text-muted-foreground">
+                      <p>
+                        <strong className="text-foreground">NIF DA EMPRESA:</strong>{" "}
+                        {identity?.nif || "—"}
+                      </p>
+                      <p>
+                        <strong className="text-foreground">NOME DA EMPRESA:</strong>{" "}
+                        {identity?.companyName || "—"}
+                      </p>
+                      <p>
+                        <strong className="text-foreground">PERÍODO:</strong> {monthLabel(month)}/
+                        {year}
+                      </p>
+                    </div>
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium text-foreground/80">
+                        Nome do responsável
+                      </span>
+                      <input
+                        value={responsibleName}
+                        onChange={(e) => setResponsibleName(e.target.value)}
+                        className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50"
+                      />
+                    </label>
+                    <p className="text-xs font-medium uppercase tracking-wide text-foreground/80">
+                      Declaração de conclusão da entrega
+                    </p>
+                    <p className="rounded-2xl bg-secondary px-5 py-4 text-xs leading-relaxed text-muted-foreground">
+                      {SUBMISSION_DECLARATION_TEXT}
+                    </p>
+                    <label className="flex items-start gap-3 text-xs text-foreground">
                       <input
                         type="checkbox"
                         checked={submitAccepted}
                         onChange={(e) => setSubmitAccepted(e.target.checked)}
                         className="mt-0.5 h-4 w-4 accent-[color:var(--gold)]"
                       />
-                      <span>{SUBMISSION_DECLARATION_TEXT}</span>
+                      <span>{SUBMISSION_DECLARATION_CHECKBOX}</span>
                     </label>
+
                     <div className="flex flex-wrap gap-3">
                       <button
                         type="button"
@@ -535,6 +613,30 @@ export function DocumentExplorer({
                   </div>
                 ) : showForm ? (
                   <form onSubmit={onSubmitRequest} className="mt-5 space-y-4">
+                    <div className="rounded-2xl border border-gold/20 bg-background px-5 py-4 text-xs text-muted-foreground">
+                      <p>
+                        <strong className="text-foreground">NIF DA EMPRESA:</strong>{" "}
+                        {identity?.nif || "—"}
+                      </p>
+                      <p>
+                        <strong className="text-foreground">NOME DA EMPRESA:</strong>{" "}
+                        {identity?.companyName || "—"}
+                      </p>
+                      <p>
+                        <strong className="text-foreground">PERÍODO A REABRIR:</strong>{" "}
+                        {monthLabel(month)}/{year}
+                      </p>
+                    </div>
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium text-foreground/80">
+                        Nome do responsável
+                      </span>
+                      <input
+                        value={responsibleName}
+                        onChange={(e) => setResponsibleName(e.target.value)}
+                        className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50"
+                      />
+                    </label>
                     <label className="block">
                       <span className="mb-2 block text-xs font-medium text-foreground/80">
                         Motivo da entrega fora de prazo
@@ -547,15 +649,19 @@ export function DocumentExplorer({
                         className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
                       />
                     </label>
-                    <label className="flex items-start gap-3 text-xs text-muted-foreground">
+                    <p className="rounded-2xl bg-secondary px-5 py-4 text-xs leading-relaxed text-muted-foreground">
+                      {DECLARATION_TEXT}
+                    </p>
+                    <label className="flex items-start gap-3 text-xs text-foreground">
                       <input
                         type="checkbox"
                         checked={accepted}
                         onChange={(e) => setAccepted(e.target.checked)}
                         className="mt-0.5 h-4 w-4 accent-[color:var(--gold)]"
                       />
-                      <span>{DECLARATION_TEXT}</span>
+                      <span>{DECLARATION_CHECKBOX}</span>
                     </label>
+
                     <div className="flex flex-wrap gap-3">
                       <button
                         type="submit"
@@ -678,10 +784,20 @@ export function DocumentExplorer({
                 docs.map((d) => (
                   <div
                     key={d.id}
-                    className="soft-card flex flex-wrap items-center gap-4 px-5 py-4"
+                    className={`soft-card flex flex-wrap items-center gap-4 px-5 py-4 ${
+                      d.late ? "border-destructive/40 bg-destructive/5" : ""
+                    }`}
                   >
-                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
-                      <FileText className="h-5 w-5" />
+                    <span
+                      className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl ${
+                        d.late ? "bg-destructive/15 text-destructive" : "bg-gold/15 text-gold"
+                      }`}
+                    >
+                      {d.late ? (
+                        <AlertTriangle className="h-5 w-5" />
+                      ) : (
+                        <FileText className="h-5 w-5" />
+                      )}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="font-serif text-lg text-foreground">
@@ -691,7 +807,15 @@ export function DocumentExplorer({
                         {d.original_name} ·{" "}
                         {new Date(d.created_at).toLocaleDateString("pt-PT")}
                       </p>
+                      {d.late ? (
+                        <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          Entregue fora de prazo em{" "}
+                          {formatDatePt(d.late_submitted_at ?? d.created_at)}
+                        </p>
+                      ) : null}
                     </div>
+
                     <div className="flex items-center gap-2">
                       <button
                         type="button"

@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_records: {
+        Row: {
+          address: string
+          client_number: string
+          created_at: string
+          email: string
+          folder_active: boolean
+          id: string
+          locality: string
+          name: string
+          nif: string
+          notes: string
+          phone: string
+          postal_code: string
+          responsible_name: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          address?: string
+          client_number?: string
+          created_at?: string
+          email?: string
+          folder_active?: boolean
+          id?: string
+          locality?: string
+          name: string
+          nif?: string
+          notes?: string
+          phone?: string
+          postal_code?: string
+          responsible_name?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          address?: string
+          client_number?: string
+          created_at?: string
+          email?: string
+          folder_active?: boolean
+          id?: string
+          locality?: string
+          name?: string
+          nif?: string
+          notes?: string
+          phone?: string
+          postal_code?: string
+          responsible_name?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       contact_messages: {
         Row: {
           created_at: string
@@ -75,6 +129,8 @@ export type Database = {
           doc_date: string | null
           id: string
           label: string
+          late: boolean
+          late_submitted_at: string | null
           month: number
           original_name: string
           seq: number
@@ -91,6 +147,8 @@ export type Database = {
           doc_date?: string | null
           id?: string
           label: string
+          late?: boolean
+          late_submitted_at?: string | null
           month: number
           original_name: string
           seq: number
@@ -107,6 +165,8 @@ export type Database = {
           doc_date?: string | null
           id?: string
           label?: string
+          late?: boolean
+          late_submitted_at?: string | null
           month?: number
           original_name?: string
           seq?: number
@@ -121,36 +181,45 @@ export type Database = {
       }
       month_submissions: {
         Row: {
+          company_name: string
           created_at: string
           declaration_accepted: boolean
+          declaration_text: string
           document_count: number
           id: string
           month: number
           nif: string
+          responsible_name: string
           submitted_at: string
           updated_at: string
           user_id: string
           year: number
         }
         Insert: {
+          company_name?: string
           created_at?: string
           declaration_accepted?: boolean
+          declaration_text?: string
           document_count?: number
           id?: string
           month: number
           nif?: string
+          responsible_name?: string
           submitted_at?: string
           updated_at?: string
           user_id: string
           year: number
         }
         Update: {
+          company_name?: string
           created_at?: string
           declaration_accepted?: boolean
+          declaration_text?: string
           document_count?: number
           id?: string
           month?: number
           nif?: string
+          responsible_name?: string
           submitted_at?: string
           updated_at?: string
           user_id?: string
@@ -188,14 +257,17 @@ export type Database = {
       unlock_requests: {
         Row: {
           admin_note: string | null
+          company_name: string
           created_at: string
           decided_at: string | null
           decided_by: string | null
           declaration_accepted: boolean
+          declaration_text: string
           id: string
           month: number
           nif: string
           reason: string
+          responsible_name: string
           status: Database["public"]["Enums"]["unlock_status"]
           updated_at: string
           user_id: string
@@ -203,14 +275,17 @@ export type Database = {
         }
         Insert: {
           admin_note?: string | null
+          company_name?: string
           created_at?: string
           decided_at?: string | null
           decided_by?: string | null
           declaration_accepted?: boolean
+          declaration_text?: string
           id?: string
           month: number
           nif: string
           reason: string
+          responsible_name?: string
           status?: Database["public"]["Enums"]["unlock_status"]
           updated_at?: string
           user_id: string
@@ -218,14 +293,17 @@ export type Database = {
         }
         Update: {
           admin_note?: string | null
+          company_name?: string
           created_at?: string
           decided_at?: string | null
           decided_by?: string | null
           declaration_accepted?: boolean
+          declaration_text?: string
           id?: string
           month?: number
           nif?: string
           reason?: string
+          responsible_name?: string
           status?: Database["public"]["Enums"]["unlock_status"]
           updated_at?: string
           user_id?: string
@@ -266,6 +344,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      verify_reminder_token: { Args: { _token: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "cliente"

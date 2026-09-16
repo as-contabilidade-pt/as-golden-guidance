@@ -1,7 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { isMonthPastDeadline } from "@/lib/portal";
+import {
+  isMonthPastDeadline,
+  buildUnlockDeclaration,
+  buildSubmissionDeclaration,
+} from "@/lib/portal";
 
 const categoryEnum = z
   .string()
@@ -16,6 +20,30 @@ async function isAdmin(context: { supabase: any; userId: string }) {
     _role: "admin",
   });
   return data === true;
+}
+
+/** Dados da ficha do cliente usados no preenchimento automático das declarações. */
+async function clientIdentity(context: { supabase: any }, userId: string) {
+  const { data: record } = await context.supabase
+    .from("client_records")
+    .select("name, nif, email, responsible_name, folder_active, client_number")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const { data: profile } = await context.supabase
+    .from("profiles")
+    .select("full_name, nif, email")
+    .eq("id", userId)
+    .maybeSingle();
+
+  return {
+    companyName: record?.name || profile?.full_name || "",
+    nif: record?.nif || profile?.nif || "",
+    email: record?.email || profile?.email || "",
+    responsibleName: record?.responsible_name || "",
+    clientNumber: record?.client_number || "",
+    folderActive: record ? Boolean(record.folder_active) : true,
+  };
 }
 
 async function monthIsSubmitted(
@@ -89,7 +117,7 @@ export const listDocuments = createServerFn({ method: "POST" })
     const { data: rows, error } = await context.supabase
       .from("documents")
       .select(
-        "id, label, original_name, storage_path, size_bytes, created_at, supplier, doc_date",
+        "id, label, original_name, storage_path, size_bytes, created_at, supplier, doc_date, late, late_submitted_at",
       )
       .eq("user_id", target)
       .eq("year", data.year)
@@ -153,6 +181,10 @@ export const reserveDocument = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!cat) throw new Error("Esta categoria já não existe.");
 
+    const lateEntry =
+      isMonthPastDeadline(data.year, data.month) ||
+      (await monthIsSubmitted(context, target, data.year, data.month));
+    const lateAt = lateEntry ? new Date().toISOString() : null;
 
     for (let attempt = 0; attempt < 8; attempt++) {
       const { count, error: countError } = await context.supabase
@@ -181,8 +213,10 @@ export const reserveDocument = createServerFn({ method: "POST" })
           storage_path: storagePath,
           supplier: data.supplier.trim(),
           doc_date: data.docDate,
+          late: lateEntry,
+          late_submitted_at: lateAt,
         })
-        .select("id, label, storage_path, supplier, doc_date")
+        .select("id, label, storage_path, supplier, doc_date, late, late_submitted_at")
         .single();
 
       if (!error && inserted) return inserted;
@@ -374,22 +408,31 @@ export const createUnlockRequest = createServerFn({ method: "POST" })
         year: z.number().int(),
         month: z.number().int().min(1).max(12),
         reason: z.string().min(5).max(2000),
+        responsibleName: z.string().trim().max(120).optional(),
         declarationAccepted: z.literal(true),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { data: profile } = await context.supabase
-      .from("profiles")
-      .select("nif")
-      .eq("id", context.userId)
-      .maybeSingle();
+    const identity = await clientIdentity(context, context.userId);
+    const at = new Date().toISOString();
+    const responsibleName = data.responsibleName?.trim() || identity.responsibleName;
 
     const { data: row, error } = await context.supabase
       .from("unlock_requests")
       .insert({
         user_id: context.userId,
-        nif: profile?.nif ?? "",
+        nif: identity.nif,
+        company_name: identity.companyName,
+        responsible_name: responsibleName,
+        declaration_text: buildUnlockDeclaration({
+          nif: identity.nif,
+          companyName: identity.companyName,
+          responsibleName,
+          year: data.year,
+          month: data.month,
+          at,
+        }),
         year: data.year,
         month: data.month,
         reason: data.reason,
@@ -430,7 +473,7 @@ export const decideUnlockRequest = createServerFn({ method: "POST" })
         decided_at: decidedAt,
       })
       .eq("id", data.id)
-      .select("user_id, nif, year, month, reason")
+      .select("user_id, nif, year, month, reason, declaration_text, company_name, responsible_name")
       .single();
     if (error) throw new Error(error.message);
 
@@ -442,7 +485,7 @@ export const decideUnlockRequest = createServerFn({ method: "POST" })
         .maybeSingle();
       const { notifyUnlockDecision } = await import("@/lib/submission-email.server");
       await notifyUnlockDecision({
-        fullName: profile?.full_name ?? "Cliente",
+        fullName: row.company_name || profile?.full_name || "Cliente",
         nif: profile?.nif ?? row.nif ?? "",
         ...(profile?.email ? { email: profile.email as string } : {}),
         year: row.year,
@@ -450,6 +493,7 @@ export const decideUnlockRequest = createServerFn({ method: "POST" })
         reason: row.reason,
         decision: data.decision,
         decidedAt,
+        declarationText: row.declaration_text ?? "",
       });
     } catch (e) {
       console.error("[decideUnlockRequest] falha ao enviar comprovativo:", e);
@@ -485,6 +529,7 @@ export const submitMonth = createServerFn({ method: "POST" })
       .object({
         year: z.number().int(),
         month: z.number().int().min(1).max(12),
+        responsibleName: z.string().trim().max(120).optional(),
         declarationAccepted: z.literal(true),
       })
       .parse(d),
@@ -501,17 +546,26 @@ export const submitMonth = createServerFn({ method: "POST" })
       throw new Error("Anexe pelo menos um documento antes de submeter o mês.");
     }
 
-    const { data: profile } = await context.supabase
-      .from("profiles")
-      .select("full_name, nif, email")
-      .eq("id", context.userId)
-      .maybeSingle();
+    const identity = await clientIdentity(context, context.userId);
+    const responsibleName = data.responsibleName?.trim() || identity.responsibleName;
+    const at = new Date().toISOString();
+    const declarationText = buildSubmissionDeclaration({
+      nif: identity.nif,
+      companyName: identity.companyName,
+      responsibleName,
+      year: data.year,
+      month: data.month,
+      at,
+    });
 
     const { data: row, error } = await context.supabase
       .from("month_submissions")
       .insert({
         user_id: context.userId,
-        nif: profile?.nif ?? "",
+        nif: identity.nif,
+        company_name: identity.companyName,
+        responsible_name: responsibleName,
+        declaration_text: declarationText,
         year: data.year,
         month: data.month,
         declaration_accepted: true,
@@ -531,13 +585,14 @@ export const submitMonth = createServerFn({ method: "POST" })
         "@/lib/submission-email.server"
       );
       const info = {
-        fullName: profile?.full_name ?? "Cliente",
-        nif: profile?.nif ?? "",
-        ...(profile?.email ? { email: profile.email as string } : {}),
+        fullName: identity.companyName,
+        nif: identity.nif,
+        ...(identity.email ? { email: identity.email } : {}),
         year: data.year,
         month: data.month,
         submittedAt: row.submitted_at as string,
         documentCount: count,
+        declarationText,
       };
       await notifyAdminOfSubmission(info);
       await notifyClientOfSubmission(info);
@@ -670,4 +725,125 @@ export const deleteCategory = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/* ------------------------- Fichas de cliente ------------------------- */
+
+export const getMyClientIdentity = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const identity = await clientIdentity(context, context.userId);
+    return { ...identity, isAdmin: await isAdmin(context) };
+  });
+
+const recordSchema = z.object({
+  clientNumber: z.string().trim().max(30).default(""),
+  name: z.string().trim().min(2).max(160),
+  nif: z.string().trim().max(20).default(""),
+  address: z.string().trim().max(200).default(""),
+  postalCode: z.string().trim().max(20).default(""),
+  locality: z.string().trim().max(120).default(""),
+  email: z.string().trim().max(160).default(""),
+  phone: z.string().trim().max(40).default(""),
+  responsibleName: z.string().trim().max(120).default(""),
+  notes: z.string().trim().max(4000).default(""),
+  folderActive: z.boolean().default(false),
+});
+
+function recordColumns(v: z.infer<typeof recordSchema>) {
+  return {
+    client_number: v.clientNumber,
+    name: v.name,
+    nif: v.nif,
+    address: v.address,
+    postal_code: v.postalCode,
+    locality: v.locality,
+    email: v.email,
+    phone: v.phone,
+    responsible_name: v.responsibleName,
+    notes: v.notes,
+    folder_active: v.folderActive,
+  };
+}
+
+export const listClientRecords = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { data, error } = await context.supabase
+      .from("client_records")
+      .select("id, user_id, client_number, name, nif, email, phone, locality, folder_active")
+      .order("name", { ascending: true })
+      .limit(2000);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const getClientRecord = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { data: row, error } = await context.supabase
+      .from("client_records")
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Ficha de cliente não encontrada.");
+    return row;
+  });
+
+export const createClientRecord = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => recordSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { data: row, error } = await context.supabase
+      .from("client_records")
+      .insert(recordColumns(data))
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const updateClientRecord = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    recordSchema.extend({ id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { id, ...rest } = data;
+    const { error } = await context.supabase
+      .from("client_records")
+      .update(recordColumns(rest))
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteClientRecord = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { error } = await context.supabase.from("client_records").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const importClientRecords = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ rows: z.array(recordSchema).min(1).max(1000) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { error } = await context.supabase
+      .from("client_records")
+      .insert(data.rows.map(recordColumns));
+    if (error) throw new Error(error.message);
+    return { imported: data.rows.length };
   });

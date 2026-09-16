@@ -1,6 +1,9 @@
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { DocumentExplorer } from "@/components/portal/DocumentExplorer";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { getMyClientIdentity } from "@/lib/portal.functions";
 
 export const Route = createFileRoute("/_authenticated/documentos")({
   component: DocumentosPage,
@@ -24,12 +27,43 @@ export const Route = createFileRoute("/_authenticated/documentos")({
 });
 
 function DocumentosPage() {
+  const fetchIdentity = useServerFn(getMyClientIdentity);
+  const [state, setState] = useState<"loading" | "active" | "inactive">("loading");
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const info = (await fetchIdentity()) as unknown as {
+          folderActive: boolean;
+          isAdmin: boolean;
+        };
+        setState(info.folderActive || info.isAdmin ? "active" : "inactive");
+      } catch {
+        setState("active");
+      }
+    })();
+  }, [fetchIdentity]);
+
   return (
     <PortalShell
       title="Os Meus Documentos"
       subtitle="Organize e envie os seus documentos por ano, mês e categoria. Apenas ficheiros PDF."
     >
-      <DocumentExplorer />
+      {state === "loading" ? (
+        <p className="soft-card px-6 py-8 text-sm text-muted-foreground">A carregar…</p>
+      ) : state === "inactive" ? (
+        <div className="soft-card px-6 py-8">
+          <p className="font-serif text-xl text-foreground">
+            Pasta de submissão de documentos inativa
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            A sua ficha está registada, mas a pasta de submissão de documentos não se encontra
+            ativa. Fale connosco para a ativar.
+          </p>
+        </div>
+      ) : (
+        <DocumentExplorer />
+      )}
     </PortalShell>
   );
 }

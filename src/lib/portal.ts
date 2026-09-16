@@ -84,8 +84,72 @@ export function formatDateTimePt(value: string | Date) {
   return `${formatDatePt(d)} ${d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
+/* --------------------------- Textos oficiais --------------------------- */
+
 export const DECLARATION_TEXT =
-  "Declaro que a entrega de documentação fora do prazo estabelecido pode ter consequências ao nível do cumprimento das obrigações fiscais e/ou contributivas, e assumo essa responsabilidade.";
+  "Solicito a reabertura do período de submissão de documentos acima identificado, para entrega de documentação após o prazo previsto no contrato de prestação de serviços. Declaro ter conhecimento de que esta entrega ocorre fora do prazo contratual e das eventuais consequências daí decorrentes, nomeadamente de natureza contratual, contabilística e fiscal.";
+
+export const DECLARATION_CHECKBOX =
+  "Confirmo que tomei conhecimento e solicito a reabertura do período.";
 
 export const SUBMISSION_DECLARATION_TEXT =
-  "Declaro que a documentação entregue está completa, que não oculto documentos necessários à execução da contabilidade, e que tenho conhecimento de que devo manter o arquivo dos documentos originais nos termos das normas fiscais aplicáveis.";
+  "Declaro que concluí a submissão da documentação referente ao período acima indicado e que, tanto quanto é do meu conhecimento, foram entregues todos os documentos e informações necessários ao processamento da contabilidade, não tendo sido omitido ou ocultado qualquer elemento relevante. Declaro ainda ter conhecimento da obrigação de conservar os documentos originais nos termos e pelos prazos legalmente aplicáveis.";
+
+export const SUBMISSION_DECLARATION_CHECKBOX =
+  "Confirmo a conclusão da entrega e as declarações acima.";
+
+export type DeclarationFields = {
+  nif: string;
+  companyName: string;
+  responsibleName: string;
+  year: number;
+  month: number;
+  at: string | Date;
+};
+
+/** Texto integral da declaração de pedido de reabertura, para registo e comprovativo. */
+export function buildUnlockDeclaration(f: DeclarationFields) {
+  return [
+    `NIF DA EMPRESA: ${f.nif || "—"}`,
+    `NOME DA EMPRESA: ${f.companyName || "—"}`,
+    `NOME DO RESPONSÁVEL: ${f.responsibleName || "—"}`,
+    `PERÍODO A REABRIR: ${monthLabel(f.month)}/${f.year}`,
+    "",
+    DECLARATION_TEXT,
+    "",
+    `[X] ${DECLARATION_CHECKBOX}`,
+    "",
+    `DATA E HORA DO PEDIDO: ${formatDateTimePt(f.at)}`,
+  ].join("\n");
+}
+
+/** Texto integral da declaração de conclusão da entrega, para registo e comprovativo. */
+export function buildSubmissionDeclaration(f: DeclarationFields) {
+  return [
+    `NIF DA EMPRESA: ${f.nif || "—"}`,
+    `NOME DA EMPRESA: ${f.companyName || "—"}`,
+    `NOME DO RESPONSÁVEL: ${f.responsibleName || "—"}`,
+    `PERÍODO: ${monthLabel(f.month)}/${f.year}`,
+    "",
+    "DECLARAÇÃO DE CONCLUSÃO DA ENTREGA",
+    SUBMISSION_DECLARATION_TEXT,
+    "",
+    `[X] ${SUBMISSION_DECLARATION_CHECKBOX}`,
+    "",
+    `DATA E HORA DA SUBMISSÃO: ${formatDateTimePt(f.at)}`,
+  ].join("\n");
+}
+
+export const REMINDER_SUBJECT = "Lembrete - Prazo de entrega de documentação";
+
+export const REMINDER_BODY = [
+  "Caro cliente,",
+  "",
+  "Recordamos que dia 10 é o último dia para disponibilizar as faturas e restante documentação contabilística referente ao mês anterior.",
+  "",
+  "Caso ainda não tenha procedido ao envio ou disponibilização da documentação, solicitamos que o faça com a maior brevidade possível.",
+  "",
+  "Caso a documentação já tenha sido disponibilizada, agradecemos que desconsidere esta mensagem, a qual é enviada automaticamente.",
+  "",
+  "AS | Contabilidade, Fiscalidade e Gestão",
+].join("\n");
