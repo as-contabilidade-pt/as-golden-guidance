@@ -726,3 +726,124 @@ export const deleteCategory = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/* ------------------------- Fichas de cliente ------------------------- */
+
+export const getMyClientIdentity = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const identity = await clientIdentity(context, context.userId);
+    return { ...identity, isAdmin: await isAdmin(context) };
+  });
+
+const recordSchema = z.object({
+  clientNumber: z.string().trim().max(30).default(""),
+  name: z.string().trim().min(2).max(160),
+  nif: z.string().trim().max(20).default(""),
+  address: z.string().trim().max(200).default(""),
+  postalCode: z.string().trim().max(20).default(""),
+  locality: z.string().trim().max(120).default(""),
+  email: z.string().trim().max(160).default(""),
+  phone: z.string().trim().max(40).default(""),
+  responsibleName: z.string().trim().max(120).default(""),
+  notes: z.string().trim().max(4000).default(""),
+  folderActive: z.boolean().default(false),
+});
+
+function recordColumns(v: z.infer<typeof recordSchema>) {
+  return {
+    client_number: v.clientNumber,
+    name: v.name,
+    nif: v.nif,
+    address: v.address,
+    postal_code: v.postalCode,
+    locality: v.locality,
+    email: v.email,
+    phone: v.phone,
+    responsible_name: v.responsibleName,
+    notes: v.notes,
+    folder_active: v.folderActive,
+  };
+}
+
+export const listClientRecords = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { data, error } = await context.supabase
+      .from("client_records")
+      .select("id, user_id, client_number, name, nif, email, phone, locality, folder_active")
+      .order("name", { ascending: true })
+      .limit(2000);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const getClientRecord = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { data: row, error } = await context.supabase
+      .from("client_records")
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Ficha de cliente não encontrada.");
+    return row;
+  });
+
+export const createClientRecord = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => recordSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { data: row, error } = await context.supabase
+      .from("client_records")
+      .insert(recordColumns(data))
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const updateClientRecord = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    recordSchema.extend({ id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { id, ...rest } = data;
+    const { error } = await context.supabase
+      .from("client_records")
+      .update(recordColumns(rest))
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteClientRecord = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { error } = await context.supabase.from("client_records").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const importClientRecords = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ rows: z.array(recordSchema).min(1).max(1000) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { error } = await context.supabase
+      .from("client_records")
+      .insert(data.rows.map(recordColumns));
+    if (error) throw new Error(error.message);
+    return { imported: data.rows.length };
+  });
