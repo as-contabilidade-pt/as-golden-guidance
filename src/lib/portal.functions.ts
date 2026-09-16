@@ -89,7 +89,7 @@ export const listDocuments = createServerFn({ method: "POST" })
     const { data: rows, error } = await context.supabase
       .from("documents")
       .select(
-        "id, label, original_name, storage_path, size_bytes, created_at, supplier, doc_date",
+        "id, label, original_name, storage_path, size_bytes, created_at, supplier, doc_date, late, late_submitted_at",
       )
       .eq("user_id", target)
       .eq("year", data.year)
@@ -153,6 +153,10 @@ export const reserveDocument = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!cat) throw new Error("Esta categoria já não existe.");
 
+    const lateEntry =
+      isMonthPastDeadline(data.year, data.month) ||
+      (await monthIsSubmitted(context, target, data.year, data.month));
+    const lateAt = lateEntry ? new Date().toISOString() : null;
 
     for (let attempt = 0; attempt < 8; attempt++) {
       const { count, error: countError } = await context.supabase
@@ -181,8 +185,10 @@ export const reserveDocument = createServerFn({ method: "POST" })
           storage_path: storagePath,
           supplier: data.supplier.trim(),
           doc_date: data.docDate,
+          late: lateEntry,
+          late_submitted_at: lateAt,
         })
-        .select("id, label, storage_path, supplier, doc_date")
+        .select("id, label, storage_path, supplier, doc_date, late, late_submitted_at")
         .single();
 
       if (!error && inserted) return inserted;
