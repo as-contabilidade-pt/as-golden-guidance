@@ -23,7 +23,22 @@ export function Hero() {
             Contabilista Certificada · Viseu
           </span>
 
-          <h1 className="mt-7 font-serif text-5xl leading-[1.05] text-cream sm:text-6xl md:text-[4.25rem]">
+          <div className="mt-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
+            <span className="font-serif text-5xl font-medium leading-none text-gold sm:text-6xl md:text-7xl">
+              AS
+            </span>
+            <div className="hidden h-12 w-px bg-gold/30 sm:block" />
+            <div className="flex flex-col">
+              <span className="font-sans text-[0.72rem] font-medium uppercase tracking-[0.22em] text-cream/80 sm:text-xs">
+                Contabilidade
+              </span>
+              <span className="font-sans text-[0.72rem] font-medium uppercase tracking-[0.22em] text-cream/80 sm:text-xs">
+                Fiscalidade e Gestão
+              </span>
+            </div>
+          </div>
+
+          <h1 className="mt-8 font-serif text-5xl leading-[1.05] text-cream sm:text-6xl md:text-[4.25rem]">
             Números com{" "}
             <span className="text-gradient-gold">rigor e visão</span>.
           </h1>
