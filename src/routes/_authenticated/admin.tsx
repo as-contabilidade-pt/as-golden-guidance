@@ -96,6 +96,12 @@ function AdminPage() {
       action={
         <div className="flex flex-wrap gap-3">
           <Link
+            to="/admin/clientes"
+            className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-3 text-sm font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
+          >
+            <Settings className="h-4 w-4" /> Clientes
+          </Link>
+          <Link
             to="/admin/definicoes/categorias"
             className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-3 text-sm font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
           >
