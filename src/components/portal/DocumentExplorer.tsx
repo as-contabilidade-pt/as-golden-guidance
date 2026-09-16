@@ -436,15 +436,46 @@ export function DocumentExplorer({
                 {showSubmit ? (
                   <div className="space-y-4">
                     <p className="font-serif text-xl text-foreground">Confirmar submissão</p>
-                    <label className="flex items-start gap-3 text-xs text-muted-foreground">
+                    <div className="rounded-2xl border border-gold/20 bg-background px-5 py-4 text-xs text-muted-foreground">
+                      <p>
+                        <strong className="text-foreground">NIF DA EMPRESA:</strong>{" "}
+                        {identity?.nif || "—"}
+                      </p>
+                      <p>
+                        <strong className="text-foreground">NOME DA EMPRESA:</strong>{" "}
+                        {identity?.companyName || "—"}
+                      </p>
+                      <p>
+                        <strong className="text-foreground">PERÍODO:</strong> {monthLabel(month)}/
+                        {year}
+                      </p>
+                    </div>
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium text-foreground/80">
+                        Nome do responsável
+                      </span>
+                      <input
+                        value={responsibleName}
+                        onChange={(e) => setResponsibleName(e.target.value)}
+                        className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50"
+                      />
+                    </label>
+                    <p className="text-xs font-medium uppercase tracking-wide text-foreground/80">
+                      Declaração de conclusão da entrega
+                    </p>
+                    <p className="rounded-2xl bg-secondary px-5 py-4 text-xs leading-relaxed text-muted-foreground">
+                      {SUBMISSION_DECLARATION_TEXT}
+                    </p>
+                    <label className="flex items-start gap-3 text-xs text-foreground">
                       <input
                         type="checkbox"
                         checked={submitAccepted}
                         onChange={(e) => setSubmitAccepted(e.target.checked)}
                         className="mt-0.5 h-4 w-4 accent-[color:var(--gold)]"
                       />
-                      <span>{SUBMISSION_DECLARATION_TEXT}</span>
+                      <span>{SUBMISSION_DECLARATION_CHECKBOX}</span>
                     </label>
+
                     <div className="flex flex-wrap gap-3">
                       <button
                         type="button"
