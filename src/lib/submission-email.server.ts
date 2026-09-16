@@ -1,4 +1,9 @@
-import { monthLabel, formatDateTimePt, DECLARATION_TEXT, SUBMISSION_DECLARATION_TEXT } from "@/lib/portal";
+import {
+  monthLabel,
+  formatDateTimePt,
+  REMINDER_SUBJECT,
+  REMINDER_BODY,
+} from "@/lib/portal";
 
 type SubmissionInfo = {
   fullName: string;
@@ -8,6 +13,7 @@ type SubmissionInfo = {
   month: number;
   submittedAt: string;
   documentCount: number;
+  declarationText: string;
 };
 
 type UnlockDecisionInfo = {
@@ -19,6 +25,7 @@ type UnlockDecisionInfo = {
   reason: string;
   decision: "aprovado" | "rejeitado" | "fechado";
   decidedAt: string;
+  declarationText: string;
 };
 
 async function adminEmails() {
@@ -59,7 +66,8 @@ export async function notifyAdminOfSubmission(info: SubmissionInfo) {
       `Data/hora da submissão: ${formatDateTimePt(info.submittedAt)}`,
       `Total de documentos submetidos: ${info.documentCount}`,
       "",
-      `Declaração aceite pelo cliente: "${SUBMISSION_DECLARATION_TEXT}"`,
+      "DECLARAÇÃO REGISTADA PELO CLIENTE",
+      info.declarationText,
     ].join("\n"),
   );
 }
@@ -78,7 +86,8 @@ export async function notifyClientOfSubmission(info: SubmissionInfo) {
       `Data/hora da submissão: ${formatDateTimePt(info.submittedAt)}`,
       `Número de documentos submetidos: ${info.documentCount}`,
       "",
-      `Declaração aceite: "${SUBMISSION_DECLARATION_TEXT}"`,
+      "DECLARAÇÃO REGISTADA",
+      info.declarationText,
       "",
       "AS | Contabilidade, Fiscalidade e Gestão",
     ].join("\n"),
@@ -100,7 +109,8 @@ export async function notifyUnlockDecision(info: UnlockDecisionInfo) {
     `Pasta: ${monthLabel(info.month)} ${info.year}`,
     `Motivo indicado pelo cliente: ${info.reason}`,
     "",
-    `Declaração aceite pelo cliente: "${DECLARATION_TEXT}"`,
+    "DECLARAÇÃO REGISTADA PELO CLIENTE",
+    info.declarationText,
     "",
     `Resultado: ${resultado}`,
     `Data/hora da decisão: ${formatDateTimePt(info.decidedAt)}`,
@@ -113,7 +123,27 @@ export async function notifyUnlockDecision(info: UnlockDecisionInfo) {
 
   await deliver(
     to,
-    `Pedido de desbloqueio ${resultado.toLowerCase()} - ${monthLabel(info.month)} ${info.year}`,
+    `Pedido de reabertura ${resultado.toLowerCase()} - ${monthLabel(info.month)} ${info.year}`,
     body,
   );
+}
+
+/** Lembrete do dia 8 para todos os clientes com pasta de submissão ativa. */
+export async function sendMonthlyReminders() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: rows, error } = await supabaseAdmin
+    .from("client_records")
+    .select("email, name")
+    .eq("folder_active", true);
+  if (error) throw new Error(error.message);
+
+  const recipients = (rows ?? [])
+    .map((r: { email: string | null }) => (r.email ?? "").trim())
+    .filter((e: string) => e.includes("@"));
+
+  for (const address of recipients) {
+    await deliver([address], REMINDER_SUBJECT, REMINDER_BODY);
+  }
+
+  return { sent: recipients.length };
 }
