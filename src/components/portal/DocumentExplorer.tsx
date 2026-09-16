@@ -111,6 +111,12 @@ export function DocumentExplorer({
   const [showSubmit, setShowSubmit] = useState(false);
   const [submitAccepted, setSubmitAccepted] = useState(false);
   const [showScan, setShowScan] = useState(false);
+  const [identity, setIdentity] = useState<{
+    companyName: string;
+    nif: string;
+    responsibleName: string;
+  } | null>(null);
+  const [responsibleName, setResponsibleName] = useState("");
 
   const fetchCounts = useServerFn(countsForYear);
   const fetchDocs = useServerFn(listDocuments);
@@ -123,6 +129,7 @@ export function DocumentExplorer({
   const fetchSubmissions = useServerFn(listMonthSubmissions);
   const sendSubmission = useServerFn(submitMonth);
   const fetchCategories = useServerFn(listCategories);
+  const fetchIdentity = useServerFn(getMyClientIdentity);
 
   useEffect(() => {
     void (async () => {
@@ -133,6 +140,24 @@ export function DocumentExplorer({
       }
     })();
   }, [fetchCategories]);
+
+  useEffect(() => {
+    if (readOnly) return;
+    void (async () => {
+      try {
+        const info = (await fetchIdentity()) as unknown as {
+          companyName: string;
+          nif: string;
+          responsibleName: string;
+        };
+        setIdentity(info);
+        setResponsibleName(info.responsibleName ?? "");
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [fetchIdentity, readOnly]);
+
 
 
 
