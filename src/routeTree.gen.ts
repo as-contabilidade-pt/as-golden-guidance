@@ -17,10 +17,10 @@ import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDocumentosRouteImport } from './routes/_authenticated/documentos'
-import { Route as AuthenticatedAdminClientesRouteImport } from './routes/_authenticated/admin_.clientes'
 import { Route as AuthenticatedAdminExtratosRouteImport } from './routes/_authenticated/admin_.extratos'
 import { Route as ApiPublicLembreteDocumentacaoRouteImport } from './routes/api/public/lembrete-documentacao'
 import { Route as AuthenticatedAdminClienteClientIdRouteImport } from './routes/_authenticated/admin_.cliente.$clientId'
+import { Route as AuthenticatedAdminClientesIndexRouteImport } from './routes/_authenticated/admin_.clientes.index'
 import { Route as AuthenticatedAdminClientesRecordIdRouteImport } from './routes/_authenticated/admin_.clientes.$recordId'
 import { Route as AuthenticatedAdminDefinicoesCategoriasRouteImport } from './routes/_authenticated/admin_.definicoes.categorias'
 
@@ -63,12 +63,6 @@ const AuthenticatedDocumentosRoute = AuthenticatedDocumentosRouteImport.update({
   path: '/documentos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAdminClientesRoute =
-  AuthenticatedAdminClientesRouteImport.update({
-    id: '/admin_/clientes',
-    path: '/admin/clientes',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedAdminExtratosRoute =
   AuthenticatedAdminExtratosRouteImport.update({
     id: '/admin_/extratos',
@@ -87,11 +81,17 @@ const AuthenticatedAdminClienteClientIdRoute =
     path: '/admin/cliente/$clientId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminClientesIndexRoute =
+  AuthenticatedAdminClientesIndexRouteImport.update({
+    id: '/admin_/clientes/',
+    path: '/admin/clientes/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminClientesRecordIdRoute =
   AuthenticatedAdminClientesRecordIdRouteImport.update({
-    id: '/$recordId',
-    path: '/$recordId',
-    getParentRoute: () => AuthenticatedAdminClientesRoute,
+    id: '/admin_/clientes/$recordId',
+    path: '/admin/clientes/$recordId',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminDefinicoesCategoriasRoute =
   AuthenticatedAdminDefinicoesCategoriasRouteImport.update({
@@ -108,12 +108,12 @@ export interface FileRoutesByFullPath {
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/documentos': typeof AuthenticatedDocumentosRoute
-  '/admin/clientes': typeof AuthenticatedAdminClientesRouteWithChildren
   '/admin/extratos': typeof AuthenticatedAdminExtratosRoute
   '/api/public/lembrete-documentacao': typeof ApiPublicLembreteDocumentacaoRoute
   '/admin/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
   '/admin/clientes/$recordId': typeof AuthenticatedAdminClientesRecordIdRoute
   '/admin/definicoes/categorias': typeof AuthenticatedAdminDefinicoesCategoriasRoute
+  '/admin/clientes/': typeof AuthenticatedAdminClientesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -123,12 +123,12 @@ export interface FileRoutesByTo {
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/documentos': typeof AuthenticatedDocumentosRoute
-  '/admin/clientes': typeof AuthenticatedAdminClientesRouteWithChildren
   '/admin/extratos': typeof AuthenticatedAdminExtratosRoute
   '/api/public/lembrete-documentacao': typeof ApiPublicLembreteDocumentacaoRoute
   '/admin/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
   '/admin/clientes/$recordId': typeof AuthenticatedAdminClientesRecordIdRoute
   '/admin/definicoes/categorias': typeof AuthenticatedAdminDefinicoesCategoriasRoute
+  '/admin/clientes': typeof AuthenticatedAdminClientesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -140,12 +140,12 @@ export interface FileRoutesById {
   '/termos': typeof TermosRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/documentos': typeof AuthenticatedDocumentosRoute
-  '/_authenticated/admin_/clientes': typeof AuthenticatedAdminClientesRouteWithChildren
   '/_authenticated/admin_/extratos': typeof AuthenticatedAdminExtratosRoute
   '/api/public/lembrete-documentacao': typeof ApiPublicLembreteDocumentacaoRoute
   '/_authenticated/admin_/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
   '/_authenticated/admin_/clientes/$recordId': typeof AuthenticatedAdminClientesRecordIdRoute
   '/_authenticated/admin_/definicoes/categorias': typeof AuthenticatedAdminDefinicoesCategoriasRoute
+  '/_authenticated/admin_/clientes/': typeof AuthenticatedAdminClientesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -157,12 +157,12 @@ export interface FileRouteTypes {
     | '/termos'
     | '/admin'
     | '/documentos'
-    | '/admin/clientes'
     | '/admin/extratos'
     | '/api/public/lembrete-documentacao'
     | '/admin/cliente/$clientId'
     | '/admin/clientes/$recordId'
     | '/admin/definicoes/categorias'
+    | '/admin/clientes/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -172,12 +172,12 @@ export interface FileRouteTypes {
     | '/termos'
     | '/admin'
     | '/documentos'
-    | '/admin/clientes'
     | '/admin/extratos'
     | '/api/public/lembrete-documentacao'
     | '/admin/cliente/$clientId'
     | '/admin/clientes/$recordId'
     | '/admin/definicoes/categorias'
+    | '/admin/clientes'
   id:
     | '__root__'
     | '/'
@@ -188,12 +188,12 @@ export interface FileRouteTypes {
     | '/termos'
     | '/_authenticated/admin'
     | '/_authenticated/documentos'
-    | '/_authenticated/admin_/clientes'
     | '/_authenticated/admin_/extratos'
     | '/api/public/lembrete-documentacao'
     | '/_authenticated/admin_/cliente/$clientId'
     | '/_authenticated/admin_/clientes/$recordId'
     | '/_authenticated/admin_/definicoes/categorias'
+    | '/_authenticated/admin_/clientes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -264,13 +264,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDocumentosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin_/clientes': {
-      id: '/_authenticated/admin_/clientes'
-      path: '/admin/clientes'
-      fullPath: '/admin/clientes'
-      preLoaderRoute: typeof AuthenticatedAdminClientesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/admin_/extratos': {
       id: '/_authenticated/admin_/extratos'
       path: '/admin/extratos'
@@ -292,12 +285,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminClienteClientIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin_/clientes/': {
+      id: '/_authenticated/admin_/clientes/'
+      path: '/admin/clientes'
+      fullPath: '/admin/clientes/'
+      preLoaderRoute: typeof AuthenticatedAdminClientesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin_/clientes/$recordId': {
       id: '/_authenticated/admin_/clientes/$recordId'
-      path: '/$recordId'
+      path: '/admin/clientes/$recordId'
       fullPath: '/admin/clientes/$recordId'
       preLoaderRoute: typeof AuthenticatedAdminClientesRecordIdRouteImport
-      parentRoute: typeof AuthenticatedAdminClientesRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin_/definicoes/categorias': {
       id: '/_authenticated/admin_/definicoes/categorias'
@@ -309,39 +309,27 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthenticatedAdminClientesRouteChildren {
-  AuthenticatedAdminClientesRecordIdRoute: typeof AuthenticatedAdminClientesRecordIdRoute
-}
-
-const AuthenticatedAdminClientesRouteChildren: AuthenticatedAdminClientesRouteChildren =
-  {
-    AuthenticatedAdminClientesRecordIdRoute:
-      AuthenticatedAdminClientesRecordIdRoute,
-  }
-
-const AuthenticatedAdminClientesRouteWithChildren =
-  AuthenticatedAdminClientesRoute._addFileChildren(
-    AuthenticatedAdminClientesRouteChildren,
-  )
-
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDocumentosRoute: typeof AuthenticatedDocumentosRoute
-  AuthenticatedAdminClientesRoute: typeof AuthenticatedAdminClientesRouteWithChildren
   AuthenticatedAdminExtratosRoute: typeof AuthenticatedAdminExtratosRoute
   AuthenticatedAdminClienteClientIdRoute: typeof AuthenticatedAdminClienteClientIdRoute
+  AuthenticatedAdminClientesRecordIdRoute: typeof AuthenticatedAdminClientesRecordIdRoute
   AuthenticatedAdminDefinicoesCategoriasRoute: typeof AuthenticatedAdminDefinicoesCategoriasRoute
+  AuthenticatedAdminClientesIndexRoute: typeof AuthenticatedAdminClientesIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDocumentosRoute: AuthenticatedDocumentosRoute,
-  AuthenticatedAdminClientesRoute: AuthenticatedAdminClientesRouteWithChildren,
   AuthenticatedAdminExtratosRoute: AuthenticatedAdminExtratosRoute,
   AuthenticatedAdminClienteClientIdRoute:
     AuthenticatedAdminClienteClientIdRoute,
+  AuthenticatedAdminClientesRecordIdRoute:
+    AuthenticatedAdminClientesRecordIdRoute,
   AuthenticatedAdminDefinicoesCategoriasRoute:
     AuthenticatedAdminDefinicoesCategoriasRoute,
+  AuthenticatedAdminClientesIndexRoute: AuthenticatedAdminClientesIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
