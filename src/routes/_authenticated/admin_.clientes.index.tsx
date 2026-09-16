@@ -9,7 +9,7 @@ import {
   importClientRecords,
 } from "@/lib/portal.functions";
 
-export const Route = createFileRoute("/_authenticated/admin_/clientes")({
+export const Route = createFileRoute("/_authenticated/admin_/clientes/")({
   head: () => ({
     meta: [
       { title: "Fichas de Clientes | AS Contabilidade" },
