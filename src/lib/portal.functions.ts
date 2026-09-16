@@ -445,7 +445,7 @@ export const decideUnlockRequest = createServerFn({ method: "POST" })
         decided_at: decidedAt,
       })
       .eq("id", data.id)
-      .select("user_id, nif, year, month, reason")
+      .select("user_id, nif, year, month, reason, declaration_text, company_name, responsible_name")
       .single();
     if (error) throw new Error(error.message);
 
@@ -457,7 +457,7 @@ export const decideUnlockRequest = createServerFn({ method: "POST" })
         .maybeSingle();
       const { notifyUnlockDecision } = await import("@/lib/submission-email.server");
       await notifyUnlockDecision({
-        fullName: profile?.full_name ?? "Cliente",
+        fullName: row.company_name || profile?.full_name || "Cliente",
         nif: profile?.nif ?? row.nif ?? "",
         ...(profile?.email ? { email: profile.email as string } : {}),
         year: row.year,
@@ -465,6 +465,7 @@ export const decideUnlockRequest = createServerFn({ method: "POST" })
         reason: row.reason,
         decision: data.decision,
         decidedAt,
+        declarationText: row.declaration_text ?? "",
       });
     } catch (e) {
       console.error("[decideUnlockRequest] falha ao enviar comprovativo:", e);
