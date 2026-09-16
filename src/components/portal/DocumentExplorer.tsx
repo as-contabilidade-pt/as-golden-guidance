@@ -54,7 +54,10 @@ type Doc = {
   created_at: string;
   supplier: string | null;
   doc_date: string | null;
+  late?: boolean | null;
+  late_submitted_at?: string | null;
 };
+
 
 type MonthSubmission = {
   id: string;
