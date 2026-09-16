@@ -678,10 +678,20 @@ export function DocumentExplorer({
                 docs.map((d) => (
                   <div
                     key={d.id}
-                    className="soft-card flex flex-wrap items-center gap-4 px-5 py-4"
+                    className={`soft-card flex flex-wrap items-center gap-4 px-5 py-4 ${
+                      d.late ? "border-destructive/40 bg-destructive/5" : ""
+                    }`}
                   >
-                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
-                      <FileText className="h-5 w-5" />
+                    <span
+                      className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl ${
+                        d.late ? "bg-destructive/15 text-destructive" : "bg-gold/15 text-gold"
+                      }`}
+                    >
+                      {d.late ? (
+                        <AlertTriangle className="h-5 w-5" />
+                      ) : (
+                        <FileText className="h-5 w-5" />
+                      )}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="font-serif text-lg text-foreground">
@@ -691,7 +701,15 @@ export function DocumentExplorer({
                         {d.original_name} ·{" "}
                         {new Date(d.created_at).toLocaleDateString("pt-PT")}
                       </p>
+                      {d.late ? (
+                        <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          Entregue fora de prazo em{" "}
+                          {formatDatePt(d.late_submitted_at ?? d.created_at)}
+                        </p>
+                      ) : null}
                     </div>
+
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
