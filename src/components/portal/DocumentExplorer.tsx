@@ -11,6 +11,7 @@ import {
   Trash2,
   Upload,
   Camera,
+  AlertTriangle,
 } from "lucide-react";
 import { ScanDialog } from "@/components/portal/ScanDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +27,9 @@ import {
   documentDisplayName,
   todayInputValue,
   DECLARATION_TEXT,
+  DECLARATION_CHECKBOX,
   SUBMISSION_DECLARATION_TEXT,
+  SUBMISSION_DECLARATION_CHECKBOX,
 } from "@/lib/portal";
 import {
   confirmDocument,
@@ -40,7 +43,9 @@ import {
   listMonthSubmissions,
   submitMonth,
   listCategories,
+  getMyClientIdentity,
 } from "@/lib/portal.functions";
+
 
 type Category = { id: string; slug: string; label: string; position: number };
 
