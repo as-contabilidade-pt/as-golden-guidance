@@ -535,6 +535,30 @@ export function DocumentExplorer({
                   </div>
                 ) : showForm ? (
                   <form onSubmit={onSubmitRequest} className="mt-5 space-y-4">
+                    <div className="rounded-2xl border border-gold/20 bg-background px-5 py-4 text-xs text-muted-foreground">
+                      <p>
+                        <strong className="text-foreground">NIF DA EMPRESA:</strong>{" "}
+                        {identity?.nif || "—"}
+                      </p>
+                      <p>
+                        <strong className="text-foreground">NOME DA EMPRESA:</strong>{" "}
+                        {identity?.companyName || "—"}
+                      </p>
+                      <p>
+                        <strong className="text-foreground">PERÍODO A REABRIR:</strong>{" "}
+                        {monthLabel(month)}/{year}
+                      </p>
+                    </div>
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium text-foreground/80">
+                        Nome do responsável
+                      </span>
+                      <input
+                        value={responsibleName}
+                        onChange={(e) => setResponsibleName(e.target.value)}
+                        className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50"
+                      />
+                    </label>
                     <label className="block">
                       <span className="mb-2 block text-xs font-medium text-foreground/80">
                         Motivo da entrega fora de prazo
@@ -547,15 +571,19 @@ export function DocumentExplorer({
                         className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
                       />
                     </label>
-                    <label className="flex items-start gap-3 text-xs text-muted-foreground">
+                    <p className="rounded-2xl bg-secondary px-5 py-4 text-xs leading-relaxed text-muted-foreground">
+                      {DECLARATION_TEXT}
+                    </p>
+                    <label className="flex items-start gap-3 text-xs text-foreground">
                       <input
                         type="checkbox"
                         checked={accepted}
                         onChange={(e) => setAccepted(e.target.checked)}
                         className="mt-0.5 h-4 w-4 accent-[color:var(--gold)]"
                       />
-                      <span>{DECLARATION_TEXT}</span>
+                      <span>{DECLARATION_CHECKBOX}</span>
                     </label>
+
                     <div className="flex flex-wrap gap-3">
                       <button
                         type="submit"
