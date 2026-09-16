@@ -380,22 +380,31 @@ export const createUnlockRequest = createServerFn({ method: "POST" })
         year: z.number().int(),
         month: z.number().int().min(1).max(12),
         reason: z.string().min(5).max(2000),
+        responsibleName: z.string().trim().max(120).optional(),
         declarationAccepted: z.literal(true),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { data: profile } = await context.supabase
-      .from("profiles")
-      .select("nif")
-      .eq("id", context.userId)
-      .maybeSingle();
+    const identity = await clientIdentity(context, context.userId);
+    const at = new Date().toISOString();
+    const responsibleName = data.responsibleName?.trim() || identity.responsibleName;
 
     const { data: row, error } = await context.supabase
       .from("unlock_requests")
       .insert({
         user_id: context.userId,
-        nif: profile?.nif ?? "",
+        nif: identity.nif,
+        company_name: identity.companyName,
+        responsible_name: responsibleName,
+        declaration_text: buildUnlockDeclaration({
+          nif: identity.nif,
+          companyName: identity.companyName,
+          responsibleName,
+          year: data.year,
+          month: data.month,
+          at,
+        }),
         year: data.year,
         month: data.month,
         reason: data.reason,
