@@ -501,6 +501,7 @@ export const submitMonth = createServerFn({ method: "POST" })
       .object({
         year: z.number().int(),
         month: z.number().int().min(1).max(12),
+        responsibleName: z.string().trim().max(120).optional(),
         declarationAccepted: z.literal(true),
       })
       .parse(d),
@@ -517,17 +518,26 @@ export const submitMonth = createServerFn({ method: "POST" })
       throw new Error("Anexe pelo menos um documento antes de submeter o mês.");
     }
 
-    const { data: profile } = await context.supabase
-      .from("profiles")
-      .select("full_name, nif, email")
-      .eq("id", context.userId)
-      .maybeSingle();
+    const identity = await clientIdentity(context, context.userId);
+    const responsibleName = data.responsibleName?.trim() || identity.responsibleName;
+    const at = new Date().toISOString();
+    const declarationText = buildSubmissionDeclaration({
+      nif: identity.nif,
+      companyName: identity.companyName,
+      responsibleName,
+      year: data.year,
+      month: data.month,
+      at,
+    });
 
     const { data: row, error } = await context.supabase
       .from("month_submissions")
       .insert({
         user_id: context.userId,
-        nif: profile?.nif ?? "",
+        nif: identity.nif,
+        company_name: identity.companyName,
+        responsible_name: responsibleName,
+        declaration_text: declarationText,
         year: data.year,
         month: data.month,
         declaration_accepted: true,
@@ -547,13 +557,14 @@ export const submitMonth = createServerFn({ method: "POST" })
         "@/lib/submission-email.server"
       );
       const info = {
-        fullName: profile?.full_name ?? "Cliente",
-        nif: profile?.nif ?? "",
-        ...(profile?.email ? { email: profile.email as string } : {}),
+        fullName: identity.companyName,
+        nif: identity.nif,
+        ...(identity.email ? { email: identity.email } : {}),
         year: data.year,
         month: data.month,
         submittedAt: row.submitted_at as string,
         documentCount: count,
+        declarationText,
       };
       await notifyAdminOfSubmission(info);
       await notifyClientOfSubmission(info);
