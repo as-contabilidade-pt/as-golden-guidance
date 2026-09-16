@@ -209,7 +209,14 @@ export function DocumentExplorer({
     setBusy(true);
     setError(null);
     try {
-      await sendSubmission({ data: { year, month, declarationAccepted: true as const } });
+      await sendSubmission({
+        data: {
+          year,
+          month,
+          responsibleName: responsibleName.trim(),
+          declarationAccepted: true as const,
+        },
+      });
       setShowSubmit(false);
       setSubmitAccepted(false);
       await loadSubmissions();
@@ -228,8 +235,15 @@ export function DocumentExplorer({
     setError(null);
     try {
       await submitRequest({
-        data: { year, month, reason, declarationAccepted: true as const },
+        data: {
+          year,
+          month,
+          reason,
+          responsibleName: responsibleName.trim(),
+          declarationAccepted: true as const,
+        },
       });
+
       setReason("");
       setAccepted(false);
       setShowForm(false);
