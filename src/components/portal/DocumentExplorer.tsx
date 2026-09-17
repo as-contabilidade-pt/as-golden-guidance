@@ -868,29 +868,68 @@ function FolderCard({
   title,
   meta,
   onClick,
-  locked = false,
+  status = "default",
 }: {
   title: string;
   meta: string;
   onClick: () => void;
-  locked?: boolean;
+  status?: "locked" | "current" | "future" | "default";
 }) {
+  const styles = {
+    locked: {
+      card: "border-[oklch(0.55_0.18_25)/45%] bg-[oklch(0.985_0_0)] hover:border-[oklch(0.55_0.18_25)/65%]",
+      iconBg: "bg-[oklch(0.55_0.18_25/12%)]",
+      icon: "text-[oklch(0.55_0.18_25)]",
+      title: "text-foreground",
+      meta: "text-[oklch(0.55_0.18_25)]",
+    },
+    current: {
+      card: "border-gold/70 bg-gold/[8%] shadow-[0_4px_28px_-10px_color-mix(in_oklab,var(--gold)_28%,transparent)] hover:border-gold hover:-translate-y-0.5",
+      iconBg: "bg-gold/25",
+      icon: "text-gold-deep",
+      title: "text-foreground group-hover:text-gold",
+      meta: "text-gold-deep",
+    },
+    future: {
+      card: "border-ink/8 bg-ink/[3%] opacity-70 hover:opacity-90",
+      iconBg: "bg-ink/8",
+      icon: "text-muted-foreground",
+      title: "text-muted-foreground",
+      meta: "text-muted-foreground/80",
+    },
+    default: {
+      card: "",
+      iconBg: "bg-gold/15",
+      icon: "text-gold",
+      title: "text-foreground group-hover:text-gold",
+      meta: "text-muted-foreground",
+    },
+  }[status];
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className="soft-card group flex items-center gap-4 p-5 text-left transition-transform hover:-translate-y-0.5"
+      className={`soft-card group flex items-center gap-4 p-5 text-left transition-transform ${styles.card}`}
     >
-      <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/15 text-gold">
-        {locked ? <Lock className="h-5 w-5" /> : <Folder className="h-5 w-5" />}
+      <span
+        className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${styles.iconBg} ${styles.icon}`}
+      >
+        {status === "locked" ? (
+          <Lock className="h-5 w-5" />
+        ) : (
+          <Folder className="h-5 w-5" />
+        )}
       </span>
       <span className="min-w-0">
-        <span className="block truncate font-serif text-lg text-foreground group-hover:text-gold">
+        <span
+          className={`block truncate font-serif text-lg transition-colors ${styles.title}`}
+        >
           {title}
         </span>
-        <span className="block text-xs text-muted-foreground">
+        <span className={`block text-xs ${styles.meta}`}>
           {meta}
-          {locked ? " · bloqueada" : ""}
+          {status === "locked" ? " · bloqueada" : ""}
         </span>
       </span>
     </button>
