@@ -46,18 +46,18 @@ export function Hero() {
             </a>
           </div>
 
-          <dl className="mt-12 grid max-w-lg grid-cols-3 gap-2 sm:mt-14 sm:gap-4">
+          <dl className="mt-12 grid w-full grid-cols-3 gap-2 sm:mt-14 sm:max-w-lg sm:gap-4">
             {[
               ["Presencial", "e remoto"],
               ["Empresas", "e independentes"],
-              ["Contab.", "digital"],
+              ["Contabilidade", "digital"],
             ].map(([a, b]) => (
               <div
                 key={a}
-                className="rounded-3xl border border-gold/15 bg-ink/40 px-3 py-3 sm:px-5 sm:py-4"
+                className="flex flex-col items-center justify-center rounded-3xl border border-gold/15 bg-ink/40 px-2 py-3 text-center sm:px-5 sm:py-4"
               >
-                <dt className="font-serif text-sm text-gold sm:text-lg">{a}</dt>
-                <dd className="mt-0.5 text-[0.65rem] text-cream/50 sm:mt-1 sm:text-xs">{b}</dd>
+                <dt className="break-words font-serif text-[0.62rem] leading-tight text-gold sm:text-sm md:text-base">{a}</dt>
+                <dd className="mt-0.5 text-[0.6rem] leading-tight text-cream/50 sm:mt-1 sm:text-xs">{b}</dd>
               </div>
             ))}
           </dl>
