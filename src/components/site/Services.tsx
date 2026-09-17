@@ -138,9 +138,11 @@ export function Services() {
                       </li>
                     ))}
                   </ul>
-                  <Button asChild className="mt-8 h-11 rounded-full bg-gold px-6 text-ink hover:bg-gold-deep">
-                    <a href="#contactos">Pedir informações <ArrowUpRight /></a>
-                  </Button>
+                  <DialogClose asChild>
+                    <Button asChild className="mt-8 h-11 rounded-full bg-gold px-6 text-ink hover:bg-gold-deep">
+                      <a href="#contactos">Pedir informações <ArrowUpRight /></a>
+                    </Button>
+                  </DialogClose>
                 </div>
               </DialogContent>
             </Dialog>
