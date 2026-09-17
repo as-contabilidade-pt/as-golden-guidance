@@ -12,6 +12,7 @@ import servicesImage from "@/assets/services-detail.jpg";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -138,9 +139,26 @@ export function Services() {
                       </li>
                     ))}
                   </ul>
-                  <Button asChild className="mt-8 h-11 rounded-full bg-gold px-6 text-ink hover:bg-gold-deep">
-                    <a href="#contactos">Pedir informações <ArrowUpRight /></a>
-                  </Button>
+                  <DialogClose asChild>
+                    <Button
+                      className="mt-8 h-11 rounded-full bg-gold px-6 text-ink hover:bg-gold-deep"
+                      onClick={() => {
+                        const go = () => {
+                          const el = document.getElementById("contactos");
+                          if (!el) return;
+                          el.scrollIntoView({ behavior: "smooth" });
+                          window.setTimeout(() => {
+                            if (Math.abs(el.getBoundingClientRect().top) > 150) {
+                              el.scrollIntoView();
+                            }
+                          }, 900);
+                        };
+                        window.setTimeout(go, 350);
+                      }}
+                    >
+                      Pedir informações <ArrowUpRight />
+                    </Button>
+                  </DialogClose>
                 </div>
               </DialogContent>
             </Dialog>
