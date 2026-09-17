@@ -80,18 +80,37 @@ function StatementConverterPage() {
     );
   }
 
+  function parseAmount(value: string): number | null {
+    const cleaned = value.replace(/[€\s]/g, "").replace(/\./g, "").replace(",", ".");
+    if (!cleaned) return null;
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : null;
+  }
+
   function generateExcel() {
     if (!rows || rows.length === 0) return;
-    const sheet = XLSX.utils.json_to_sheet(
-      rows.map((r) => ({
-        Data: r.data,
-        Descrição: r.descricao,
-        Débito: r.debito,
-        Crédito: r.credito,
-        Saldo: r.saldo,
-      })),
-      { header: ["Data", "Descrição", "Débito", "Crédito", "Saldo"] },
-    );
+    const money = "#,##0.00"; // vírgula decimal garantida pela localização portuguesa do Excel
+    const aoa: (string | number)[][] = [["Data", "Descrição", "Débito", "Crédito", "Saldo"]];
+    for (const r of rows) {
+      const debito = parseAmount(r.debito);
+      const credito = parseAmount(r.credito);
+      const saldo = parseAmount(r.saldo);
+      aoa.push([
+        r.data,
+        r.descricao,
+        debito === null ? "" : -Math.abs(debito),
+        credito === null ? "" : Math.abs(credito),
+        saldo === null ? "" : saldo,
+      ]);
+    }
+    const sheet = XLSX.utils.aoa_to_sheet(aoa);
+    for (let i = 1; i < aoa.length; i++) {
+      for (const col of [2, 3, 4]) {
+        const ref = XLSX.utils.encode_cell({ r: i, c: col });
+        const cell = sheet[ref];
+        if (cell && typeof cell.v === "number") cell.z = money;
+      }
+    }
     sheet["!cols"] = [{ wch: 12 }, { wch: 48 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
     const book = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(book, sheet, "Extrato");
