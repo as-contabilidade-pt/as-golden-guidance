@@ -12,6 +12,7 @@ import servicesImage from "@/assets/services-detail.jpg";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
