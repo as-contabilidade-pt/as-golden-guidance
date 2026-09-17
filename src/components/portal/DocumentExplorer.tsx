@@ -369,20 +369,33 @@ export function DocumentExplorer({
     }
   }
 
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  function monthStatus(m: number): "locked" | "current" | "future" | "default" {
+    if (monthLocked(m)) return "locked";
+    if (year === currentYear && m === currentMonth) return "current";
+    if (year > currentYear || (year === currentYear && m > currentMonth)) return "future";
+    return "default";
+  }
+
   return (
     <div>
       {/* Breadcrumb */}
       <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        <button
-          type="button"
-          onClick={() => {
-            setMonth(null);
-            setCategory(null);
-          }}
-          className="rounded-full bg-secondary px-4 py-1.5 text-xs font-medium text-foreground transition-colors hover:text-gold"
-        >
-          {year}
-        </button>
+        {month !== null ? (
+          <button
+            type="button"
+            onClick={() => {
+              setMonth(null);
+              setCategory(null);
+            }}
+            className="rounded-full bg-secondary px-4 py-1.5 text-xs font-medium text-foreground transition-colors hover:text-gold"
+          >
+            {year}
+          </button>
+        ) : null}
         {month !== null ? (
           <>
             <ChevronRight className="h-4 w-4 text-gold/60" />
@@ -433,21 +446,26 @@ export function DocumentExplorer({
       <div className="mt-8">
         {month === null ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {MONTHS.map((name, i) => (
-              <FolderCard
-                key={name}
-                title={name}
-                meta={
-                  submissionFor(i + 1)
-                    ? `${counts[`${i + 1}`] ?? 0} documento(s) · submetida em ${formatDatePt(
-                        submissionFor(i + 1)!.submitted_at,
-                      )}`
-                    : `${counts[`${i + 1}`] ?? 0} documento(s)`
-                }
-                locked={monthLocked(i + 1)}
-                onClick={() => setMonth(i + 1)}
-              />
-            ))}
+            {MONTHS.map((name, i) => {
+              const m = i + 1;
+              const status = monthStatus(m);
+              const submitted = submissionFor(m);
+              return (
+                <FolderCard
+                  key={name}
+                  title={name}
+                  meta={
+                    submitted
+                      ? `${counts[`${m}`] ?? 0} documento(s) · submetida em ${formatDatePt(
+                          submitted.submitted_at,
+                        )}`
+                      : `${counts[`${m}`] ?? 0} documento(s)`
+                  }
+                  status={status}
+                  onClick={() => setMonth(m)}
+                />
+              );
+            })}
           </div>
         ) : category === null ? (
           <div className="space-y-6">
@@ -850,29 +868,68 @@ function FolderCard({
   title,
   meta,
   onClick,
-  locked = false,
+  status = "default",
 }: {
   title: string;
   meta: string;
   onClick: () => void;
-  locked?: boolean;
+  status?: "locked" | "current" | "future" | "default";
 }) {
+  const styles = {
+    locked: {
+      card: "border-[oklch(0.55_0.18_25)/45%] bg-[oklch(0.985_0_0)] hover:border-[oklch(0.55_0.18_25)/65%]",
+      iconBg: "bg-[oklch(0.55_0.18_25/12%)]",
+      icon: "text-[oklch(0.55_0.18_25)]",
+      title: "text-foreground",
+      meta: "text-[oklch(0.55_0.18_25)]",
+    },
+    current: {
+      card: "border-gold/70 bg-gold/[8%] shadow-[0_4px_28px_-10px_color-mix(in_oklab,var(--gold)_28%,transparent)] hover:border-gold hover:-translate-y-0.5",
+      iconBg: "bg-gold/25",
+      icon: "text-gold-deep",
+      title: "text-foreground group-hover:text-gold",
+      meta: "text-gold-deep",
+    },
+    future: {
+      card: "border-ink/8 bg-ink/[3%] opacity-70 hover:opacity-90",
+      iconBg: "bg-ink/8",
+      icon: "text-muted-foreground",
+      title: "text-muted-foreground",
+      meta: "text-muted-foreground/80",
+    },
+    default: {
+      card: "",
+      iconBg: "bg-gold/15",
+      icon: "text-gold",
+      title: "text-foreground group-hover:text-gold",
+      meta: "text-muted-foreground",
+    },
+  }[status];
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className="soft-card group flex items-center gap-4 p-5 text-left transition-transform hover:-translate-y-0.5"
+      className={`soft-card group flex items-center gap-4 p-5 text-left transition-transform ${styles.card}`}
     >
-      <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/15 text-gold">
-        {locked ? <Lock className="h-5 w-5" /> : <Folder className="h-5 w-5" />}
+      <span
+        className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${styles.iconBg} ${styles.icon}`}
+      >
+        {status === "locked" ? (
+          <Lock className="h-5 w-5" />
+        ) : (
+          <Folder className="h-5 w-5" />
+        )}
       </span>
       <span className="min-w-0">
-        <span className="block truncate font-serif text-lg text-foreground group-hover:text-gold">
+        <span
+          className={`block truncate font-serif text-lg transition-colors ${styles.title}`}
+        >
           {title}
         </span>
-        <span className="block text-xs text-muted-foreground">
+        <span className={`block text-xs ${styles.meta}`}>
           {meta}
-          {locked ? " · bloqueada" : ""}
+          {status === "locked" ? " · bloqueada" : ""}
         </span>
       </span>
     </button>
