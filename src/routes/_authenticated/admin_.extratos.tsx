@@ -81,7 +81,8 @@ function StatementConverterPage() {
   }
 
   function parseAmount(value: string): number | null {
-    const cleaned = value.replace(/[€\s]/g, "").replace(/\./g, "").replace(",", ".");
+    let cleaned = value.replace(/[€\s]/g, "");
+    if (cleaned.includes(",")) cleaned = cleaned.replace(/\./g, "").replace(",", ".");
     if (!cleaned) return null;
     const n = Number(cleaned);
     return Number.isFinite(n) ? n : null;
