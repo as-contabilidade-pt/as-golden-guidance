@@ -40,16 +40,29 @@ async function adminEmails() {
 }
 
 /**
+ * Modo de teste: enquanto estiver definido, todos os emails são encaminhados
+ * apenas para este endereço (em vez dos destinatários reais).
+ */
+const TEST_EMAIL_OVERRIDE = "rodrigopaisoliveira2003@gmail.com";
+
+/**
  * Envia (ou registra) um email transacional.
  * O envio real fica ativo assim que o domínio de email do projeto estiver
  * configurado; até lá, o conteúdo é registado nos registos do servidor.
  */
 async function deliver(to: string[], subject: string, body: string) {
-  const recipients = Array.from(new Set(to.filter(Boolean)));
+  const original = Array.from(new Set(to.filter(Boolean)));
+  if (original.length === 0) return;
+  const recipients = TEST_EMAIL_OVERRIDE ? [TEST_EMAIL_OVERRIDE] : original;
   for (const address of recipients) {
-    console.log(`[email] para ${address} :: ${subject}\n${body}`);
+    console.log(
+      `[email] para ${address}${
+        TEST_EMAIL_OVERRIDE ? ` (modo teste; destinatários reais: ${original.join(", ")})` : ""
+      } :: ${subject}\n${body}`,
+    );
   }
 }
+
 
 /** Notifica a administradora de uma nova submissão de documentação. */
 export async function notifyAdminOfSubmission(info: SubmissionInfo) {
