@@ -30,11 +30,15 @@ export function Header() {
             : "border border-transparent bg-transparent"
         }`}
       >
-        <a href="/#inicio" className="flex min-w-0 items-center gap-3">
-          <Logo size={38} />
-          <span className="hidden font-serif text-base text-ink sm:block">
+        <a href="/#inicio" className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+          <Logo size={34} />
+          <span
+            className={`min-w-0 truncate font-serif text-sm transition-colors sm:text-base ${
+              scrolled ? "text-ink" : "text-cream"
+            }`}
+          >
             AS
-            <span className="ml-2 font-sans text-xs text-gold">Contabilidade</span>
+            <span className="ml-2 font-sans text-[0.7rem] text-gold sm:text-xs">Contabilidade</span>
           </span>
         </a>
 
@@ -43,7 +47,9 @@ export function Header() {
             <a
               key={l.href}
               href={l.href}
-              className="text-sm text-ink/70 transition-colors hover:text-gold"
+              className={`text-sm transition-colors hover:text-gold ${
+                scrolled ? "text-ink/70" : "text-cream/80"
+              }`}
             >
               {l.label}
             </a>
