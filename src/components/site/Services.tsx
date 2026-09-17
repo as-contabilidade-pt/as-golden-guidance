@@ -143,9 +143,17 @@ export function Services() {
                     <Button
                       className="mt-8 h-11 rounded-full bg-gold px-6 text-ink hover:bg-gold-deep"
                       onClick={() => {
-                        window.setTimeout(() => {
-                          document.getElementById("contactos")?.scrollIntoView({ behavior: "smooth" });
-                        }, 400);
+                        const go = () => {
+                          const el = document.getElementById("contactos");
+                          if (!el) return;
+                          el.scrollIntoView({ behavior: "smooth" });
+                          window.setTimeout(() => {
+                            if (Math.abs(el.getBoundingClientRect().top) > 150) {
+                              el.scrollIntoView();
+                            }
+                          }, 900);
+                        };
+                        window.setTimeout(go, 350);
                       }}
                     >
                       Pedir informações <ArrowUpRight />
