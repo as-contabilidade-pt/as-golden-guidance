@@ -145,7 +145,7 @@ export function Services() {
                       onClick={() => {
                         window.setTimeout(() => {
                           document.getElementById("contactos")?.scrollIntoView({ behavior: "smooth" });
-                        }, 120);
+                        }, 400);
                       }}
                     >
                       Pedir informações <ArrowUpRight />
