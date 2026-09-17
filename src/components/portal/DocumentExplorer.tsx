@@ -369,20 +369,33 @@ export function DocumentExplorer({
     }
   }
 
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  function monthStatus(m: number): "locked" | "current" | "future" | "default" {
+    if (monthLocked(m)) return "locked";
+    if (year === currentYear && m === currentMonth) return "current";
+    if (year > currentYear || (year === currentYear && m > currentMonth)) return "future";
+    return "default";
+  }
+
   return (
     <div>
       {/* Breadcrumb */}
       <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        <button
-          type="button"
-          onClick={() => {
-            setMonth(null);
-            setCategory(null);
-          }}
-          className="rounded-full bg-secondary px-4 py-1.5 text-xs font-medium text-foreground transition-colors hover:text-gold"
-        >
-          {year}
-        </button>
+        {month !== null ? (
+          <button
+            type="button"
+            onClick={() => {
+              setMonth(null);
+              setCategory(null);
+            }}
+            className="rounded-full bg-secondary px-4 py-1.5 text-xs font-medium text-foreground transition-colors hover:text-gold"
+          >
+            {year}
+          </button>
+        ) : null}
         {month !== null ? (
           <>
             <ChevronRight className="h-4 w-4 text-gold/60" />
@@ -433,21 +446,26 @@ export function DocumentExplorer({
       <div className="mt-8">
         {month === null ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {MONTHS.map((name, i) => (
-              <FolderCard
-                key={name}
-                title={name}
-                meta={
-                  submissionFor(i + 1)
-                    ? `${counts[`${i + 1}`] ?? 0} documento(s) · submetida em ${formatDatePt(
-                        submissionFor(i + 1)!.submitted_at,
-                      )}`
-                    : `${counts[`${i + 1}`] ?? 0} documento(s)`
-                }
-                locked={monthLocked(i + 1)}
-                onClick={() => setMonth(i + 1)}
-              />
-            ))}
+            {MONTHS.map((name, i) => {
+              const m = i + 1;
+              const status = monthStatus(m);
+              const submitted = submissionFor(m);
+              return (
+                <FolderCard
+                  key={name}
+                  title={name}
+                  meta={
+                    submitted
+                      ? `${counts[`${m}`] ?? 0} documento(s) · submetida em ${formatDatePt(
+                          submitted.submitted_at,
+                        )}`
+                      : `${counts[`${m}`] ?? 0} documento(s)`
+                  }
+                  status={status}
+                  onClick={() => setMonth(m)}
+                />
+              );
+            })}
           </div>
         ) : category === null ? (
           <div className="space-y-6">
