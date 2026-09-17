@@ -140,8 +140,15 @@ export function Services() {
                     ))}
                   </ul>
                   <DialogClose asChild>
-                    <Button asChild className="mt-8 h-11 rounded-full bg-gold px-6 text-ink hover:bg-gold-deep">
-                      <a href="#contactos">Pedir informações <ArrowUpRight /></a>
+                    <Button
+                      className="mt-8 h-11 rounded-full bg-gold px-6 text-ink hover:bg-gold-deep"
+                      onClick={() => {
+                        window.setTimeout(() => {
+                          document.getElementById("contactos")?.scrollIntoView({ behavior: "smooth" });
+                        }, 120);
+                      }}
+                    >
+                      Pedir informações <ArrowUpRight />
                     </Button>
                   </DialogClose>
                 </div>
