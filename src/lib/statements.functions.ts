@@ -31,7 +31,7 @@ Sem separadores de milhares. Sem símbolos de moeda. Responde APENAS com json v�
 {"movimentos":[{"data":"","descricao":"","debito":"","credito":"","saldo":""}]}`;
 
 // Modelo Claude utilizado na extração. Alterar aqui para mudar de modelo.
-const CLAUDE_MODEL = "claude-sonnet-4-6";
+const CLAUDE_MODEL = "claude-sonnet-5-5";
 
 export const extractBankStatement = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
