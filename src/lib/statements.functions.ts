@@ -30,6 +30,9 @@ Para cada movimento devolve:
 Sem separadores de milhares. Sem símbolos de moeda. Responde APENAS com json válido no formato:
 {"movimentos":[{"data":"","descricao":"","debito":"","credito":"","saldo":""}]}`;
 
+// Modelo Claude utilizado na extração. Alterar aqui para mudar de modelo.
+const CLAUDE_MODEL = "claude-sonnet-4-6";
+
 export const extractBankStatement = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => inputSchema.parse(data))
@@ -40,30 +43,32 @@ export const extractBankStatement = createServerFn({ method: "POST" })
     });
     if (isAdmin !== true) throw new Error("Acesso restrito.");
 
-    const apiKey = process.env["LOVABLE_API_KEY"];
+    const apiKey = process.env["ANTHROPIC_API_KEY"];
     if (!apiKey) throw new Error("Serviço de processamento não configurado.");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Lovable-API-Key": apiKey,
-        "X-Lovable-AIG-SDK": "fetch",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "google/gemini-3.8-flash",
+        model: CLAUDE_MODEL,
+        max_tokens: 8192,
         messages: [
           {
             role: "user",
             content: [
-              { type: "text", text: PROMPT },
               {
-                type: "file",
-                file: {
-                  filename: data.filename,
-                  file_data: `data:${data.mimeType};base64,${data.fileData}`,
+                type: "document",
+                source: {
+                  type: "base64",
+                  media_type: "application/pdf",
+                  data: data.fileData,
                 },
               },
+              { type: "text", text: PROMPT },
             ],
           },
         ],
@@ -72,6 +77,9 @@ export const extractBankStatement = createServerFn({ method: "POST" })
 
     if (!res.ok) {
       const body = await res.text();
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Chave de acesso ao serviço de processamento inválida ou sem permissões.");
+      }
       if (res.status === 402) {
         throw new Error(
           "Créditos de IA insuficientes para processar o extrato. É necessário reforçar os créditos.",
@@ -84,14 +92,18 @@ export const extractBankStatement = createServerFn({ method: "POST" })
     }
 
     const payload = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
+      content?: Array<{ type?: string; text?: string }>;
     };
-    const text = payload.choices?.[0]?.message?.content ?? "";
+    const text = (payload.content ?? [])
+      .filter((block) => block?.type === "text")
+      .map((block) => block.text ?? "")
+      .join("");
     const start = text.indexOf("{");
     const end = text.lastIndexOf("}");
     if (start === -1 || end === -1) {
       throw new Error("Não foi possível interpretar os movimentos do extrato.");
     }
+
 
     let parsed: { movimentos?: unknown };
     try {
