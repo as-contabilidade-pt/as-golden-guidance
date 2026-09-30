@@ -55,7 +55,7 @@ export const extractBankStatement = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 8192,
+        max_tokens: 16000,
         messages: [
           {
             role: "user",
