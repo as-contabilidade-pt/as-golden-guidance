@@ -24,8 +24,8 @@ export function Hero() {
           </span>
 
           <h1 className="mt-7 font-serif text-[2.6rem] leading-[1.08] text-cream sm:text-6xl md:text-[4.25rem]">
-            Números com{" "}
-            <span className="text-gradient-gold">rigor e visão</span>.
+            AS{" "}
+            <span className="text-gradient-gold">Contabilidade</span>
           </h1>
 
           <p className="mt-7 max-w-xl text-sm leading-loose text-cream/70 sm:text-base">
