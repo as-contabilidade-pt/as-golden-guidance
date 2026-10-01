@@ -8,7 +8,7 @@ export function Contact() {
       <div className="relative">
         <SectionHeading overline="Fale connosco" title="Vamos falar sobre o seu negócio" light />
         <p className="mx-auto mt-6 max-w-xl text-center text-sm leading-loose text-cream/65 sm:text-base">
-          A forma mais rápida é pelo WhatsApp — respondemos em minutos, em horário útil.
+          A forma mais rápida é pelo WhatsApp — respondemos o mais brevemente possível, em horário útil.
         </p>
 
         <div className="mx-auto mt-14 grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
@@ -27,7 +27,7 @@ export function Contact() {
               </span>
             </div>
             <h3 className="mt-7 font-serif text-2xl">WhatsApp</h3>
-            <p className="mt-1.5 text-sm text-ink/70">Resposta rápida em minutos</p>
+            <p className="mt-1.5 text-sm text-ink/70">Fale diretamente connosco </p>
             <span className="mt-6 inline-flex items-center rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-gold transition-transform duration-300 group-hover:translate-x-1">
               965 378 291
             </span>
