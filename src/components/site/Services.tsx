@@ -24,7 +24,7 @@ const servicos = [
   {
     icon: BookOpen,
     title: "Contabilidade Organizada",
-    text: "Apoio à constituição de sociedades, cumprimento de obrigações contabilísticas e fiscais e reporte regular de informação financeira.",
+    text: "Constituição de sociedades, cumprimento de obrigações contabilísticas e fiscais e reporte regular de informação financeira.",
     highlights: ["Constituição e acompanhamento de sociedades", "Obrigações fiscais e contabilísticas", "Informação financeira para apoiar decisões"],
   },
   {
