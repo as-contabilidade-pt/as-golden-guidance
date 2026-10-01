@@ -39,15 +39,12 @@ export function About() {
         </div>
 
         <div>
-          <SectionHeading overline="Sobre nós" title="Andreia Sofia — a escolha certa." align="left" />
+          <SectionHeading overline="Sobre nós" title="Contabilidade com proximidade e rigor." align="left" />
           <p className="mt-6 text-sm leading-loose text-muted-foreground sm:text-base">
-            Somos representados pela Andreia Sofia, uma Contabilista Certificada com
-            experiência e dedicação. Oferecemos serviços de contabilidade personalizados
-            para empresas e trabalhadores independentes em Portugal.
+            Somos um gabinete de contabilidade que privilegia a proximidade, o rigor e um acompanhamento adaptado às necessidades de cada cliente. Desenvolvemos a nossa atividade de acordo com os princípios estabelecidos no Estatuto e no Código Deontológico da Ordem dos Contabilistas Certificados.
           </p>
           <p className="mt-5 text-sm leading-loose text-muted-foreground/80 sm:text-base">
-            Adaptamo-nos às necessidades do mundo de negócios atual, com acompanhamento
-            remoto ou presencial e apoio à gestão que vai além das necessidades legais.
+            Oferecemos serviços de contabilidade personalizados para empresas e trabalhadores independentes em Portugal, com acompanhamento remoto ou presencial e apoio à gestão que vai além das necessidades legais.
           </p>
 
           <ul className="mt-9 flex flex-wrap gap-3">
