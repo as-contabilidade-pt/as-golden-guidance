@@ -34,7 +34,7 @@ export function About() {
           />
           <div className="absolute -left-4 bottom-8 hidden rounded-3xl bg-gold px-6 py-5 text-ink shadow-[0_16px_40px_-12px_color-mix(in_oklab,var(--gold)_55%,transparent)] sm:block">
             <p className="font-serif text-2xl leading-none">100%</p>
-            <p className="mt-1 text-[0.7rem] font-medium">dedicação ao cliente</p>
+            <p className="mt-1 text-[0.7rem] font-medium">Rigor em cada detalhe.</p>
           </div>
         </div>
 
