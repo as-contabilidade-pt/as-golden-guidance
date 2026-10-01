@@ -11,7 +11,7 @@ export function Contact() {
           A forma mais rápida é pelo WhatsApp — respondemos o mais brevemente possível, em horário útil.
         </p>
 
-        <div className="mx-auto mt-14 grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="mx-auto mt-14 grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <a
             href={whatsappUrl}
             target="_blank"
