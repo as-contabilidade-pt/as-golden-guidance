@@ -13,6 +13,20 @@ export function Contact() {
 
         <div className="mx-auto mt-14 grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <a
+            href="tel:+351965378291"
+            className="soft-card-dark group p-8 transition-all duration-300 hover:-translate-y-1 hover:border-gold/45"
+          >
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gold/10 text-gold">
+              <Phone className="h-5 w-5" strokeWidth={1.5} />
+            </span>
+            <h3 className="mt-7 font-serif text-2xl text-cream">Chamada</h3>
+            <p className="mt-1.5 text-sm text-cream/55">Segunda a sexta, em horário de expediente</p>
+            <span className="mt-6 inline-flex items-center rounded-full bg-gold/10 px-5 py-2.5 text-sm font-medium text-gold transition-transform duration-300 group-hover:translate-x-1">
+              965 378 291
+            </span>
+          </a>
+
+          <a
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
@@ -27,22 +41,8 @@ export function Contact() {
               </span>
             </div>
             <h3 className="mt-7 font-serif text-2xl">WhatsApp</h3>
-            <p className="mt-1.5 text-sm text-ink/70">Fale diretamente connosco </p>
+            <p className="mt-1.5 text-sm text-ink/70">Fale diretamente connosco&nbsp;</p>
             <span className="mt-6 inline-flex items-center rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-gold transition-transform duration-300 group-hover:translate-x-1">
-              965 378 291
-            </span>
-          </a>
-
-          <a
-            href="tel:+351965378291"
-            className="soft-card-dark group p-8 transition-all duration-300 hover:-translate-y-1 hover:border-gold/45"
-          >
-            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gold/10 text-gold">
-              <Phone className="h-5 w-5" strokeWidth={1.5} />
-            </span>
-            <h3 className="mt-7 font-serif text-2xl text-cream">Chamada</h3>
-            <p className="mt-1.5 text-sm text-cream/55">Segunda a sexta, em horário de expediente</p>
-            <span className="mt-6 inline-flex items-center rounded-full bg-gold/10 px-5 py-2.5 text-sm font-medium text-gold transition-transform duration-300 group-hover:translate-x-1">
               965 378 291
             </span>
           </a>
@@ -72,8 +72,16 @@ export function Contact() {
             </span>
             <h3 className="mt-7 font-serif text-2xl text-cream">Localização</h3>
             <p className="mt-1.5 text-sm text-cream/55">Visite-nos no nosso gabinete</p>
-            <span className="mt-6 inline-flex max-w-full items-center rounded-full bg-gold/10 px-5 py-2.5 text-sm font-medium text-gold transition-transform duration-300 group-hover:translate-x-1">
-              Viseu, Portugal
+            <p className="mt-6 flex items-start gap-2 text-sm text-cream/80">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" strokeWidth={1.5} />
+              <span>
+                Av. José Gonçalves Pais, nº 21
+                <br />
+                3515-146 Viseu, Portugal
+              </span>
+            </p>
+            <span className="mt-5 inline-flex items-center rounded-full bg-gold/10 px-5 py-2.5 text-sm font-medium text-gold transition-transform duration-300 group-hover:translate-x-1">
+              Ver no Google Maps
             </span>
           </a>
         </div>
