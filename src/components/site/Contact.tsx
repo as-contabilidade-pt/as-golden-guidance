@@ -83,10 +83,6 @@ export function Contact() {
             <Clock className="h-4 w-4 text-gold" strokeWidth={1.5} />
             8h30 — 12h30 | 14h00 — 18h00
           </span>
-          <span className="flex items-center gap-2.5">
-            <MapPin className="h-4 w-4 text-gold" strokeWidth={1.5} />
-            Av. José Gonçalves Pais, nº21, 3515-146 Viseu
-          </span>
         </div>
       </div>
     </Section>
