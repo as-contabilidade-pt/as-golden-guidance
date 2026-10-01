@@ -31,14 +31,14 @@ export function Header() {
         }`}
       >
         <a href="/#inicio" className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-          <Logo size={34} />
+          <Logo size={40} />
           <span
-            className={`min-w-0 truncate font-serif text-base transition-colors sm:text-lg ${
+            className={`min-w-0 truncate font-serif text-xl transition-colors sm:text-2xl ${
               scrolled ? "text-ink" : "text-cream"
             }`}
           >
             AS
-            <span className="ml-2 font-sans text-xs text-gold sm:text-sm">Contabilidade</span>
+            <span className="ml-2 font-sans text-base text-gold sm:text-lg">Contabilidade</span>
           </span>
         </a>
 
