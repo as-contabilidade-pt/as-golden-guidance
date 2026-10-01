@@ -72,9 +72,20 @@ export function Contact() {
             </span>
             <h3 className="mt-7 font-serif text-2xl text-cream">Localização</h3>
             <p className="mt-1.5 text-sm text-cream/55">Visite-nos no nosso gabinete</p>
-            <span className="mt-6 inline-flex max-w-full items-center rounded-full bg-gold/10 px-5 py-2.5 text-sm font-medium text-gold transition-transform duration-300 group-hover:translate-x-1">
-              Viseu, Portugal
+            <div className="mt-6 space-y-1.5 text-sm text-cream/80">
+              <p className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" strokeWidth={1.5} />
+                <span>
+                  Av. José Gonçalves Pais, nº 21
+                  <br />
+                  3515-146 Viseu, Portugal
+                </span>
+              </p>
+            </div>
+            <span className="mt-5 inline-flex items-center rounded-full bg-gold/10 px-5 py-2.5 text-sm font-medium text-gold transition-transform duration-300 group-hover:translate-x-1">
+              Ver no Google Maps
             </span>
+
           </a>
         </div>
 
