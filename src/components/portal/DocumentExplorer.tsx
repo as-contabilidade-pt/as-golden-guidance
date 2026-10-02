@@ -477,8 +477,8 @@ export function DocumentExplorer({
             return (
               <div className="space-y-8">
                 {open.length > 0 ? (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {open.map(renderCard)}
+                  <div className="mx-auto grid max-w-3xl gap-5 sm:grid-cols-2">
+                    {open.map((m) => renderCard(m, "lg"))}
                   </div>
                 ) : (
                   <p className="soft-card px-6 py-5 text-sm text-muted-foreground">
@@ -508,16 +508,6 @@ export function DocumentExplorer({
                   </div>
                 ) : null}
 
-                {future.length > 0 ? (
-                  <div className="opacity-80">
-                    <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Próximos meses
-                    </p>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      {future.map(renderCard)}
-                    </div>
-                  </div>
-                ) : null}
               </div>
             );
           })()
