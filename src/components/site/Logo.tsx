@@ -1,17 +1,13 @@
 export function Logo({ size = 44 }: { size?: number }) {
   return (
-    <span
-      className="inline-flex shrink-0 items-center justify-center rounded-full border border-gold/60 bg-ink"
+    <img
+      src="/as-logo.png"
+      alt="AS Contabilidade"
+      width={size}
+      height={size}
+      className="inline-block shrink-0 rounded-full"
       style={{ width: size, height: size }}
-      aria-hidden
-    >
-      <span
-        className="font-serif leading-none text-gold"
-        style={{ fontSize: size * 0.55 }}
-      >
-        S
-      </span>
-    </span>
+    />
   );
 }
 

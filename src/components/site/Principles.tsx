@@ -64,12 +64,6 @@ export function Principles() {
               </li>
             ))}
           </ol>
-
-          <div className="mt-14 flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-gold" />
-            <span className="h-1.5 w-1.5 rounded-full bg-gold/50" />
-            <span className="h-1.5 w-1.5 rounded-full bg-gold/25" />
-          </div>
         </div>
       </div>
     </Section>
