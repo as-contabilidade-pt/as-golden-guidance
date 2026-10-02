@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ChevronRight,
+  ChevronDown,
   Download,
   FileText,
   Folder,
@@ -92,6 +93,7 @@ export function DocumentExplorer({
 }) {
   const years = availableYears();
   const [year, setYear] = useState(years[0]!);
+  const [showPast, setShowPast] = useState(false);
   const [month, setMonth] = useState<number | null>(null);
   const [category, setCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -445,10 +447,9 @@ export function DocumentExplorer({
 
       <div className="mt-8">
         {month === null ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {MONTHS.map((name, i) => {
-              const m = i + 1;
-              const status = monthStatus(m);
+          (() => {
+            const renderCard = (m: number) => {
+              const name = MONTHS[m - 1]!;
               const submitted = submissionFor(m);
               return (
                 <FolderCard
@@ -461,12 +462,65 @@ export function DocumentExplorer({
                         )}`
                       : `${counts[`${m}`] ?? 0} documento(s)`
                   }
-                  status={status}
+                  status={monthStatus(m)}
                   onClick={() => setMonth(m)}
                 />
               );
-            })}
-          </div>
+            };
+            const all = MONTHS.map((_, i) => i + 1);
+            const open = all.filter((m) => {
+              const s = monthStatus(m);
+              return s === "current" || s === "default";
+            });
+            const lockedList = all.filter((m) => monthStatus(m) === "locked");
+            const future = all.filter((m) => monthStatus(m) === "future");
+            return (
+              <div className="space-y-8">
+                {open.length > 0 ? (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {open.map(renderCard)}
+                  </div>
+                ) : (
+                  <p className="soft-card px-6 py-5 text-sm text-muted-foreground">
+                    Não existem meses abertos para submissão neste ano.
+                  </p>
+                )}
+
+                {lockedList.length > 0 ? (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowPast((v) => !v)}
+                      aria-expanded={showPast}
+                      className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
+                    >
+                      {showPast ? "Ocultar meses anteriores" : "Ver meses anteriores"}
+                      <span className="text-muted-foreground">({lockedList.length})</span>
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform ${showPast ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    {showPast ? (
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {lockedList.map(renderCard)}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {future.length > 0 ? (
+                  <div className="opacity-80">
+                    <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Próximos meses
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      {future.map(renderCard)}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })()
         ) : category === null ? (
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
