@@ -913,11 +913,13 @@ function FolderCard({
   meta,
   onClick,
   status = "default",
+  size = "md",
 }: {
   title: string;
   meta: string;
   onClick: () => void;
   status?: "locked" | "current" | "future" | "default";
+  size?: "md" | "lg";
 }) {
   const styles = {
     locked: {
@@ -950,28 +952,30 @@ function FolderCard({
     },
   }[status];
 
+  const large = size === "lg";
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`soft-card group flex items-center gap-4 p-5 text-left transition-transform ${styles.card}`}
+      className={`soft-card group flex items-center gap-5 text-left transition-transform ${large ? "p-7" : "p-5"} ${styles.card} ${status === "current" && large ? "month-glow" : ""}`}
     >
       <span
-        className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${styles.iconBg} ${styles.icon}`}
+        className={`inline-flex items-center justify-center rounded-2xl ${large ? "h-16 w-16" : "h-12 w-12"} ${styles.iconBg} ${styles.icon}`}
       >
         {status === "locked" ? (
-          <Lock className="h-5 w-5" />
+          <Lock className={large ? "h-7 w-7" : "h-5 w-5"} />
         ) : (
-          <Folder className="h-5 w-5" />
+          <Folder className={large ? "h-7 w-7" : "h-5 w-5"} />
         )}
       </span>
       <span className="min-w-0">
         <span
-          className={`block truncate font-serif text-lg transition-colors ${styles.title}`}
+          className={`block truncate font-serif transition-colors ${large ? "text-2xl" : "text-lg"} ${styles.title}`}
         >
           {title}
         </span>
-        <span className={`block text-xs ${styles.meta}`}>
+        <span className={`block ${large ? "text-sm" : "text-xs"} ${styles.meta}`}>
           {meta}
           {status === "locked" ? " · bloqueada" : ""}
         </span>
