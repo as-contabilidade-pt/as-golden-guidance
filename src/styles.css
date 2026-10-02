@@ -190,3 +190,23 @@
 @utility animate-fade-up {
   animation: fade-up 1s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+@keyframes month-glow {
+  0%,
+  100% {
+    box-shadow: 0 4px 28px -10px color-mix(in oklab, var(--gold) 28%, transparent);
+  }
+  50% {
+    box-shadow: 0 8px 40px -6px color-mix(in oklab, var(--gold) 60%, transparent);
+  }
+}
+
+@utility month-glow {
+  animation: month-glow 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .month-glow {
+    animation: none;
+  }
+}
