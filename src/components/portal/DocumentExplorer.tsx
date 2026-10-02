@@ -448,7 +448,7 @@ export function DocumentExplorer({
       <div className="mt-8">
         {month === null ? (
           (() => {
-            const renderCard = (m: number) => {
+            const renderCard = (m: number, size: "md" | "lg" = "md") => {
               const name = MONTHS[m - 1]!;
               const submitted = submissionFor(m);
               return (
@@ -463,6 +463,7 @@ export function DocumentExplorer({
                       : `${counts[`${m}`] ?? 0} documento(s)`
                   }
                   status={monthStatus(m)}
+                  size={size}
                   onClick={() => setMonth(m)}
                 />
               );
@@ -473,7 +474,6 @@ export function DocumentExplorer({
               return s === "current" || s === "default";
             });
             const lockedList = all.filter((m) => monthStatus(m) === "locked");
-            const future = all.filter((m) => monthStatus(m) === "future");
             return (
               <div className="space-y-8">
                 {open.length > 0 ? (
