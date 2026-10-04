@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/admin-guard";
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -10,6 +11,7 @@ import {
 } from "@/lib/portal.functions";
 
 export const Route = createFileRoute("/_authenticated/admin_/clientes/$recordId")({
+  beforeLoad: requireAdmin,
   head: () => ({
     meta: [
       { title: "Ficha de Cliente | AS Contabilidade" },

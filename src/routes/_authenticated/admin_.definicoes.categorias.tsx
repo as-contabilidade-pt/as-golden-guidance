@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/admin-guard";
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -11,6 +12,7 @@ import {
 } from "@/lib/portal.functions";
 
 export const Route = createFileRoute("/_authenticated/admin_/definicoes/categorias")({
+  beforeLoad: requireAdmin,
   head: () => ({
     meta: [
       { title: "Categorias de Documentos | AS Contabilidade" },

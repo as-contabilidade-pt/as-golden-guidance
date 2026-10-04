@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/admin-guard";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -13,6 +14,7 @@ import {
 import { formatDateTimePt, monthLabel } from "@/lib/portal";
 
 export const Route = createFileRoute("/_authenticated/admin")({
+  beforeLoad: requireAdmin,
   component: AdminPage,
   head: () => ({
     meta: [
