@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/admin-guard";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -7,6 +8,7 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { extractBankStatement, type StatementRow } from "@/lib/statements.functions";
 
 export const Route = createFileRoute("/_authenticated/admin_/extratos")({
+  beforeLoad: requireAdmin,
   component: StatementConverterPage,
   head: () => ({
     meta: [
