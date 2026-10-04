@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   ChevronRight,
   ChevronDown,
@@ -92,10 +93,35 @@ export function DocumentExplorer({
   readOnly?: boolean;
 }) {
   const years = availableYears();
-  const [year, setYear] = useState(years[0]!);
+  const navigate = useNavigate();
+  const search = useRouterState({
+    select: (s) => s.location.search as Record<string, unknown>,
+  });
+  const yearParam = Number(search.ano);
+  const year = years.includes(yearParam) ? yearParam : years[0]!;
+  const monthParam = search.mes === undefined ? NaN : Number(search.mes);
+  const month = Number.isInteger(monthParam) && monthParam >= 0 && monthParam <= 11 ? monthParam : null;
+  const category = month !== null && typeof search.pasta === "string" ? search.pasta : null;
+  const updateNav = useCallback(
+    (next: { ano?: number; mes?: number | null; pasta?: string | null }) => {
+      void navigate({
+        to: ".",
+        search: ((prev: Record<string, unknown>) => {
+          const out: Record<string, unknown> = { ...prev };
+          for (const [k, v] of Object.entries(next)) {
+            if (v === null || v === undefined) delete out[k];
+            else out[k] = v;
+          }
+          return out;
+        }) as never,
+      });
+    },
+    [navigate],
+  );
+  const setYear = (y: number) => updateNav({ ano: y, mes: null, pasta: null });
+  const setMonth = (m: number | null) => updateNav({ mes: m, pasta: null });
+  const setCategory = (c: string | null) => updateNav({ pasta: c });
   const [showPast, setShowPast] = useState(false);
-  const [month, setMonth] = useState<number | null>(null);
-  const [category, setCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [supplier, setSupplier] = useState("");
   const [docDate, setDocDate] = useState(todayInputValue());
@@ -391,7 +417,6 @@ export function DocumentExplorer({
             type="button"
             onClick={() => {
               setMonth(null);
-              setCategory(null);
             }}
             className="rounded-full bg-secondary px-4 py-1.5 text-xs font-medium text-foreground transition-colors hover:text-gold"
           >
