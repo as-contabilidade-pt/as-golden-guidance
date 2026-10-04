@@ -416,7 +416,6 @@ export function DocumentExplorer({
             type="button"
             onClick={() => {
               setMonth(null);
-              setCategory(null);
             }}
             className="rounded-full bg-secondary px-4 py-1.5 text-xs font-medium text-foreground transition-colors hover:text-gold"
           >
