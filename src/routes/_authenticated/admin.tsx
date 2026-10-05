@@ -59,7 +59,6 @@ function AdminPage() {
     <PortalShell
       title="Painel de Administração"
       subtitle="Clientes da AS | Contabilidade, Fiscalidade e Gestão."
-      action={<NewClientDialog onCreated={(email) => setNotice(`Convite enviado para ${email}.`)} />}
     >
       {notice ? (
         <p className="mb-6 rounded-2xl border border-gold/30 bg-gold/10 px-5 py-3 text-sm text-foreground">
