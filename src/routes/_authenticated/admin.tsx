@@ -1,12 +1,11 @@
 import { requireAdmin } from "@/lib/admin-guard";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, FileSpreadsheet, Loader2, Plus, Settings, UserRound } from "lucide-react";
+import { CheckCircle2, FileSpreadsheet, FolderTree, Inbox, Users } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { NewClientDialog } from "@/components/portal/NewClientDialog";
 import {
-  createClient,
-  listClients,
   listPendingUnlockRequests,
   decideUnlockRequest,
   listRecentSubmissions,
@@ -32,161 +31,79 @@ export const Route = createFileRoute("/_authenticated/admin")({
   }),
 });
 
-type Client = {
-  id: string;
-  full_name: string;
-  nif: string;
-  email: string;
-};
+const QUICK = [
+  {
+    to: "/admin/clientes",
+    icon: Users,
+    title: "Clientes",
+    text: "Todos os clientes em grelha, pesquisa e acesso aos documentos.",
+  },
+  {
+    to: "/admin/definicoes/categorias",
+    icon: FolderTree,
+    title: "Categorias",
+    text: "Configurar as pastas de submissão de documentos.",
+  },
+  {
+    to: "/admin/extratos",
+    icon: FileSpreadsheet,
+    title: "Conversor de Extratos",
+    text: "Converter extratos bancários em PDF para Excel.",
+  },
+] as const;
 
 function AdminPage() {
-  const fetchClients = useServerFn(listClients);
-  const addClient = useServerFn(createClient);
-
-  const [clients, setClients] = useState<Client[]>([]);
-  const [open, setOpen] = useState(false);
-  const [fullName, setFullName] = useState("");
-  const [nif, setNif] = useState("");
-  const [email, setEmail] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      setClients((await fetchClients()) as Client[]);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao carregar clientes.");
-    }
-  }, [fetchClients]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    setNotice(null);
-    try {
-      await addClient({
-        data: {
-          fullName,
-          nif,
-          email,
-          redirectTo: `${window.location.origin}/definir-password`,
-        },
-      });
-      setNotice(`Convite enviado para ${email}.`);
-      setFullName("");
-      setNif("");
-      setEmail("");
-      setOpen(false);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível criar o cliente.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <PortalShell
       title="Painel de Administração"
       subtitle="Clientes da AS | Contabilidade, Fiscalidade e Gestão."
-      action={
-        <div className="flex flex-wrap gap-3">
-          <Link
-            to="/admin/clientes"
-            className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-3 text-sm font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
-          >
-            <Settings className="h-4 w-4" /> Clientes
-          </Link>
-          <Link
-            to="/admin/definicoes/categorias"
-            className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-3 text-sm font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
-          >
-            <Settings className="h-4 w-4" /> Categorias
-          </Link>
-          <Link
-            to="/admin/extratos"
-            className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-3 text-sm font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
-          >
-            <FileSpreadsheet className="h-4 w-4" /> Conversor de Extratos
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep"
-          >
-            <Plus className="h-4 w-4" /> Novo cliente
-          </button>
-        </div>
-      }
+      action={<NewClientDialog onCreated={(email) => setNotice(`Convite enviado para ${email}.`)} />}
     >
       {notice ? (
         <p className="mb-6 rounded-2xl border border-gold/30 bg-gold/10 px-5 py-3 text-sm text-foreground">
           {notice}
         </p>
       ) : null}
-      {error ? (
-        <p className="mb-6 rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-3 text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
 
-      {open ? (
-        <form onSubmit={onSubmit} className="soft-card mb-8 grid gap-4 p-6 sm:grid-cols-3">
-          <Field label="Nome completo" value={fullName} onChange={setFullName} />
-          <Field label="NIF" value={nif} onChange={setNif} />
-          <Field label="Email" value={email} onChange={setEmail} type="email" />
-          <div className="sm:col-span-3">
-            <button
-              type="submit"
-              disabled={busy}
-              className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
-            >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Criar conta e enviar convite
-            </button>
-          </div>
-        </form>
-      ) : null}
-
-      <RecentSubmissions />
+      <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {QUICK.map(({ to, icon: Icon, title, text }) => (
+          <Link
+            key={to}
+            to={to}
+            className="soft-card group flex flex-col gap-4 p-6 transition-all hover:-translate-y-1 hover:border-gold/50"
+          >
+            <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/15 text-gold">
+              <Icon className="h-6 w-6" />
+            </span>
+            <span>
+              <span className="block font-serif text-xl text-foreground">{title}</span>
+              <span className="mt-1 block text-sm text-muted-foreground">{text}</span>
+            </span>
+            <span className="mt-auto text-xs text-gold">Abrir →</span>
+          </Link>
+        ))}
+        <a
+          href="#submissoes"
+          className="soft-card flex flex-col gap-4 p-6 transition-all hover:-translate-y-1 hover:border-gold/50"
+        >
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/15 text-gold">
+            <Inbox className="h-6 w-6" />
+          </span>
+          <span>
+            <span className="block font-serif text-xl text-foreground">Submissões Recentes</span>
+            <span className="mt-1 block text-sm text-muted-foreground">
+              Meses entregues pelos clientes, com declaração.
+            </span>
+          </span>
+          <span className="mt-auto text-xs text-gold">Ver abaixo ↓</span>
+        </a>
+      </div>
 
       <UnlockRequests />
 
-      <h2 className="mb-4 mt-10 font-serif text-2xl text-foreground">Clientes</h2>
-      <div className="space-y-3">
-        {clients.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-gold/30 px-6 py-10 text-center text-sm text-muted-foreground">
-            Ainda não existem clientes registados.
-          </p>
-        ) : (
-          clients.map((c) => (
-            <Link
-              key={c.id}
-              to="/admin/cliente/$clientId"
-              params={{ clientId: c.id }}
-              className="soft-card flex flex-wrap items-center gap-4 px-5 py-4 transition-transform hover:-translate-y-0.5"
-            >
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
-                <UserRound className="h-5 w-5" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-serif text-lg text-foreground">{c.full_name}</span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  NIF {c.nif} · {c.email}
-                </span>
-              </span>
-              <span className="text-xs text-gold">Ver documentos →</span>
-            </Link>
-          ))
-        )}
-      </div>
+      <RecentSubmissions />
     </PortalShell>
   );
 }
@@ -288,32 +205,6 @@ function UnlockRequests() {
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  type?: string;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-xs font-medium text-foreground/80">{label}</span>
-      <input
-        required
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
-      />
-    </label>
-  );
-}
-
-
 type SubmissionRow = {
   id: string;
   full_name: string;
@@ -327,6 +218,7 @@ type SubmissionRow = {
 function RecentSubmissions() {
   const fetchRecent = useServerFn(listRecentSubmissions);
   const [rows, setRows] = useState<SubmissionRow[]>([]);
+  const [all, setAll] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -339,15 +231,26 @@ function RecentSubmissions() {
   }, [fetchRecent]);
 
   return (
-    <section className="mt-10">
-      <h2 className="mb-4 font-serif text-2xl text-foreground">Submissões Recentes</h2>
+    <section id="submissoes" className="mt-10 scroll-mt-24">
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <h2 className="font-serif text-2xl text-foreground">Submissões Recentes</h2>
+        {rows.length > 5 ? (
+          <button
+            type="button"
+            onClick={() => setAll((v) => !v)}
+            className="text-xs text-gold hover:underline"
+          >
+            {all ? "Ver menos" : "Ver todas"}
+          </button>
+        ) : null}
+      </div>
       {rows.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-gold/30 px-6 py-8 text-center text-sm text-muted-foreground">
           Ainda não existem submissões de documentação.
         </p>
       ) : (
         <div className="space-y-3">
-          {rows.map((r) => (
+          {(all ? rows : rows.slice(0, 5)).map((r) => (
             <div key={r.id} className="soft-card flex flex-wrap items-center gap-4 px-5 py-4">
               <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
                 <CheckCircle2 className="h-5 w-5" />
