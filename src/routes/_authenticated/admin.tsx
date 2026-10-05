@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, FileSpreadsheet, FolderTree, Inbox, Users } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { NewClientDialog } from "@/components/portal/NewClientDialog";
 import {
   listPendingUnlockRequests,
   decideUnlockRequest,
@@ -53,19 +52,11 @@ const QUICK = [
 ] as const;
 
 function AdminPage() {
-  const [notice, setNotice] = useState<string | null>(null);
-
   return (
     <PortalShell
       title="Painel de Administração"
       subtitle="Clientes da AS | Contabilidade, Fiscalidade e Gestão."
-      action={<NewClientDialog onCreated={(email) => setNotice(`Convite enviado para ${email}.`)} />}
     >
-      {notice ? (
-        <p className="mb-6 rounded-2xl border border-gold/30 bg-gold/10 px-5 py-3 text-sm text-foreground">
-          {notice}
-        </p>
-      ) : null}
 
       <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {QUICK.map(({ to, icon: Icon, title, text }) => (
