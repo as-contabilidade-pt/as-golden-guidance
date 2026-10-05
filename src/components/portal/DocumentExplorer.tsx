@@ -97,11 +97,11 @@ export function DocumentExplorer({
   const search = useRouterState({
     select: (s) => s.location.search as Record<string, unknown>,
   });
-  const yearParam = Number(search.ano);
+  const yearParam = Number(search["ano"]);
   const year = years.includes(yearParam) ? yearParam : years[0]!;
-  const monthParam = search.mes === undefined ? NaN : Number(search.mes);
+  const monthParam = search["mes"] === undefined ? NaN : Number(search["mes"]);
   const month = Number.isInteger(monthParam) && monthParam >= 0 && monthParam <= 11 ? monthParam : null;
-  const category = month !== null && typeof search.pasta === "string" ? search.pasta : null;
+  const category = month !== null && typeof search["pasta"] === "string" ? search["pasta"] : null;
   const updateNav = useCallback(
     (next: { ano?: number; mes?: number | null; pasta?: string | null }) => {
       void navigate({
