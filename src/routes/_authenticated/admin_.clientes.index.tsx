@@ -2,10 +2,12 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Loader2, Plus, Search, Upload } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Search, Upload, UserRound } from "lucide-react";
+import { NewClientDialog } from "@/components/portal/NewClientDialog";
 import { PortalShell } from "@/components/portal/PortalShell";
 import {
   listClientRecords,
+  listClients,
   createClientRecord,
   importClientRecords,
 } from "@/lib/portal.functions";
@@ -59,6 +61,22 @@ type SortKey = "client_number" | "name" | "nif" | "folder_active";
 
 function ClientesPage() {
   const fetchList = useServerFn(listClientRecords);
+  const fetchAccounts = useServerFn(listClients);
+  const [accounts, setAccounts] = useState<
+    { id: string; full_name: string; nif: string; email: string }[]
+  >([]);
+  const loadAccounts = useCallback(async () => {
+    try {
+      setAccounts(
+        (await fetchAccounts()) as { id: string; full_name: string; nif: string; email: string }[],
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [fetchAccounts]);
+  useEffect(() => {
+    void loadAccounts();
+  }, [loadAccounts]);
   const create = useServerFn(createClientRecord);
   const importRows = useServerFn(importClientRecords);
 
@@ -99,6 +117,21 @@ function ClientesPage() {
     });
     return asc ? sorted : sorted.reverse();
   }, [rows, query, sort, asc]);
+
+  const visibleAccounts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const byNif = new Map(rows.filter((r) => r.nif).map((r) => [r.nif.trim(), r]));
+    return accounts
+      .map((a) => ({ ...a, record: byNif.get((a.nif ?? "").trim()) }))
+      .filter(
+        (a) =>
+          !q ||
+          [a.full_name, a.nif, a.record?.client_number ?? ""].some((v) =>
+            (v ?? "").toLowerCase().includes(q),
+          ),
+      )
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt"));
+  }, [accounts, rows, query]);
 
   function toggleSort(key: SortKey) {
     if (key === sort) setAsc((v) => !v);
@@ -204,12 +237,20 @@ function ClientesPage() {
       title="Clientes"
       subtitle="Base de dados de fichas de cliente. Pesquise por nome, NIF ou nº de cliente."
       action={
+        <div className="flex flex-wrap gap-3">
         <Link
           to="/admin"
           className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
         >
           <ArrowLeft className="h-4 w-4" /> Voltar ao painel
         </Link>
+        <NewClientDialog
+          onCreated={async (email) => {
+            setNotice(`Convite enviado para ${email}.`);
+            await loadAccounts();
+          }}
+        />
+        </div>
       }
     >
       {notice ? (
@@ -257,6 +298,48 @@ function ClientesPage() {
         </div>
       </div>
 
+
+      <div className="mb-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {visibleAccounts.length === 0 ? (
+          <p className="col-span-full rounded-2xl border border-dashed border-gold/30 px-6 py-10 text-center text-sm text-muted-foreground">
+            Nenhum cliente encontrado.
+          </p>
+        ) : (
+          visibleAccounts.map((c) => {
+            const active = c.record?.folder_active;
+            return (
+              <Link
+                key={c.id}
+                to="/admin/cliente/$clientId"
+                params={{ clientId: c.id }}
+                className="soft-card flex flex-col gap-4 p-5 transition-all hover:-translate-y-1 hover:border-gold/50"
+              >
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
+                  <UserRound className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate font-serif text-lg text-foreground">
+                    {c.full_name}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">NIF {c.nif || "—"}</span>
+                </span>
+                <span className="mt-auto flex items-center justify-between gap-2">
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs ${
+                      active ? "bg-gold/15 text-gold" : "bg-secondary text-muted-foreground"
+                    }`}
+                  >
+                    {active ? "Pasta ativa" : "Pasta inativa"}
+                  </span>
+                  <span className="text-xs text-gold">Documentos →</span>
+                </span>
+              </Link>
+            );
+          })
+        )}
+      </div>
+
+      <h2 className="mb-4 font-serif text-2xl text-foreground">Fichas de clientes</h2>
       <div className="soft-card mb-8 grid gap-4 p-6 sm:grid-cols-4">
         <label className="block">
           <span className="mb-2 block text-xs font-medium text-foreground/80">Nº de cliente</span>
