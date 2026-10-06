@@ -1,8 +1,8 @@
 import { requireAdmin } from "@/lib/admin-guard";
 import { useCallback, useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
 import {
   listCategories,
