@@ -27,6 +27,7 @@ import {
   formatDatePt,
   formatDateTimePt,
   documentDisplayName,
+  documentPartyField,
   todayInputValue,
   DECLARATION_TEXT,
   DECLARATION_CHECKBOX,
@@ -102,6 +103,7 @@ export function DocumentExplorer({
   const monthParam = search["mes"] === undefined ? NaN : Number(search["mes"]);
   const month = Number.isInteger(monthParam) && monthParam >= 0 && monthParam <= 11 ? monthParam : null;
   const category = month !== null && typeof search["pasta"] === "string" ? search["pasta"] : null;
+  const partyField = documentPartyField(category ?? "");
   const updateNav = useCallback(
     (next: { ano?: number; mes?: number | null; pasta?: string | null }) => {
       void navigate({
@@ -324,7 +326,7 @@ export function DocumentExplorer({
     if (!files || month === null || category === null) return;
     setError(null);
     if (!supplier.trim()) {
-      setError("Indique o fornecedor do documento antes de enviar.");
+      setError(`Indique ${partyField.label.toLocaleLowerCase("pt-PT")} antes de enviar.`);
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(docDate)) {
@@ -785,13 +787,13 @@ export function DocumentExplorer({
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block text-left">
                     <span className="mb-2 block text-xs font-medium text-foreground/80">
-                      Fornecedor
+                      {partyField.label}
                     </span>
                     <input
                       type="text"
                       value={supplier}
                       onChange={(e) => setSupplier(e.target.value)}
-                      placeholder="Ex: EDP"
+                      placeholder={partyField.placeholder}
                       className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
                     />
                   </label>
@@ -812,7 +814,7 @@ export function DocumentExplorer({
                   <span className="text-gold">
                     {documentDisplayName(
                       `${String(month).padStart(2, "0")}-NN`,
-                      supplier || "Fornecedor",
+                      supplier || partyField.label,
                       docDate,
                     )}
                   </span>
