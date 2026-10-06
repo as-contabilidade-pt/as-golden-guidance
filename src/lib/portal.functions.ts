@@ -92,11 +92,25 @@ export const getSessionInfo = createServerFn({ method: "GET" })
       .eq("id", context.userId)
       .maybeSingle();
 
+    const admin = await isAdmin(context);
+
+    // Ficha completa do próprio cliente (RLS permite SELECT da ficha própria).
+    const { data: record } = admin
+      ? { data: null }
+      : await context.supabase
+          .from("client_records")
+          .select(
+            "client_number, name, nif, email, phone, responsible_name, address, postal_code, locality, notes, folder_active",
+          )
+          .eq("user_id", context.userId)
+          .maybeSingle();
+
     return {
       userId: context.userId,
       email: (context.claims as { email?: string }).email ?? profile?.email ?? "",
       profile: profile ?? null,
-      isAdmin: await isAdmin(context),
+      isAdmin: admin,
+      record: record ?? null,
     };
   });
 
