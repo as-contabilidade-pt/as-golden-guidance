@@ -91,7 +91,17 @@ export function PortalShell({
         ["Localidade", r.locality],
         ["Observações", r.notes],
       ];
-      return (
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      const el = event.target as HTMLElement | null;
+      if (!el?.closest("[data-user-menu]")) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  return (
         <>
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs font-medium text-foreground">Os seus dados</span>
