@@ -510,6 +510,20 @@ export function DocumentExplorer({
               ) : null}
             </div>
           ) : null}
+          {year === currentYear && otherMonths.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setShowPast((v) => !v)}
+              aria-expanded={showPast}
+              className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
+            >
+              {showPast ? "Ocultar outros meses" : "Ver outros meses"}
+              <span className="text-muted-foreground">({otherMonths.length})</span>
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${showPast ? "rotate-180" : ""}`}
+              />
+            </button>
+          ) : null}
         </div>
       ) : null}
 
