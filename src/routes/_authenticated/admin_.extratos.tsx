@@ -1,8 +1,9 @@
 import { requireAdmin } from "@/lib/admin-guard";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, FileSpreadsheet, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import { FileSpreadsheet, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { extractBankStatement, type StatementRow } from "@/lib/statements.functions";
@@ -128,14 +129,6 @@ function StatementConverterPage() {
     <PortalShell
       title="Conversor de Extratos"
       subtitle="Ferramenta interna: converter extratos bancários em PDF para folha de cálculo."
-      action={
-        <Link
-          to="/admin"
-          className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
-        >
-          <ArrowLeft className="h-4 w-4" /> Voltar ao painel
-        </Link>
-      }
     >
       <div className="soft-card grid gap-5 p-6 sm:grid-cols-2">
         <div>

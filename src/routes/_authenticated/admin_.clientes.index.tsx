@@ -2,7 +2,7 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Download, FolderOpen, Loader2, Plus, Search, Upload } from "lucide-react";
+import { Download, FolderOpen, Loader2, Plus, Search, Upload } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -324,17 +324,9 @@ function ClientesPage() {
       title="Clientes"
       subtitle={`${rows.length} cliente(s) · ${activeCount} com pasta de documentos ativa`}
       action={
-        <div className="flex flex-wrap gap-3">
-          <Link
-            to="/admin"
-            className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
-          >
-            <ArrowLeft className="h-4 w-4" /> Voltar ao painel
-          </Link>
-          <NewRecordDialog
-            onCreated={(id) => navigate({ to: "/admin/clientes/$recordId", params: { recordId: id } })}
-          />
-        </div>
+        <NewRecordDialog
+          onCreated={(id) => navigate({ to: "/admin/clientes/$recordId", params: { recordId: id } })}
+        />
       }
     >
       {notice ? (

@@ -1,8 +1,8 @@
 import { requireAdmin } from "@/lib/admin-guard";
 import { useCallback, useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
 import {
   listCategories,
@@ -93,14 +93,6 @@ function CategoriesPage() {
     <PortalShell
       title="Categorias de Documentos"
       subtitle="Defina as pastas que os clientes vêem dentro de cada mês."
-      action={
-        <Link
-          to="/admin"
-          className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-3 text-sm font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
-        >
-          <ArrowLeft className="h-4 w-4" /> Voltar ao painel
-        </Link>
-      }
     >
       {notice ? (
         <p className="mb-6 rounded-2xl border border-gold/30 bg-gold/10 px-5 py-3 text-sm text-foreground">
