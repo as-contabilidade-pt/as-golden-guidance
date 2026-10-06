@@ -518,17 +518,12 @@ export function DocumentExplorer({
                         )}`
                       : `${counts[`${m}`] ?? 0} documento(s)`
                   }
-                  status={monthStatus(m)}
+                  status={highlight === m ? "current" : monthStatus(m)}
                   size={size}
                   onClick={() => setMonth(m)}
                 />
               );
             };
-            const all = MONTHS.map((_, i) => i + 1);
-            const open = all.filter((m) => {
-              const s = monthStatus(m);
-              return s === "current" || s === "default";
-            });
             const lockedList = all.filter((m) => monthStatus(m) === "locked");
             return (
               <div className="space-y-8">
