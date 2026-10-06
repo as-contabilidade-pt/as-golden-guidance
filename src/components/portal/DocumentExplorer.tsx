@@ -294,6 +294,127 @@ export function DocumentExplorer({
     }
   }
   const locked = month !== null && !readOnly && monthLocked(month);
+  function renderLockPanel(month: number) {
+    return (
+              <div className="soft-card p-6">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
+                    <Lock className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-serif text-lg text-foreground">Pasta bloqueada</p>
+                    <p className="text-xs text-muted-foreground">
+                      Bloqueada desde{" "}
+                      {currentSubmission
+                        ? formatDatePt(currentSubmission.submitted_at)
+                        : formatDatePt(lockDate(year, month))}
+                      . Pode consultar e
+                      descarregar os documentos, mas não adicionar ou remover.
+                    </p>
+                  </div>
+                </div>
+
+                {currentRequest ? (
+                  <div className="mt-4 rounded-2xl border border-gold/25 bg-gold/5 px-5 py-4 text-sm">
+                    <p className="text-foreground">
+                      Pedido de desbloqueio{" "}
+                      <strong className="text-gold">
+                        {currentRequest.status === "pendente"
+                          ? "pendente"
+                          : currentRequest.status === "aprovado"
+                            ? "aprovado"
+                            : "rejeitado"}
+                      </strong>{" "}
+                      · enviado a {formatDateTimePt(currentRequest.created_at)}
+                    </p>
+                    {currentRequest.decided_at ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Decisão em {formatDateTimePt(currentRequest.decided_at)}
+                        {currentRequest.admin_note ? ` · ${currentRequest.admin_note}` : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : showForm ? (
+                  <form onSubmit={onSubmitRequest} className="mt-5 space-y-4">
+                    <div className="rounded-2xl border border-gold/20 bg-background px-5 py-4 text-xs text-muted-foreground">
+                      <p>
+                        <strong className="text-foreground">NIF DA EMPRESA:</strong>{" "}
+                        {identity?.nif || "—"}
+                      </p>
+                      <p>
+                        <strong className="text-foreground">NOME DA EMPRESA:</strong>{" "}
+                        {identity?.companyName || "—"}
+                      </p>
+                      <p>
+                        <strong className="text-foreground">PERÍODO A REABRIR:</strong>{" "}
+                        {monthLabel(month)}/{year}
+                      </p>
+                    </div>
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium text-foreground/80">
+                        Nome do responsável
+                      </span>
+                      <input
+                        value={responsibleName}
+                        onChange={(e) => setResponsibleName(e.target.value)}
+                        className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium text-foreground/80">
+                        Motivo da entrega fora de prazo
+                      </span>
+                      <textarea
+                        required
+                        rows={4}
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
+                      />
+                    </label>
+                    <p className="rounded-2xl bg-secondary px-5 py-4 text-xs leading-relaxed text-muted-foreground">
+                      {DECLARATION_TEXT}
+                    </p>
+                    <label className="flex items-start gap-3 text-xs text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={accepted}
+                        onChange={(e) => setAccepted(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 accent-[color:var(--gold)]"
+                      />
+                      <span>{DECLARATION_CHECKBOX}</span>
+                    </label>
+
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="submit"
+                        disabled={!accepted || busy}
+                        className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-50"
+                      >
+                        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                        Enviar pedido
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowForm(false)}
+                        className="rounded-full border border-ink/15 px-6 py-3 text-sm text-foreground transition-colors hover:border-gold hover:text-gold"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(true)}
+                    className="mt-5 inline-flex items-center gap-2 rounded-full border border-gold px-6 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink"
+                  >
+                    Pedir desbloqueio para entrega fora de prazo
+                  </button>
+                )}
+              </div>
+    );
+  }
 
   async function onSubmitRequest(e: React.FormEvent) {
     e.preventDefault();
@@ -601,7 +722,8 @@ export function DocumentExplorer({
               ))}
             </div>
 
-            {currentSubmission ? (
+            {currentSubmission && monthLocked(month) ? (
+              <>
               <div className="soft-card flex flex-wrap items-center gap-4 p-6">
                 <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
                   <CheckCircle2 className="h-5 w-5" />
@@ -617,6 +739,8 @@ export function DocumentExplorer({
                   </p>
                 </div>
               </div>
+              {!readOnly ? renderLockPanel(month) : null}
+              </>
             ) : !readOnly && !monthLocked(month) ? (
               <div className="soft-card p-6">
                 {showSubmit ? (
@@ -712,123 +836,7 @@ export function DocumentExplorer({
         ) : (
           <div>
             {locked ? (
-              <div className="soft-card p-6">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
-                    <Lock className="h-5 w-5" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-serif text-lg text-foreground">Pasta bloqueada</p>
-                    <p className="text-xs text-muted-foreground">
-                      Bloqueada desde{" "}
-                      {currentSubmission
-                        ? formatDatePt(currentSubmission.submitted_at)
-                        : formatDatePt(lockDate(year, month))}
-                      . Pode consultar e
-                      descarregar os documentos, mas não adicionar ou remover.
-                    </p>
-                  </div>
-                </div>
-
-                {currentRequest ? (
-                  <div className="mt-4 rounded-2xl border border-gold/25 bg-gold/5 px-5 py-4 text-sm">
-                    <p className="text-foreground">
-                      Pedido de desbloqueio{" "}
-                      <strong className="text-gold">
-                        {currentRequest.status === "pendente"
-                          ? "pendente"
-                          : currentRequest.status === "aprovado"
-                            ? "aprovado"
-                            : "rejeitado"}
-                      </strong>{" "}
-                      · enviado a {formatDateTimePt(currentRequest.created_at)}
-                    </p>
-                    {currentRequest.decided_at ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Decisão em {formatDateTimePt(currentRequest.decided_at)}
-                        {currentRequest.admin_note ? ` · ${currentRequest.admin_note}` : ""}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : showForm ? (
-                  <form onSubmit={onSubmitRequest} className="mt-5 space-y-4">
-                    <div className="rounded-2xl border border-gold/20 bg-background px-5 py-4 text-xs text-muted-foreground">
-                      <p>
-                        <strong className="text-foreground">NIF DA EMPRESA:</strong>{" "}
-                        {identity?.nif || "—"}
-                      </p>
-                      <p>
-                        <strong className="text-foreground">NOME DA EMPRESA:</strong>{" "}
-                        {identity?.companyName || "—"}
-                      </p>
-                      <p>
-                        <strong className="text-foreground">PERÍODO A REABRIR:</strong>{" "}
-                        {monthLabel(month)}/{year}
-                      </p>
-                    </div>
-                    <label className="block">
-                      <span className="mb-2 block text-xs font-medium text-foreground/80">
-                        Nome do responsável
-                      </span>
-                      <input
-                        value={responsibleName}
-                        onChange={(e) => setResponsibleName(e.target.value)}
-                        className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-2 block text-xs font-medium text-foreground/80">
-                        Motivo da entrega fora de prazo
-                      </span>
-                      <textarea
-                        required
-                        rows={4}
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
-                      />
-                    </label>
-                    <p className="rounded-2xl bg-secondary px-5 py-4 text-xs leading-relaxed text-muted-foreground">
-                      {DECLARATION_TEXT}
-                    </p>
-                    <label className="flex items-start gap-3 text-xs text-foreground">
-                      <input
-                        type="checkbox"
-                        checked={accepted}
-                        onChange={(e) => setAccepted(e.target.checked)}
-                        className="mt-0.5 h-4 w-4 accent-[color:var(--gold)]"
-                      />
-                      <span>{DECLARATION_CHECKBOX}</span>
-                    </label>
-
-                    <div className="flex flex-wrap gap-3">
-                      <button
-                        type="submit"
-                        disabled={!accepted || busy}
-                        className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-50"
-                      >
-                        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                        Enviar pedido
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowForm(false)}
-                        className="rounded-full border border-ink/15 px-6 py-3 text-sm text-foreground transition-colors hover:border-gold hover:text-gold"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowForm(true)}
-                    className="mt-5 inline-flex items-center gap-2 rounded-full border border-gold px-6 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink"
-                  >
-                    Pedir desbloqueio para entrega fora de prazo
-                  </button>
-                )}
-              </div>
+              renderLockPanel(month)
             ) : !readOnly ? (
               <div className="soft-card flex flex-col gap-4 p-6 sm:p-8">
                 <p className="text-sm text-muted-foreground">
