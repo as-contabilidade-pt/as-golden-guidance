@@ -75,6 +75,16 @@ export function PortalShell({
     };
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      const el = event.target as HTMLElement | null;
+      if (!el?.closest("[data-user-menu]")) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
   const details = (() => {
     if (!info) return null;
     const r = info.record;
@@ -91,17 +101,7 @@ export function PortalShell({
         ["Localidade", r.locality],
         ["Observações", r.notes],
       ];
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (event: MouseEvent) => {
-      const el = event.target as HTMLElement | null;
-      if (!el?.closest("[data-user-menu]")) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  return (
+      return (
         <>
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs font-medium text-foreground">Os seus dados</span>
@@ -153,30 +153,28 @@ export function PortalShell({
             </span>
           </Link>
           {firstName ? (
-            <div className="relative">
-              <div data-user-menu className="relative">
-                <button
-                  type="button"
-                  onClick={() => setOpen((v) => !v)}
-                  className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 sm:text-sm"
-                  aria-expanded={open}
-                >
-                  <span>
-                    Bem-vindo, <span className="text-foreground">{firstName}</span>
-                  </span>
-                  <ChevronDown
-                    className={
-                      "size-3.5 text-gold transition-transform duration-200 " +
-                      (open ? "rotate-180" : "")
-                    }
-                  />
-                </button>
-                {open && details ? (
-                  <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-gold/20 bg-card p-4 shadow-xl shadow-black/5 sm:w-80">
-                    {details}
-                  </div>
-                ) : null}
-              </div>
+            <div data-user-menu className="relative">
+              <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 sm:text-sm"
+                aria-expanded={open}
+              >
+                <span>
+                  Bem-vindo, <span className="text-foreground">{firstName}</span>
+                </span>
+                <ChevronDown
+                  className={
+                    "size-3.5 text-gold transition-transform duration-200 " +
+                    (open ? "rotate-180" : "")
+                  }
+                />
+              </button>
+              {open && details ? (
+                <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-gold/20 bg-card p-4 shadow-xl shadow-black/5 sm:w-80">
+                  {details}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
