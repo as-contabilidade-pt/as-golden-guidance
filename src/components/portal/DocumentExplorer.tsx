@@ -448,21 +448,42 @@ export function DocumentExplorer({
       </div>
 
       {month === null ? (
-        <div className="mt-6 flex flex-wrap gap-2">
-          {years.map((y) => (
-            <button
-              key={y}
-              type="button"
-              onClick={() => setYear(y)}
-              className={`rounded-full px-5 py-2 text-xs font-medium transition-colors ${
-                y === year
-                  ? "bg-gold text-ink"
-                  : "border border-ink/15 text-foreground hover:border-gold hover:text-gold"
-              }`}
-            >
-              {y}
-            </button>
-          ))}
+        <div className="relative mt-6 flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-gold px-5 py-2 text-xs font-medium text-ink">
+            {year}
+          </span>
+          {otherYears.length > 0 ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setYearsOpen((v) => !v)}
+                aria-expanded={yearsOpen}
+                className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-5 py-2 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
+              >
+                Outros anos
+                <ChevronDown
+                  className={`h-3.5 w-3.5 transition-transform ${yearsOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {yearsOpen ? (
+                <div className="absolute left-0 top-full z-30 mt-2 flex flex-wrap gap-2 rounded-2xl border border-ink/10 bg-background p-3 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.18)]">
+                  {otherYears.map((y) => (
+                    <button
+                      key={y}
+                      type="button"
+                      onClick={() => {
+                        setYear(y);
+                        setYearsOpen(false);
+                      }}
+                      className="rounded-full border border-ink/15 px-4 py-2 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
+                    >
+                      {y}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : null}
         </div>
       ) : null}
 
