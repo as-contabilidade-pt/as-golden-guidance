@@ -2,12 +2,13 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Loader2, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, FolderOpen, Loader2, Mail, Save, Trash2 } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
 import {
   getClientRecord,
   updateClientRecord,
   deleteClientRecord,
+  inviteFromRecord,
 } from "@/lib/portal.functions";
 
 export const Route = createFileRoute("/_authenticated/admin_/clientes/$recordId")({
@@ -78,6 +79,8 @@ function FichaPage() {
   const fetchRecord = useServerFn(getClientRecord);
   const save = useServerFn(updateClientRecord);
   const removeRecord = useServerFn(deleteClientRecord);
+  const invite = useServerFn(inviteFromRecord);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [form, setForm] = useState<Form>(empty);
   const [busy, setBusy] = useState(false);
@@ -88,6 +91,7 @@ function FichaPage() {
     void (async () => {
       try {
         const r = (await fetchRecord({ data: { id: recordId } })) as Record<string, unknown>;
+        setUserId((r["user_id"] as string | null) ?? null);
         setForm({
           clientNumber: String(r["client_number"] ?? ""),
           name: String(r["name"] ?? ""),
@@ -125,6 +129,26 @@ function FichaPage() {
     }
   }
 
+  async function onInvite() {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await save({ data: { id: recordId, ...form } });
+      const res = (await invite({
+        data: { id: recordId, redirectTo: `${window.location.origin}/definir-password` },
+      })) as { email: string };
+      setNotice(`Acesso criado. Convite enviado para ${res.email}.`);
+      setForm((f) => ({ ...f, folderActive: true }));
+      const r = (await fetchRecord({ data: { id: recordId } })) as Record<string, unknown>;
+      setUserId((r["user_id"] as string | null) ?? null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível enviar o convite.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onDelete() {
     if (!window.confirm("Remover esta ficha de cliente?")) return;
     setBusy(true);
@@ -147,7 +171,7 @@ function FichaPage() {
           to="/admin/clientes"
           className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
         >
-          <ArrowLeft className="h-4 w-4" /> Voltar às fichas
+          <ArrowLeft className="h-4 w-4" /> Voltar aos clientes
         </Link>
       }
     >
@@ -205,6 +229,30 @@ function FichaPage() {
               </span>
             </span>
           </label>
+        </div>
+
+        <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ink/10 px-5 py-4">
+          <span className="text-sm text-foreground">
+            {userId ? "Este cliente já tem acesso à área de cliente." : "Este cliente ainda não tem acesso à área de cliente."}
+          </span>
+          {userId ? (
+            <Link
+              to="/admin/cliente/$clientId"
+              params={{ clientId: userId }}
+              className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10"
+            >
+              <FolderOpen className="h-4 w-4" /> Ver documentos
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void onInvite()}
+              className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10 disabled:opacity-60"
+            >
+              <Mail className="h-4 w-4" /> Criar acesso e enviar convite
+            </button>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-3 sm:col-span-2">

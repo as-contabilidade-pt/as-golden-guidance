@@ -1,31 +1,34 @@
 import { requireAdmin } from "@/lib/admin-guard";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Loader2, Plus, Search, Upload, UserRound } from "lucide-react";
-import { NewClientDialog } from "@/components/portal/NewClientDialog";
+import { ArrowLeft, Download, FolderOpen, Loader2, Plus, Search, Upload } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   listClientRecords,
   listClients,
   createClientRecord,
   importClientRecords,
+  exportClientRecords,
+  setFolderActive,
+  createRecordFromAccount,
 } from "@/lib/portal.functions";
 
 export const Route = createFileRoute("/_authenticated/admin_/clientes/")({
   beforeLoad: requireAdmin,
   head: () => ({
     meta: [
-      { title: "Fichas de Clientes | AS Contabilidade" },
+      { title: "Clientes | AS Contabilidade" },
       {
         name: "description",
         content:
-          "Base de dados de clientes da AS Contabilidade: fichas completas, pesquisa e gestão das pastas de submissão.",
+          "Base de dados de clientes da AS Contabilidade: fichas, pesquisa, importação e exportação Excel e pastas de submissão.",
       },
-      { property: "og:title", content: "Fichas de Clientes | AS Contabilidade" },
+      { property: "og:title", content: "Clientes | AS Contabilidade" },
       {
         property: "og:description",
-        content: "Área interna para gerir as fichas de clientes e as pastas de submissão.",
+        content: "Área interna para gerir os clientes e as pastas de submissão.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -33,14 +36,14 @@ export const Route = createFileRoute("/_authenticated/admin_/clientes/")({
   }),
   component: ClientesPage,
   errorComponent: () => (
-    <PortalShell title="Fichas de Clientes">
+    <PortalShell title="Clientes">
       <p className="soft-card px-6 py-8 text-sm text-muted-foreground">
-        Não foi possível carregar as fichas de clientes. Tente novamente.
+        Não foi possível carregar os clientes. Tente novamente.
       </p>
     </PortalShell>
   ),
   notFoundComponent: () => (
-    <PortalShell title="Fichas de Clientes">
+    <PortalShell title="Clientes">
       <p className="soft-card px-6 py-8 text-sm text-muted-foreground">Página não encontrada.</p>
     </PortalShell>
   ),
@@ -48,6 +51,7 @@ export const Route = createFileRoute("/_authenticated/admin_/clientes/")({
 
 type Row = {
   id: string;
+  user_id: string | null;
   client_number: string;
   name: string;
   nif: string;
@@ -56,82 +60,86 @@ type Row = {
   locality: string;
   folder_active: boolean;
 };
+type Account = { id: string; full_name: string; nif: string; email: string };
+type SortKey = "client_number" | "name" | "nif" | "locality" | "folder_active";
+type Filter = "todos" | "ativa" | "inativa";
 
-type SortKey = "client_number" | "name" | "nif" | "folder_active";
+const norm = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 
 function ClientesPage() {
+  const navigate = useNavigate();
   const fetchList = useServerFn(listClientRecords);
   const fetchAccounts = useServerFn(listClients);
-  const [accounts, setAccounts] = useState<
-    { id: string; full_name: string; nif: string; email: string }[]
-  >([]);
-  const loadAccounts = useCallback(async () => {
-    try {
-      setAccounts(
-        (await fetchAccounts()) as { id: string; full_name: string; nif: string; email: string }[],
-      );
-    } catch {
-      /* ignore */
-    }
-  }, [fetchAccounts]);
-  useEffect(() => {
-    void loadAccounts();
-  }, [loadAccounts]);
-  const create = useServerFn(createClientRecord);
   const importRows = useServerFn(importClientRecords);
+  const exportRows = useServerFn(exportClientRecords);
+  const toggleFolder = useServerFn(setFolderActive);
+  const fromAccount = useServerFn(createRecordFromAccount);
 
   const [rows, setRows] = useState<Row[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("todos");
   const [sort, setSort] = useState<SortKey>("name");
   const [asc, setAsc] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [newName, setNewName] = useState("");
-  const [newNif, setNewNif] = useState("");
-  const [newNumber, setNewNumber] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     try {
-      setRows((await fetchList()) as unknown as Row[]);
+      const [r, a] = await Promise.all([fetchList(), fetchAccounts().catch(() => [])]);
+      setRows(r as unknown as Row[]);
+      setAccounts(a as Account[]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao carregar as fichas.");
+      setError(e instanceof Error ? e.message : "Erro ao carregar os clientes.");
     }
-  }, [fetchList]);
+  }, [fetchList, fetchAccounts]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  /** Conta de acesso associada a cada ficha (pela ligação direta ou pelo NIF). */
+  const accountFor = useMemo(() => {
+    const byNif = new Map(accounts.filter((a) => a.nif).map((a) => [a.nif.trim(), a.id]));
+    return (r: Row) => r.user_id ?? (r.nif ? byNif.get(r.nif.trim()) : undefined) ?? null;
+  }, [accounts]);
+
+  const orphanAccounts = useMemo(() => {
+    const linked = new Set(rows.map((r) => r.user_id).filter(Boolean));
+    const nifs = new Set(rows.map((r) => r.nif.trim()).filter(Boolean));
+    return accounts.filter((a) => !linked.has(a.id) && !nifs.has((a.nif ?? "").trim()));
+  }, [accounts, rows]);
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = q
-      ? rows.filter((r) =>
-          [r.name, r.nif, r.client_number].some((v) => (v ?? "").toLowerCase().includes(q)),
-        )
-      : rows;
+    const list = rows.filter(
+      (r) =>
+        (filter === "todos" || (filter === "ativa") === r.folder_active) &&
+        (!q ||
+          [r.name, r.nif, r.client_number, r.locality].some((v) =>
+            (v ?? "").toLowerCase().includes(q),
+          )),
+    );
     const sorted = [...list].sort((a, b) => {
       if (sort === "folder_active") return Number(a.folder_active) - Number(b.folder_active);
+      if (sort === "client_number")
+        return String(a.client_number).localeCompare(String(b.client_number), "pt", {
+          numeric: true,
+        });
       return String(a[sort] ?? "").localeCompare(String(b[sort] ?? ""), "pt");
     });
     return asc ? sorted : sorted.reverse();
-  }, [rows, query, sort, asc]);
+  }, [rows, query, filter, sort, asc]);
 
-  const visibleAccounts = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const byNif = new Map(rows.filter((r) => r.nif).map((r) => [r.nif.trim(), r]));
-    return accounts
-      .map((a) => ({ ...a, record: byNif.get((a.nif ?? "").trim()) }))
-      .filter(
-        (a) =>
-          !q ||
-          [a.full_name, a.nif, a.record?.client_number ?? ""].some((v) =>
-            (v ?? "").toLowerCase().includes(q),
-          ),
-      )
-      .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt"));
-  }, [accounts, rows, query]);
+  const activeCount = rows.filter((r) => r.folder_active).length;
 
   function toggleSort(key: SortKey) {
     if (key === sort) setAsc((v) => !v);
@@ -141,38 +149,15 @@ function ClientesPage() {
     }
   }
 
-  async function onCreate() {
-    if (newName.trim().length < 2) {
-      setError("Indique o nome do cliente.");
-      return;
-    }
-    setBusy(true);
-    setError(null);
+  async function onToggle(r: Row) {
+    setRows((list) =>
+      list.map((x) => (x.id === r.id ? { ...x, folder_active: !r.folder_active } : x)),
+    );
     try {
-      await create({
-        data: {
-          name: newName.trim(),
-          nif: newNif.trim(),
-          clientNumber: newNumber.trim(),
-          address: "",
-          postalCode: "",
-          locality: "",
-          email: "",
-          phone: "",
-          responsibleName: "",
-          notes: "",
-          folderActive: false,
-        },
-      });
-      setNewName("");
-      setNewNif("");
-      setNewNumber("");
-      setNotice("Ficha criada.");
-      await load();
+      await toggleFolder({ data: { id: r.id, active: !r.folder_active } });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível criar a ficha.");
-    } finally {
-      setBusy(false);
+      setError(e instanceof Error ? e.message : "Não foi possível alterar a pasta.");
+      await load();
     }
   }
 
@@ -185,44 +170,100 @@ function ClientesPage() {
       const book = XLSX.read(await file.arrayBuffer(), { type: "array" });
       const sheetName = book.SheetNames[0];
       if (!sheetName) throw new Error("O ficheiro não tem folhas de dados.");
-      const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(book.Sheets[sheetName]!, {
+      const grid = XLSX.utils.sheet_to_json<unknown[]>(book.Sheets[sheetName]!, {
+        header: 1,
         defval: "",
+        raw: false,
       });
 
-      const pick = (r: Record<string, unknown>, keys: string[]) => {
-        for (const k of Object.keys(r)) {
-          const norm = k
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .toLowerCase()
-            .trim();
-          if (keys.includes(norm)) return String(r[k] ?? "").trim();
-        }
-        return "";
-      };
+      // Encontra a linha de cabeçalhos (a primeira que tenha "NIF" e um nome).
+      const headerIdx = grid.findIndex((row) => {
+        const cells = (row ?? []).map((c) => norm(String(c)));
+        return (
+          cells.some((c) => c.startsWith("nif") || c.includes("contribuinte")) &&
+          cells.some((c) => c.includes("nome") || c.includes("denominacao") || c === "cliente")
+        );
+      });
+      if (headerIdx < 0)
+        throw new Error("Não foi encontrada a linha de cabeçalhos (com NIF e Nome/Denominação).");
+      const headers = (grid[headerIdx] ?? []).map((c) => norm(String(c)));
 
-      const parsed = raw
-        .map((r) => ({
-          clientNumber: pick(r, ["no de cliente", "n de cliente", "numero", "no cliente", "codigo"]),
-          name: pick(r, ["nome", "designacao", "cliente", "nome/designacao"]),
-          nif: pick(r, ["nif", "contribuinte"]),
-          address: pick(r, ["morada", "endereco"]),
-          postalCode: pick(r, ["codigo postal", "cod postal", "cp"]),
-          locality: pick(r, ["localidade", "cidade"]),
-          email: pick(r, ["email", "e-mail"]),
-          phone: pick(r, ["telefone", "telemovel", "contacto"]),
-          responsibleName: pick(r, ["nome do responsavel", "responsavel"]),
-          notes: pick(r, ["observacoes", "notas"]),
-          folderActive: ["sim", "true", "1", "ativa", "ativo"].includes(
-            pick(r, ["pasta ativa", "pasta"]).toLowerCase(),
+      const col = (tests: ((h: string) => boolean)[]) => {
+        for (const t of tests) {
+          const i = headers.findIndex(t);
+          if (i >= 0) return i;
+        }
+        return -1;
+      };
+      const idx = {
+        number: col([
+          (h) => h === "cli" || h === "n" || h === "no",
+          (h) => h.includes("de cliente") || h === "numero" || h === "codigo" || h === "no cliente",
+        ]),
+        name: col([(h) => h.includes("denominacao"), (h) => h === "nome" || h === "cliente"]),
+        nif: col([(h) => h.startsWith("nif") || h.includes("contribuinte")]),
+        responsible: col([
+          (h) => h.includes("nome contacto") || h.includes("responsavel"),
+        ]),
+        address: col([(h) => h.includes("morada") || h.includes("endereco postal") || h === "sede"]),
+        postal: col([(h) => h.includes("postal") || h === "cp"]),
+        locality: col([(h) => h.includes("localidade") || h.includes("cidade")]),
+        phone: col([(h) => h.includes("telem") || h.includes("telefone") || h.includes("contacto telef")]),
+        email: col([(h) => h.includes("email") || h.includes("e mail")]),
+        notes: col([(h) => h.includes("observa") || h.includes("notas")]),
+        folder: col([(h) => h.includes("pasta")]),
+      };
+      if (idx.name < 0) throw new Error("Não foi encontrada a coluna do nome do cliente.");
+
+      const cell = (row: unknown[], i: number) => (i >= 0 ? String(row[i] ?? "").trim() : "");
+      const existingNifs = new Set(rows.map((r) => r.nif.trim()).filter(Boolean));
+      const seen = new Set<string>();
+      let skipped = 0;
+
+      const parsed = grid
+        .slice(headerIdx + 1)
+        .map((row) => ({
+          clientNumber: cell(row, idx.number).slice(0, 30),
+          name: cell(row, idx.name).slice(0, 160),
+          nif: cell(row, idx.nif).replace(/\s+/g, "").slice(0, 20),
+          address: cell(row, idx.address).slice(0, 200),
+          postalCode: cell(row, idx.postal).slice(0, 20),
+          locality: cell(row, idx.locality).slice(0, 120),
+          email: cell(row, idx.email).slice(0, 160),
+          phone: cell(row, idx.phone).slice(0, 40),
+          responsibleName: cell(row, idx.responsible).slice(0, 120),
+          notes: cell(row, idx.notes).slice(0, 4000),
+          folderActive: ["sim", "s", "true", "1", "ativa", "ativo", "x"].includes(
+            cell(row, idx.folder).toLowerCase(),
           ),
         }))
-        .filter((r) => r.name.length >= 2);
+        .filter((r) => {
+          if (r.name.length < 2) return false;
+          if (r.nif && (existingNifs.has(r.nif) || seen.has(r.nif))) {
+            skipped++;
+            return false;
+          }
+          if (r.nif) seen.add(r.nif);
+          return true;
+        });
 
-      if (parsed.length === 0) throw new Error("Não foi encontrada nenhuma linha com nome.");
+      if (parsed.length === 0)
+        throw new Error(
+          skipped > 0
+            ? "Todos os clientes deste ficheiro já existem (mesmo NIF)."
+            : "Não foi encontrada nenhuma linha com nome.",
+        );
 
-      const { imported } = (await importRows({ data: { rows: parsed } })) as { imported: number };
-      setNotice(`${imported} ficha(s) importada(s).`);
+      let imported = 0;
+      for (let i = 0; i < parsed.length; i += 500) {
+        const res = (await importRows({ data: { rows: parsed.slice(i, i + 500) } })) as {
+          imported: number;
+        };
+        imported += res.imported;
+      }
+      setNotice(
+        `${imported} cliente(s) importado(s).${skipped ? ` ${skipped} já existiam e foram ignorados.` : ""}`,
+      );
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível importar o ficheiro.");
@@ -232,24 +273,67 @@ function ClientesPage() {
     }
   }
 
+  async function onExport() {
+    setBusy(true);
+    setError(null);
+    try {
+      const data = (await exportRows()) as Record<string, unknown>[];
+      const XLSX = await import("xlsx");
+      const sheet = XLSX.utils.json_to_sheet(
+        data.map((r) => ({
+          "Nº Cliente": r["client_number"] ?? "",
+          Denominação: r["name"] ?? "",
+          "NIF / NIPC": r["nif"] ?? "",
+          "Nome Contacto": r["responsible_name"] ?? "",
+          "Morada/Sede": r["address"] ?? "",
+          "Código Postal": r["postal_code"] ?? "",
+          Localidade: r["locality"] ?? "",
+          "Nº Telemóvel": r["phone"] ?? "",
+          "Endereço de email": r["email"] ?? "",
+          Observações: r["notes"] ?? "",
+          "Pasta ativa": r["folder_active"] ? "Sim" : "Não",
+        })),
+      );
+      sheet["!cols"] = [8, 40, 14, 24, 36, 12, 18, 16, 30, 40, 11].map((w) => ({ wch: w }));
+      const book = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(book, sheet, "Clientes");
+      const d = new Date();
+      const p = (n: number) => String(n).padStart(2, "0");
+      XLSX.writeFile(book, `clientes-${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}.xlsx`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível exportar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onAdoptAccount(a: Account) {
+    try {
+      const row = (await fromAccount({ data: { userId: a.id } })) as { id: string };
+      await navigate({ to: "/admin/clientes/$recordId", params: { recordId: row.id } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível criar a ficha.");
+    }
+  }
+
+  const btnOutline =
+    "inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-3 text-sm text-foreground transition-colors hover:border-gold hover:text-gold disabled:opacity-60";
+
   return (
     <PortalShell
       title="Clientes"
-      subtitle="Base de dados de fichas de cliente. Pesquise por nome, NIF ou nº de cliente."
+      subtitle={`${rows.length} cliente(s) · ${activeCount} com pasta de documentos ativa`}
       action={
         <div className="flex flex-wrap gap-3">
-        <Link
-          to="/admin"
-          className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
-        >
-          <ArrowLeft className="h-4 w-4" /> Voltar ao painel
-        </Link>
-        <NewClientDialog
-          onCreated={async (email) => {
-            setNotice(`Convite enviado para ${email}.`);
-            await loadAccounts();
-          }}
-        />
+          <Link
+            to="/admin"
+            className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
+          >
+            <ArrowLeft className="h-4 w-4" /> Voltar ao painel
+          </Link>
+          <NewRecordDialog
+            onCreated={(id) => navigate({ to: "/admin/clientes/$recordId", params: { recordId: id } })}
+          />
         </div>
       }
     >
@@ -264,17 +348,39 @@ function ClientesPage() {
         </p>
       ) : null}
 
-      <div className="soft-card mb-6 grid gap-4 p-6 sm:grid-cols-[1fr_auto]">
-        <label className="relative block">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Pesquisar por nome, NIF ou nº de cliente"
-            className="w-full rounded-full border border-gold/20 bg-background pl-11 pr-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50"
-          />
-        </label>
+      <div className="soft-card mb-6 grid gap-4 p-5 lg:grid-cols-[1fr_auto]">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <label className="relative block flex-1">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Pesquisar por nome, NIF, nº ou localidade"
+              className="w-full rounded-full border border-gold/20 bg-background py-3 pl-11 pr-5 text-sm text-foreground outline-none transition-colors focus:border-gold/50"
+            />
+          </label>
+          <div className="flex rounded-full border border-gold/20 p-1 text-xs">
+            {(
+              [
+                ["todos", "Todos"],
+                ["ativa", "Com pasta"],
+                ["inativa", "Sem pasta"],
+              ] as [Filter, string][]
+            ).map(([k, l]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setFilter(k)}
+                className={`rounded-full px-4 py-2 transition-colors ${
+                  filter === k ? "bg-gold text-ink" : "text-muted-foreground hover:text-gold"
+                }`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <input
             ref={fileRef}
@@ -286,117 +392,31 @@ function ClientesPage() {
               if (f) void onImport(f);
             }}
           />
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => fileRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-3 text-sm text-foreground transition-colors hover:border-gold hover:text-gold disabled:opacity-60"
-          >
+          <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} className={btnOutline}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Importar Excel/CSV
+            Importar Excel
           </button>
-        </div>
-      </div>
-
-
-      <div className="mb-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {visibleAccounts.length === 0 ? (
-          <p className="col-span-full rounded-2xl border border-dashed border-gold/30 px-6 py-10 text-center text-sm text-muted-foreground">
-            Nenhum cliente encontrado.
-          </p>
-        ) : (
-          visibleAccounts.map((c) => {
-            const active = c.record?.folder_active;
-            return (
-              <Link
-                key={c.id}
-                to="/admin/cliente/$clientId"
-                params={{ clientId: c.id }}
-                className="soft-card flex flex-col gap-4 p-5 transition-all hover:-translate-y-1 hover:border-gold/50"
-              >
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
-                  <UserRound className="h-5 w-5" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate font-serif text-lg text-foreground">
-                    {c.full_name}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">NIF {c.nif || "—"}</span>
-                </span>
-                <span className="mt-auto flex items-center justify-between gap-2">
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs ${
-                      active ? "bg-gold/15 text-gold" : "bg-secondary text-muted-foreground"
-                    }`}
-                  >
-                    {active ? "Pasta ativa" : "Pasta inativa"}
-                  </span>
-                  <span className="text-xs text-gold">Documentos →</span>
-                </span>
-              </Link>
-            );
-          })
-        )}
-      </div>
-
-      <h2 className="mb-4 font-serif text-2xl text-foreground">Fichas de clientes</h2>
-      <div className="soft-card mb-8 grid gap-4 p-6 sm:grid-cols-4">
-        <label className="block">
-          <span className="mb-2 block text-xs font-medium text-foreground/80">Nº de cliente</span>
-          <input
-            value={newNumber}
-            onChange={(e) => setNewNumber(e.target.value)}
-            className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm outline-none focus:border-gold/50"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-xs font-medium text-foreground/80">
-            Nome / Designação
-          </span>
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm outline-none focus:border-gold/50"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-xs font-medium text-foreground/80">NIF</span>
-          <input
-            value={newNif}
-            onChange={(e) => setNewNif(e.target.value)}
-            className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm outline-none focus:border-gold/50"
-          />
-        </label>
-        <div className="flex items-end">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void onCreate()}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
-          >
-            <Plus className="h-4 w-4" /> Adicionar ficha
+          <button type="button" disabled={busy} onClick={() => void onExport()} className={btnOutline}>
+            <Download className="h-4 w-4" /> Exportar Excel
           </button>
         </div>
       </div>
 
       <div className="soft-card overflow-x-auto p-0">
-        <table className="w-full min-w-[640px] text-left text-sm">
+        <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
             <tr className="border-b border-ink/10 text-xs uppercase tracking-wide text-muted-foreground">
               {(
                 [
                   ["client_number", "Nº"],
-                  ["name", "Nome"],
+                  ["name", "Nome / Denominação"],
                   ["nif", "NIF"],
-                  ["folder_active", "Pasta ativa"],
+                  ["locality", "Localidade"],
+                  ["folder_active", "Pasta de documentos"],
                 ] as [SortKey, string][]
               ).map(([key, label]) => (
                 <th key={key} className="px-5 py-4">
-                  <button
-                    type="button"
-                    onClick={() => toggleSort(key)}
-                    className="transition-colors hover:text-gold"
-                  >
+                  <button type="button" onClick={() => toggleSort(key)} className="transition-colors hover:text-gold">
                     {label}
                     {sort === key ? (asc ? " ↑" : " ↓") : ""}
                   </button>
@@ -408,42 +428,194 @@ function ClientesPage() {
           <tbody>
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-5 py-10 text-center text-muted-foreground">
-                  Nenhuma ficha encontrada.
+                <td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">
+                  Nenhum cliente encontrado.
                 </td>
               </tr>
             ) : (
-              visible.map((r) => (
-                <tr key={r.id} className="border-b border-ink/5 last:border-0">
-                  <td className="px-5 py-3 text-muted-foreground">{r.client_number || "—"}</td>
-                  <td className="px-5 py-3 font-medium text-foreground">{r.name}</td>
-                  <td className="px-5 py-3 text-muted-foreground">{r.nif || "—"}</td>
-                  <td className="px-5 py-3">
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs ${
-                        r.folder_active
-                          ? "bg-gold/15 text-gold"
-                          : "bg-secondary text-muted-foreground"
-                      }`}
-                    >
-                      {r.folder_active ? "Sim" : "Não"}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <Link
-                      to="/admin/clientes/$recordId"
-                      params={{ recordId: r.id }}
-                      className="text-xs text-gold hover:underline"
-                    >
-                      Abrir ficha →
-                    </Link>
-                  </td>
-                </tr>
-              ))
+              visible.map((r) => {
+                const account = accountFor(r);
+                return (
+                  <tr
+                    key={r.id}
+                    onClick={() => navigate({ to: "/admin/clientes/$recordId", params: { recordId: r.id } })}
+                    className="cursor-pointer border-b border-ink/5 transition-colors last:border-0 hover:bg-gold/5"
+                  >
+                    <td className="px-5 py-3 text-muted-foreground">{r.client_number || "—"}</td>
+                    <td className="px-5 py-3 font-medium text-foreground">{r.name}</td>
+                    <td className="px-5 py-3 text-muted-foreground">{r.nif || "—"}</td>
+                    <td className="px-5 py-3 text-muted-foreground">{r.locality || "—"}</td>
+                    <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={r.folder_active}
+                        onClick={() => void onToggle(r)}
+                        className="inline-flex items-center gap-2 text-xs"
+                      >
+                        <span
+                          className={`relative h-5 w-9 rounded-full transition-colors ${
+                            r.folder_active ? "bg-gold" : "bg-secondary"
+                          }`}
+                        >
+                          <span
+                            className={`absolute top-0.5 h-4 w-4 rounded-full bg-background shadow transition-all ${
+                              r.folder_active ? "left-[18px]" : "left-0.5"
+                            }`}
+                          />
+                        </span>
+                        <span className={r.folder_active ? "text-gold" : "text-muted-foreground"}>
+                          {r.folder_active ? "Ativa" : "Inativa"}
+                        </span>
+                      </button>
+                    </td>
+                    <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      {account ? (
+                        <Link
+                          to="/admin/cliente/$clientId"
+                          params={{ clientId: account }}
+                          className="inline-flex items-center gap-1 text-xs text-gold hover:underline"
+                        >
+                          <FolderOpen className="h-3.5 w-3.5" /> Documentos
+                        </Link>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
+
+      {orphanAccounts.length > 0 ? (
+        <div className="soft-card mt-8 p-6">
+          <h2 className="font-serif text-lg text-foreground">Contas de acesso sem ficha</h2>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Estas contas entram na área de cliente mas ainda não têm ficha. Crie a ficha para as gerir na lista.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {orphanAccounts.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => void onAdoptAccount(a)}
+                className="inline-flex items-center gap-2 rounded-full border border-gold/30 px-4 py-2 text-xs text-foreground hover:border-gold hover:text-gold"
+              >
+                <Plus className="h-3.5 w-3.5" /> {a.full_name} {a.nif ? `· ${a.nif}` : ""}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </PortalShell>
+  );
+}
+
+function NewRecordDialog({ onCreated }: { onCreated: (id: string) => void | Promise<void> }) {
+  const create = useServerFn(createClientRecord);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [f, setF] = useState({
+    clientNumber: "",
+    name: "",
+    nif: "",
+    responsibleName: "",
+    address: "",
+    postalCode: "",
+    locality: "",
+    phone: "",
+    email: "",
+    notes: "",
+    folderActive: false,
+  });
+  const set = (k: keyof typeof f, v: string | boolean) => setF((x) => ({ ...x, [k]: v }));
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (f.name.trim().length < 2) {
+      setError("Indique o nome do cliente.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const row = (await create({ data: f })) as { id: string };
+      setOpen(false);
+      await onCreated(row.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível criar o cliente.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const input =
+    "w-full rounded-2xl border border-gold/20 bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-gold/50";
+  const fields: [keyof typeof f, string, string?][] = [
+    ["clientNumber", "Nº de cliente"],
+    ["name", "Nome / Denominação *"],
+    ["nif", "NIF / NIPC"],
+    ["responsibleName", "Nome do contacto"],
+    ["address", "Morada / Sede"],
+    ["postalCode", "Código postal"],
+    ["locality", "Localidade"],
+    ["phone", "Telemóvel"],
+    ["email", "Email", "email"],
+  ];
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep"
+      >
+        <Plus className="h-4 w-4" /> Novo cliente
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-3xl sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl">Novo cliente</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
+            {fields.map(([k, label, type]) => (
+              <label key={k} className="block">
+                <span className="mb-1.5 block text-xs font-medium text-foreground/80">{label}</span>
+                <input
+                  type={type ?? "text"}
+                  value={f[k] as string}
+                  onChange={(e) => set(k, e.target.value)}
+                  className={input}
+                />
+              </label>
+            ))}
+            <label className="block sm:col-span-2">
+              <span className="mb-1.5 block text-xs font-medium text-foreground/80">Observações</span>
+              <textarea rows={3} value={f.notes} onChange={(e) => set("notes", e.target.value)} className={input} />
+            </label>
+            <label className="flex items-center gap-3 rounded-2xl border border-gold/25 bg-gold/5 px-4 py-3 sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={f.folderActive}
+                onChange={(e) => set("folderActive", e.target.checked)}
+                className="h-4 w-4 accent-[color:var(--gold)]"
+              />
+              <span className="text-sm text-foreground">Tem pasta de submissão de documentos</span>
+            </label>
+            {error ? <p className="text-sm text-destructive sm:col-span-2">{error}</p> : null}
+            <button
+              type="submit"
+              disabled={busy}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink hover:bg-gold-deep disabled:opacity-60 sm:col-span-2"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Criar cliente
+            </button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
