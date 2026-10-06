@@ -273,6 +273,12 @@ export function DocumentExplorer({
 
   async function onSubmitMonth() {
     if (month === null) return;
+    if (
+      !window.confirm(
+        "Tem a certeza que pretende submeter a documentação deste mês? Depois de submeter, a pasta fica em modo de visualização.",
+      )
+    )
+      return;
     setBusy(true);
     setError(null);
     try {

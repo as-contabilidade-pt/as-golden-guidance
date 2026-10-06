@@ -76,16 +76,16 @@ function AdminPage() {
           </Link>
         ))}
         <a
-          href="#submissoes"
+          href="#desbloqueios"
           className="soft-card flex flex-col gap-4 p-6 transition-all hover:-translate-y-1 hover:border-gold/50"
         >
           <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/15 text-gold">
             <Inbox className="h-6 w-6" />
           </span>
           <span>
-            <span className="block font-serif text-xl text-foreground">Submissões Recentes</span>
+            <span className="block font-serif text-xl text-foreground">Pedidos de Desbloqueio</span>
             <span className="mt-1 block text-sm text-muted-foreground">
-              Meses entregues pelos clientes, com declaração.
+              Aprovar ou rejeitar pedidos de reabertura de meses.
             </span>
           </span>
           <span className="mt-auto text-xs text-gold">Ver abaixo ↓</span>
@@ -129,6 +129,13 @@ function UnlockRequests() {
   }, [load]);
 
   async function act(id: string, decision: "aprovado" | "rejeitado" | "fechado") {
+    const question =
+      decision === "aprovado"
+        ? "Tem a certeza que pretende aprovar este pedido? O mês ficará desbloqueado para o cliente."
+        : decision === "rejeitado"
+          ? "Tem a certeza que pretende rejeitar este pedido?"
+          : "Tem a certeza que pretende voltar a bloquear este mês?";
+    if (!window.confirm(question)) return;
     setBusyId(id);
     try {
       await decide({ data: { id, decision } });
@@ -138,11 +145,14 @@ function UnlockRequests() {
     }
   }
 
-  if (rows.length === 0) return null;
-
   return (
-    <section className="mb-10">
+    <section id="desbloqueios" className="mb-10 scroll-mt-24">
       <h2 className="mb-4 font-serif text-2xl text-foreground">Pedidos de desbloqueio</h2>
+      {rows.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-gold/30 px-6 py-8 text-center text-sm text-muted-foreground">
+          Não existem pedidos de desbloqueio pendentes.
+        </p>
+      ) : (
       <div className="space-y-3">
         {rows.map((r) => (
           <div key={r.id} className="soft-card p-5">
@@ -192,6 +202,7 @@ function UnlockRequests() {
           </div>
         ))}
       </div>
+      )}
     </section>
   );
 }
