@@ -128,14 +128,6 @@ function StatementConverterPage() {
     <PortalShell
       title="Conversor de Extratos"
       subtitle="Ferramenta interna: converter extratos bancários em PDF para folha de cálculo."
-      action={
-        <Link
-          to="/admin"
-          className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
-        >
-          <ArrowLeft className="h-4 w-4" /> Voltar ao painel
-        </Link>
-      }
     >
       <div className="soft-card grid gap-5 p-6 sm:grid-cols-2">
         <div>
