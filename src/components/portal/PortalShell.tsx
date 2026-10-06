@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Logo } from "@/components/site/Logo";
+import { getSessionInfo } from "@/lib/portal.functions";
 
 export function PortalShell({
   title,
@@ -15,6 +16,24 @@ export function PortalShell({
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const homeTo = pathname.startsWith("/admin") ? "/admin" : "/documentos";
+  const [firstName, setFirstName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getSessionInfo()
+      .then((info) => {
+        if (!active) return;
+        const fullName =
+          (info as { profile?: { full_name?: string | null } | null }).profile
+            ?.full_name ?? "";
+        const first = fullName.trim().split(/\s+/)[0];
+        if (first) setFirstName(first);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -26,6 +45,11 @@ export function PortalShell({
               AS <span className="ml-1 text-xs text-gold">Contabilidade</span>
             </span>
           </Link>
+          {firstName ? (
+            <span className="text-xs text-muted-foreground sm:text-sm">
+              Bem-vindo, <span className="text-foreground">{firstName}</span>
+            </span>
+          ) : null}
         </div>
       </header>
 
