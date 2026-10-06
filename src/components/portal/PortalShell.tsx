@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
-import { ChevronDown } from "lucide-react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { ChevronDown, LogOut } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Logo } from "@/components/site/Logo";
+import { supabase } from "@/integrations/supabase/client";
 import { getSessionInfo } from "@/lib/portal.functions";
 
 type RecordInfo = {
@@ -49,10 +51,20 @@ export function PortalShell({
   children: ReactNode;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const homeTo = pathname.startsWith("/admin") ? "/admin" : "/documentos";
   const [firstName, setFirstName] = useState<string | null>(null);
   const [info, setInfo] = useState<SessionInfo | null>(null);
   const [open, setOpen] = useState(false);
+
+  async function handleSignOut() {
+    setOpen(false);
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    await navigate({ to: "/login", replace: true });
+  }
 
   useEffect(() => {
     let active = true;
