@@ -414,6 +414,25 @@ export function DocumentExplorer({
     return "default";
   }
 
+  useEffect(() => {
+    if (!yearsOpen) return;
+    function onPointerDown(e: MouseEvent) {
+      if (yearsRef.current && !yearsRef.current.contains(e.target as Node)) {
+        setYearsOpen(false);
+        setShowMoreYears(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [yearsOpen]);
+
+  const allMonths = MONTHS.map((_, i) => i + 1);
+  const openMonths = allMonths.filter((m) => {
+    const s = monthStatus(m);
+    return s === "current" || s === "default";
+  });
+  const otherMonths = allMonths.filter((m) => !openMonths.includes(m));
+
   return (
     <div>
       {/* Breadcrumb */}
