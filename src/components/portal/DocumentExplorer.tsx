@@ -471,7 +471,7 @@ export function DocumentExplorer({
       </div>
 
       {month === null ? (
-        <div className="relative mt-6 flex flex-wrap items-center gap-2">
+        <div ref={yearsRef} className="relative mt-6 flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setYearsOpen((v) => !v)}
