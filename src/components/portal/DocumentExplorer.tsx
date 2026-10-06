@@ -504,7 +504,11 @@ export function DocumentExplorer({
             return (
               <div className="space-y-8">
                 {open.length > 0 ? (
-                  <div className="mx-auto grid max-w-3xl gap-5 sm:grid-cols-2">
+                  <div
+                    className={`mx-auto grid gap-5 ${
+                      open.length === 1 ? "max-w-md grid-cols-1" : "max-w-3xl sm:grid-cols-2"
+                    }`}
+                  >
                     {open.map((m) => renderCard(m, "lg"))}
                   </div>
                 ) : (
