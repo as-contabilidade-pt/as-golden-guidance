@@ -286,7 +286,7 @@ export function DocumentExplorer({
       });
       setShowSubmit(false);
       setSubmitAccepted(false);
-      await loadSubmissions();
+      await Promise.all([loadSubmissions(), loadRequests()]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível submeter a documentação.");
     } finally {

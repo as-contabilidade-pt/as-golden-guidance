@@ -79,8 +79,8 @@ async function monthIsWritable(
     .eq("year", year)
     .eq("month", month)
     .eq("status", "aprovado")
-    .maybeSingle();
-  return Boolean(data);
+    .limit(1);
+  return Boolean(data && data.length > 0);
 }
 
 export const getSessionInfo = createServerFn({ method: "GET" })
@@ -591,16 +591,19 @@ export const submitMonth = createServerFn({ method: "POST" })
       if (!(await monthIsWritable(context, context.userId, data.year, data.month))) {
         throw new Error("Esta documentação já foi submetida.");
       }
-      const { data: upd, error } = await context.supabase
+      // Permissão já verificada acima; escrita feita no servidor de forma fiável.
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: upd, error } = await supabaseAdmin
         .from("month_submissions")
         .update({ ...payload, submitted_at: at })
         .eq("user_id", context.userId)
         .eq("year", data.year)
         .eq("month", data.month)
         .select("id, year, month, submitted_at, document_count")
-        .single();
+        .limit(1);
       if (error) throw new Error(error.message);
-      row = upd;
+      if (!upd?.[0]) throw new Error("Não foi possível atualizar a submissão.");
+      row = upd[0];
     } else {
       const { data: ins, error } = await context.supabase
         .from("month_submissions")
@@ -617,13 +620,16 @@ export const submitMonth = createServerFn({ method: "POST" })
     }
 
     // A reabertura termina com a nova submissão: a pasta volta a bloquear.
-    await context.supabase
-      .from("unlock_requests")
-      .update({ status: "fechado" })
-      .eq("user_id", context.userId)
-      .eq("year", data.year)
-      .eq("month", data.month)
-      .eq("status", "aprovado");
+    {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin
+        .from("unlock_requests")
+        .update({ status: "fechado" })
+        .eq("user_id", context.userId)
+        .eq("year", data.year)
+        .eq("month", data.month)
+        .eq("status", "aprovado");
+    }
 
     try {
       const { notifyAdminOfSubmission, notifyClientOfSubmission } = await import(
