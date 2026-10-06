@@ -105,7 +105,7 @@ export function DocumentExplorer({
   const year = years.includes(yearParam) ? yearParam : years[0]!;
   const otherYears = years.filter((y) => y !== year);
   const monthParam = search["mes"] === undefined ? NaN : Number(search["mes"]);
-  const month = Number.isInteger(monthParam) && monthParam >= 0 && monthParam <= 11 ? monthParam : null;
+  const month = Number.isInteger(monthParam) && monthParam >= 1 && monthParam <= 12 ? monthParam : null;
   const category = month !== null && typeof search["pasta"] === "string" ? search["pasta"] : null;
   const partyField = documentPartyField(category ?? "");
   const updateNav = useCallback(
