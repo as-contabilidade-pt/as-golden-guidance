@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/admin-guard";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, FileSpreadsheet, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";

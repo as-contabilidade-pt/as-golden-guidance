@@ -2,7 +2,7 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Download, FolderOpen, Loader2, Plus, Search, Upload } from "lucide-react";
+import { Download, FolderOpen, Loader2, Plus, Search, Upload } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
