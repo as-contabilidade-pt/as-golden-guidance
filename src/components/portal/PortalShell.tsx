@@ -154,35 +154,29 @@ export function PortalShell({
           </Link>
           {firstName ? (
             <div className="relative">
-              <button
-                type="button"
-                onClick={() => setOpen((v) => !v)}
-                className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 sm:text-sm"
-                aria-expanded={open}
-              >
-                <span>
-                  Bem-vindo, <span className="text-foreground">{firstName}</span>
-                </span>
-                <ChevronDown
-                  className={
-                    "size-3.5 text-gold transition-transform duration-200 " +
-                    (open ? "rotate-180" : "")
-                  }
-                />
-              </button>
-              {open && details ? (
-                <>
-                  <button
-                    type="button"
-                    aria-label="Fechar"
-                    className="fixed inset-0 z-40 cursor-default"
-                    onClick={() => setOpen(false)}
+              <div data-user-menu className="relative">
+                <button
+                  type="button"
+                  onClick={() => setOpen((v) => !v)}
+                  className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 sm:text-sm"
+                  aria-expanded={open}
+                >
+                  <span>
+                    Bem-vindo, <span className="text-foreground">{firstName}</span>
+                  </span>
+                  <ChevronDown
+                    className={
+                      "size-3.5 text-gold transition-transform duration-200 " +
+                      (open ? "rotate-180" : "")
+                    }
                   />
+                </button>
+                {open && details ? (
                   <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-gold/20 bg-card p-4 shadow-xl shadow-black/5 sm:w-80">
                     {details}
                   </div>
-                </>
-              ) : null}
+                ) : null}
+              </div>
             </div>
           ) : null}
         </div>
