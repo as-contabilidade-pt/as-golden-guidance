@@ -529,6 +529,13 @@ export function DocumentExplorer({
               );
             };
             const lockedList = all.filter((m) => monthStatus(m) === "locked");
+            if (year !== currentYear) {
+              return (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {all.map((m) => renderCard(m))}
+                </div>
+              );
+            }
             return (
               <div className="space-y-8">
                 {open.length > 0 ? (
