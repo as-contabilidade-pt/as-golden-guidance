@@ -498,6 +498,12 @@ export function DocumentExplorer({
       <div className="mt-8">
         {month === null ? (
           (() => {
+            const all = MONTHS.map((_, i) => i + 1);
+            const open = all.filter((m) => {
+              const s = monthStatus(m);
+              return s === "current" || s === "default";
+            });
+            const highlight = open.length === 1 ? open[0]! : null;
             const renderCard = (m: number, size: "md" | "lg" = "md") => {
               const name = MONTHS[m - 1]!;
               const submitted = submissionFor(m);
