@@ -202,6 +202,7 @@ function UnlockRequests() {
           </div>
         ))}
       </div>
+      )}
     </section>
   );
 }
