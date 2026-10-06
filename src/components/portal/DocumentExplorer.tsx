@@ -96,6 +96,7 @@ export function DocumentExplorer({
   const years = availableYears();
   const [yearsOpen, setYearsOpen] = useState(false);
   const [showMoreYears, setShowMoreYears] = useState(false);
+  const yearsRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const search = useRouterState({
     select: (s) => s.location.search as Record<string, unknown>,
