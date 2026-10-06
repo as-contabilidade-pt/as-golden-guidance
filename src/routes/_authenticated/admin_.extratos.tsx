@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, FileSpreadsheet, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import { FileSpreadsheet, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { extractBankStatement, type StatementRow } from "@/lib/statements.functions";
