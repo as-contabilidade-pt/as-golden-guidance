@@ -28,6 +28,22 @@ export function categoryLabel(slug: string, categories?: { slug: string; label: 
   return list.find((c) => c.slug === slug)?.label ?? slug;
 }
 
+/** Texto do campo de identificação adaptado ao tipo de documento. */
+export function documentPartyField(slug: string) {
+  switch (slug) {
+    case "faturas_compras":
+      return { label: "Fornecedor", placeholder: "Ex.: EDP" };
+    case "faturas_vendas":
+      return { label: "Cliente", placeholder: "Ex.: Empresa ABC" };
+    case "extratos_bancarios":
+      return { label: "Banco", placeholder: "Ex.: Caixa Geral de Depósitos" };
+    case "documentos_salarios":
+      return { label: "Colaborador", placeholder: "Ex.: Ana Silva" };
+    default:
+      return { label: "Entidade ou descrição", placeholder: "Ex.: Seguro automóvel" };
+  }
+}
+
 export function monthLabel(month: number) {
   return MONTHS[month - 1] ?? String(month);
 }
