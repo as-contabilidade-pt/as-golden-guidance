@@ -572,27 +572,58 @@ export const submitMonth = createServerFn({ method: "POST" })
       at,
     });
 
-    const { data: row, error } = await context.supabase
-      .from("month_submissions")
-      .insert({
-        user_id: context.userId,
-        nif: identity.nif,
-        company_name: identity.companyName,
-        responsible_name: responsibleName,
-        declaration_text: declarationText,
-        year: data.year,
-        month: data.month,
-        declaration_accepted: true,
-        document_count: count,
-      })
-      .select("id, year, month, submitted_at, document_count")
-      .single();
-    if (error) {
-      if (error.message.includes("duplicate")) {
+    const payload = {
+      user_id: context.userId,
+      nif: identity.nif,
+      company_name: identity.companyName,
+      responsible_name: responsibleName,
+      declaration_text: declarationText,
+      year: data.year,
+      month: data.month,
+      declaration_accepted: true,
+      document_count: count,
+    };
+
+    const alreadySubmitted = await monthIsSubmitted(context, context.userId, data.year, data.month);
+    let row: { id: string; year: number; month: number; submitted_at: string; document_count: number };
+    if (alreadySubmitted) {
+      // Re-submissão só permitida após reabertura aprovada pelo gabinete.
+      if (!(await monthIsWritable(context, context.userId, data.year, data.month))) {
         throw new Error("Esta documentação já foi submetida.");
       }
-      throw new Error(error.message);
+      const { data: upd, error } = await context.supabase
+        .from("month_submissions")
+        .update({ ...payload, submitted_at: at })
+        .eq("user_id", context.userId)
+        .eq("year", data.year)
+        .eq("month", data.month)
+        .select("id, year, month, submitted_at, document_count")
+        .single();
+      if (error) throw new Error(error.message);
+      row = upd;
+    } else {
+      const { data: ins, error } = await context.supabase
+        .from("month_submissions")
+        .insert(payload)
+        .select("id, year, month, submitted_at, document_count")
+        .single();
+      if (error) {
+        if (error.message.includes("duplicate")) {
+          throw new Error("Esta documentação já foi submetida.");
+        }
+        throw new Error(error.message);
+      }
+      row = ins;
     }
+
+    // A reabertura termina com a nova submissão: a pasta volta a bloquear.
+    await context.supabase
+      .from("unlock_requests")
+      .update({ status: "fechado" })
+      .eq("user_id", context.userId)
+      .eq("year", data.year)
+      .eq("month", data.month)
+      .eq("status", "aprovado");
 
     try {
       const { notifyAdminOfSubmission, notifyClientOfSubmission } = await import(
