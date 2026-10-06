@@ -536,12 +536,7 @@ export function DocumentExplorer({
       <div className="mt-8">
         {month === null ? (
           (() => {
-            const all = MONTHS.map((_, i) => i + 1);
-            const open = all.filter((m) => {
-              const s = monthStatus(m);
-              return s === "current" || s === "default";
-            });
-            const highlight = open.length === 1 ? open[0]! : null;
+            const highlight = openMonths.length === 1 ? openMonths[0]! : null;
             const renderCard = (m: number, size: "md" | "lg" = "md") => {
               const name = MONTHS[m - 1]!;
               const submitted = submissionFor(m);
@@ -562,23 +557,22 @@ export function DocumentExplorer({
                 />
               );
             };
-            const lockedList = all.filter((m) => monthStatus(m) === "locked");
             if (year !== currentYear) {
               return (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {all.map((m) => renderCard(m))}
+                  {allMonths.map((m) => renderCard(m))}
                 </div>
               );
             }
             return (
               <div className="space-y-8">
-                {open.length > 0 ? (
+                {openMonths.length > 0 ? (
                   <div
                     className={`mx-auto grid gap-5 ${
-                      open.length === 1 ? "max-w-md grid-cols-1" : "max-w-3xl sm:grid-cols-2"
+                      openMonths.length === 1 ? "max-w-md grid-cols-1" : "max-w-3xl sm:grid-cols-2"
                     }`}
                   >
-                    {open.map((m) => renderCard(m, "lg"))}
+                    {openMonths.map((m) => renderCard(m, "lg"))}
                   </div>
                 ) : (
                   <p className="soft-card px-6 py-5 text-sm text-muted-foreground">
@@ -586,28 +580,11 @@ export function DocumentExplorer({
                   </p>
                 )}
 
-                {lockedList.length > 0 ? (
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setShowPast((v) => !v)}
-                      aria-expanded={showPast}
-                      className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
-                    >
-                      {showPast ? "Ocultar meses anteriores" : "Ver meses anteriores"}
-                      <span className="text-muted-foreground">({lockedList.length})</span>
-                      <ChevronDown
-                        className={`h-4 w-4 transition-transform ${showPast ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                    {showPast ? (
-                      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {lockedList.map((m) => renderCard(m))}
-                      </div>
-                    ) : null}
+                {showPast && otherMonths.length > 0 ? (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {otherMonths.map((m) => renderCard(m))}
                   </div>
                 ) : null}
-
               </div>
             );
           })()
