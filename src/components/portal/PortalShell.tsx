@@ -185,6 +185,14 @@ export function PortalShell({
               {open && details ? (
                 <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-gold/20 bg-card p-4 shadow-xl shadow-black/5 sm:w-80">
                   {details}
+                  <button
+                    type="button"
+                    onClick={() => void handleSignOut()}
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-4 py-2 text-xs font-medium text-gold transition-colors hover:bg-gold/20"
+                  >
+                    <LogOut className="size-3.5" />
+                    Terminar sessão
+                  </button>
                 </div>
               ) : null}
             </div>
