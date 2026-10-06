@@ -94,12 +94,14 @@ export function DocumentExplorer({
   readOnly?: boolean;
 }) {
   const years = availableYears();
+  const [yearsOpen, setYearsOpen] = useState(false);
   const navigate = useNavigate();
   const search = useRouterState({
     select: (s) => s.location.search as Record<string, unknown>,
   });
   const yearParam = Number(search["ano"]);
   const year = years.includes(yearParam) ? yearParam : years[0]!;
+  const otherYears = years.filter((y) => y !== year);
   const monthParam = search["mes"] === undefined ? NaN : Number(search["mes"]);
   const month = Number.isInteger(monthParam) && monthParam >= 0 && monthParam <= 11 ? monthParam : null;
   const category = month !== null && typeof search["pasta"] === "string" ? search["pasta"] : null;
@@ -448,21 +450,42 @@ export function DocumentExplorer({
       </div>
 
       {month === null ? (
-        <div className="mt-6 flex flex-wrap gap-2">
-          {years.map((y) => (
-            <button
-              key={y}
-              type="button"
-              onClick={() => setYear(y)}
-              className={`rounded-full px-5 py-2 text-xs font-medium transition-colors ${
-                y === year
-                  ? "bg-gold text-ink"
-                  : "border border-ink/15 text-foreground hover:border-gold hover:text-gold"
-              }`}
-            >
-              {y}
-            </button>
-          ))}
+        <div className="relative mt-6 flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-gold px-5 py-2 text-xs font-medium text-ink">
+            {year}
+          </span>
+          {otherYears.length > 0 ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setYearsOpen((v) => !v)}
+                aria-expanded={yearsOpen}
+                className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-5 py-2 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
+              >
+                Outros anos
+                <ChevronDown
+                  className={`h-3.5 w-3.5 transition-transform ${yearsOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {yearsOpen ? (
+                <div className="absolute left-0 top-full z-30 mt-2 flex flex-wrap gap-2 rounded-2xl border border-ink/10 bg-background p-3 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.18)]">
+                  {otherYears.map((y) => (
+                    <button
+                      key={y}
+                      type="button"
+                      onClick={() => {
+                        setYear(y);
+                        setYearsOpen(false);
+                      }}
+                      className="rounded-full border border-ink/15 px-4 py-2 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
+                    >
+                      {y}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : null}
         </div>
       ) : null}
 
@@ -475,6 +498,12 @@ export function DocumentExplorer({
       <div className="mt-8">
         {month === null ? (
           (() => {
+            const all = MONTHS.map((_, i) => i + 1);
+            const open = all.filter((m) => {
+              const s = monthStatus(m);
+              return s === "current" || s === "default";
+            });
+            const highlight = open.length === 1 ? open[0]! : null;
             const renderCard = (m: number, size: "md" | "lg" = "md") => {
               const name = MONTHS[m - 1]!;
               const submitted = submissionFor(m);
@@ -489,17 +518,12 @@ export function DocumentExplorer({
                         )}`
                       : `${counts[`${m}`] ?? 0} documento(s)`
                   }
-                  status={monthStatus(m)}
+                  status={highlight === m ? "current" : monthStatus(m)}
                   size={size}
                   onClick={() => setMonth(m)}
                 />
               );
             };
-            const all = MONTHS.map((_, i) => i + 1);
-            const open = all.filter((m) => {
-              const s = monthStatus(m);
-              return s === "current" || s === "default";
-            });
             const lockedList = all.filter((m) => monthStatus(m) === "locked");
             return (
               <div className="space-y-8">
