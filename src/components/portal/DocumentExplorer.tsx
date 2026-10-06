@@ -94,7 +94,6 @@ export function DocumentExplorer({
   readOnly?: boolean;
 }) {
   const years = availableYears();
-  const otherYears = years.filter((y) => y !== year);
   const [yearsOpen, setYearsOpen] = useState(false);
   const navigate = useNavigate();
   const search = useRouterState({
@@ -102,6 +101,7 @@ export function DocumentExplorer({
   });
   const yearParam = Number(search["ano"]);
   const year = years.includes(yearParam) ? yearParam : years[0]!;
+  const otherYears = years.filter((y) => y !== year);
   const monthParam = search["mes"] === undefined ? NaN : Number(search["mes"]);
   const month = Number.isInteger(monthParam) && monthParam >= 0 && monthParam <= 11 ? monthParam : null;
   const category = month !== null && typeof search["pasta"] === "string" ? search["pasta"] : null;
