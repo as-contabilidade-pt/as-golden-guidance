@@ -94,6 +94,8 @@ export function DocumentExplorer({
   readOnly?: boolean;
 }) {
   const years = availableYears();
+  const otherYears = years.filter((y) => y !== year);
+  const [yearsOpen, setYearsOpen] = useState(false);
   const navigate = useNavigate();
   const search = useRouterState({
     select: (s) => s.location.search as Record<string, unknown>,
