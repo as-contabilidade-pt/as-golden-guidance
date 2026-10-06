@@ -95,6 +95,7 @@ export function DocumentExplorer({
 }) {
   const years = availableYears();
   const [yearsOpen, setYearsOpen] = useState(false);
+  const [showMoreYears, setShowMoreYears] = useState(false);
   const navigate = useNavigate();
   const search = useRouterState({
     select: (s) => s.location.search as Record<string, unknown>,
@@ -451,40 +452,43 @@ export function DocumentExplorer({
 
       {month === null ? (
         <div className="relative mt-6 flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-gold px-5 py-2 text-xs font-medium text-ink">
+          <button
+            type="button"
+            onClick={() => setYearsOpen((v) => !v)}
+            aria-expanded={yearsOpen}
+            className="inline-flex items-center gap-1.5 rounded-full bg-gold px-5 py-2 text-xs font-medium text-ink transition-colors hover:bg-gold/85"
+          >
             {year}
-          </span>
-          {otherYears.length > 0 ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setYearsOpen((v) => !v)}
-                aria-expanded={yearsOpen}
-                className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-5 py-2 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
-              >
-                Outros anos
-                <ChevronDown
-                  className={`h-3.5 w-3.5 transition-transform ${yearsOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-              {yearsOpen ? (
-                <div className="absolute left-0 top-full z-30 mt-2 flex flex-wrap gap-2 rounded-2xl border border-ink/10 bg-background p-3 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.18)]">
-                  {otherYears.map((y) => (
-                    <button
-                      key={y}
-                      type="button"
-                      onClick={() => {
-                        setYear(y);
-                        setYearsOpen(false);
-                      }}
-                      className="rounded-full border border-ink/15 px-4 py-2 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
-                    >
-                      {y}
-                    </button>
-                  ))}
-                </div>
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform ${yearsOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          {yearsOpen && otherYears.length > 0 ? (
+            <div className="absolute left-0 top-full z-30 mt-2 flex flex-wrap items-center gap-2 rounded-2xl border border-ink/10 bg-background p-3 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.18)]">
+              {(showMoreYears ? otherYears : otherYears.slice(0, 5)).map((y) => (
+                <button
+                  key={y}
+                  type="button"
+                  onClick={() => {
+                    setYear(y);
+                    setYearsOpen(false);
+                    setShowMoreYears(false);
+                  }}
+                  className="rounded-full border border-ink/15 px-4 py-2 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
+                >
+                  {y}
+                </button>
+              ))}
+              {!showMoreYears && otherYears.length > 5 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowMoreYears(true)}
+                  className="rounded-full border border-gold/40 px-4 py-2 text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+                >
+                  Ver mais
+                </button>
               ) : null}
-            </>
+            </div>
           ) : null}
         </div>
       ) : null}
@@ -525,6 +529,13 @@ export function DocumentExplorer({
               );
             };
             const lockedList = all.filter((m) => monthStatus(m) === "locked");
+            if (year !== currentYear) {
+              return (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {all.map((m) => renderCard(m))}
+                </div>
+              );
+            }
             return (
               <div className="space-y-8">
                 {open.length > 0 ? (

@@ -75,7 +75,7 @@ export function documentDisplayName(
 export function availableYears() {
   const current = new Date().getFullYear();
   const years: number[] = [];
-  for (let y = current; y >= current - 4; y--) years.push(y);
+  for (let y = current; y >= current - 9; y--) years.push(y);
   return years;
 }
 
