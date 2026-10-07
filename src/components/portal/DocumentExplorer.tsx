@@ -16,6 +16,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { ScanDialog } from "@/components/portal/ScanDialog";
+import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
 import { supabase } from "@/integrations/supabase/client";
 import {
   MONTHS,
