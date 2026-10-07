@@ -43,7 +43,7 @@ async function adminEmails() {
  * Modo de teste: enquanto estiver definido, todos os emails são encaminhados
  * apenas para este endereço (em vez dos destinatários reais).
  */
-const TEST_EMAIL_OVERRIDE = "rodrigopaisoliveira2003@gmail.com";
+const TEST_EMAIL_OVERRIDE = "";
 
 /**
  * Envia (ou registra) um email transacional.
