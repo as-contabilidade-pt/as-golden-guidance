@@ -87,6 +87,7 @@ function FichaPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -280,6 +281,19 @@ function FichaPage() {
           </button>
         </div>
       </div>
+      <ConfirmDialog
+        open={pendingDelete}
+        busy={busy}
+        destructive
+        icon={<Trash2 className="h-6 w-6" />}
+        title="Remover ficha de cliente?"
+        message="Tem a certeza que pretende remover esta ficha de cliente? Esta ação não pode ser revertida."
+        confirmLabel="Remover"
+        onConfirm={() => void doDelete()}
+        onCancel={() => {
+          if (!busy) setPendingDelete(false);
+        }}
+      />
     </PortalShell>
   );
 }
