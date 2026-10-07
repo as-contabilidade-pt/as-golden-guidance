@@ -54,7 +54,6 @@ function esc(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-const PORTAL_URL = "https://as-contabilidade.vercel.app/login";
 
 /** Converte o texto do email no modelo visual da marca (cabeçalho preto/dourado). */
 function brandHtml(title: string, body: string) {
@@ -88,7 +87,7 @@ function brandHtml(title: string, body: string) {
     ${mainHtml}
     ${declHtml}
     <p style="margin:24px 0;">
-      <a href="${PORTAL_URL}" style="background-color:#c9a227;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;display:inline-block;">Aceder ao Portal</a>
+      <a href="${esc((process.env["SITE_URL"] || "https://as-golden-guidance.lovable.app").replace(/\/$/, "") + "/login")}" style="background-color:#c9a227;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;display:inline-block;">Aceder ao Portal</a>
     </p>
     <p>Com os melhores cumprimentos,<br><strong>Equipa AS Contabilidade</strong></p>
   </div>
@@ -144,6 +143,7 @@ export async function notifyAdminOfSubmission(info: SubmissionInfo) {
       "DECLARAÇÃO REGISTADA PELO CLIENTE",
       info.declarationText,
     ].join("\n"),
+    "Nova submissão de documentação",
   );
 }
 
@@ -166,6 +166,7 @@ export async function notifyClientOfSubmission(info: SubmissionInfo) {
       "",
       "AS | Contabilidade, Fiscalidade e Gestão",
     ].join("\n"),
+    "Documentação recebida",
   );
 }
 
@@ -200,6 +201,7 @@ export async function notifyUnlockDecision(info: UnlockDecisionInfo) {
     to,
     `Pedido de reabertura ${resultado.toLowerCase()} - ${monthLabel(info.month)} ${info.year}`,
     body,
+    `Pedido de reabertura: ${resultado}`,
   );
 }
 
@@ -217,7 +219,7 @@ export async function sendMonthlyReminders() {
     .filter((e: string) => e.includes("@"));
 
   for (const address of recipients) {
-    await deliver([address], REMINDER_SUBJECT, REMINDER_BODY);
+    await deliver([address], REMINDER_SUBJECT, REMINDER_BODY, "Lembrete de prazo");
   }
 
   return { sent: recipients.length };
