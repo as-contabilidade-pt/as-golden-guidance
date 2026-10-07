@@ -527,13 +527,17 @@ export function DocumentExplorer({
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!window.confirm("Remover este documento?")) return;
+  function handleDelete(d: Doc) {
+    setPendingConfirm({ kind: "delete", doc: d });
+  }
+
+  async function doDelete(id: string) {
     setBusy(true);
     try {
       await remove({ data: { id } });
       await loadDocs();
       await loadCounts();
+      setPendingConfirm(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao remover o documento.");
     } finally {
