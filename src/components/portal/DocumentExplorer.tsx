@@ -152,6 +152,12 @@ export function DocumentExplorer({
     responsibleName: string;
   } | null>(null);
   const [responsibleName, setResponsibleName] = useState("");
+  type PendingConfirm =
+    | { kind: "upload"; files: File[] }
+    | { kind: "submit" }
+    | { kind: "delete"; doc: Doc }
+    | null;
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm>(null);
 
   const fetchCounts = useServerFn(countsForYear);
   const fetchDocs = useServerFn(listDocuments);
