@@ -54,12 +54,27 @@ async function deliver(to: string[], subject: string, body: string) {
   const original = Array.from(new Set(to.filter(Boolean)));
   if (original.length === 0) return;
   const recipients = TEST_EMAIL_OVERRIDE ? [TEST_EMAIL_OVERRIDE] : original;
+  const apiKey = process.env['RESEND_API_KEY'];
+  const from = process.env['RESEND_FROM'] || "AS Contabilidade <onboarding@resend.dev>";
+  const finalSubject = TEST_EMAIL_OVERRIDE
+    ? `${subject} [teste → ${original.join(", ")}]`
+    : subject;
+
   for (const address of recipients) {
-    console.log(
-      `[email] para ${address}${
-        TEST_EMAIL_OVERRIDE ? ` (modo teste; destinatários reais: ${original.join(", ")})` : ""
-      } :: ${subject}\n${body}`,
-    );
+    if (!apiKey) {
+      console.log(`[email] (sem RESEND_API_KEY) para ${address} :: ${finalSubject}\n${body}`);
+      continue;
+    }
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from, to: [address], subject: finalSubject, text: body }),
+      });
+      if (!res.ok) console.error(`[email] Resend falhou (${res.status}): ${await res.text()}`);
+    } catch (e) {
+      console.error("[email] erro ao enviar", e);
+    }
   }
 }
 
