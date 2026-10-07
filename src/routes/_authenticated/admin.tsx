@@ -242,6 +242,8 @@ function UnlockRequests() {
     </section>
   );
 }
+
+type SubmissionRow = {
   id: string;
   full_name: string;
   nif: string;
