@@ -462,6 +462,18 @@ export function DocumentExplorer({
       setError(`Indique ${partyField.label.toLocaleLowerCase("pt-PT")} antes de enviar.`);
       return;
     }
+    const list = Array.from(files);
+    const names = list.map((f) => f.name).join("\n");
+    if (
+      !window.confirm(
+        list.length === 1
+          ? `Tem a certeza que pretende enviar este documento?\n\n${names}`
+          : `Tem a certeza que pretende enviar ${list.length} documentos?\n\n${names}`,
+      )
+    ) {
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
     setBusy(true);
     try {
       for (const file of Array.from(files)) {
