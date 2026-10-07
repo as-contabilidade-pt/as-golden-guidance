@@ -92,12 +92,12 @@ export function isMonthPastDeadline(year: number, month: number, now: Date = new
 
 export function formatDatePt(value: string | Date) {
   const d = typeof value === "string" ? new Date(value) : value;
-  return d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Lisbon" });
 }
 
 export function formatDateTimePt(value: string | Date) {
   const d = typeof value === "string" ? new Date(value) : value;
-  return `${formatDatePt(d)} ${d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}`;
+  return `${formatDatePt(d)} ${d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Lisbon" })}`;
 }
 
 /* --------------------------- Textos oficiais --------------------------- */
