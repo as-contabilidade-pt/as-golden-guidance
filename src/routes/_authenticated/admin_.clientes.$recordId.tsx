@@ -4,6 +4,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, FolderOpen, Loader2, Mail, Save, Trash2 } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
 import {
   getClientRecord,
   updateClientRecord,
@@ -150,10 +151,14 @@ function FichaPage() {
   }
 
   async function onDelete() {
-    if (!window.confirm("Remover esta ficha de cliente?")) return;
+    setPendingDelete(true);
+  }
+
+  async function doDelete() {
     setBusy(true);
     try {
       await removeRecord({ data: { id: recordId } });
+      setPendingDelete(false);
       await navigate({ to: "/admin/clientes" });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível remover a ficha.");
