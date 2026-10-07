@@ -50,7 +50,52 @@ const TEST_EMAIL_OVERRIDE = "";
  * O envio real fica ativo assim que o domínio de email do projeto estiver
  * configurado; até lá, o conteúdo é registado nos registos do servidor.
  */
-async function deliver(to: string[], subject: string, body: string) {
+function esc(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+const PORTAL_URL = "https://as-contabilidade.vercel.app/login";
+
+/** Converte o texto do email no modelo visual da marca (cabeçalho preto/dourado). */
+function brandHtml(title: string, body: string) {
+  const lines = body.split("\n").filter((l) => l.trim() !== "AS | Contabilidade, Fiscalidade e Gestão");
+  const declIdx = lines.findIndex((l) => /^DECLARAÇÃO/.test(l.trim()));
+  const main = declIdx >= 0 ? lines.slice(0, declIdx) : lines;
+  const decl = declIdx >= 0 ? lines.slice(declIdx) : [];
+
+  const mainHtml = main
+    .map((l) => {
+      if (!l.trim()) return "";
+      const m = l.match(/^([^:]{2,40}):\s(.*)$/);
+      if (m) return `<p style="margin:4px 0;"><strong>${esc(m[1])}:</strong> ${esc(m[2])}</p>`;
+      return `<p style="margin:12px 0;">${esc(l)}</p>`;
+    })
+    .join("");
+
+  const declHtml = decl.length
+    ? `<div style="margin:24px 0;padding:16px;background:#faf7ef;border-left:3px solid #c9a227;border-radius:4px;">
+         <p style="margin:0 0 8px;font-weight:bold;color:#0a0a0a;font-size:13px;letter-spacing:.5px;">${esc(decl[0])}</p>
+         <div style="white-space:pre-wrap;color:#444;font-size:12px;line-height:1.6;">${esc(decl.slice(1).join("\n").trim())}</div>
+       </div>`
+    : "";
+
+  return `<div style="font-family:Arial,Helvetica,sans-serif;color:#222;font-size:14px;line-height:1.5;max-width:600px;margin:0 auto;">
+  <div style="background-color:#0a0a0a;padding:24px;text-align:center;">
+    <span style="color:#c9a227;font-size:20px;font-weight:bold;letter-spacing:1px;">AS | CONTABILIDADE</span>
+  </div>
+  <div style="padding:32px 24px;">
+    <h2 style="color:#0a0a0a;">${esc(title)}</h2>
+    ${mainHtml}
+    ${declHtml}
+    <p style="margin:24px 0;">
+      <a href="${PORTAL_URL}" style="background-color:#c9a227;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;display:inline-block;">Aceder ao Portal</a>
+    </p>
+    <p>Com os melhores cumprimentos,<br><strong>Equipa AS Contabilidade</strong></p>
+  </div>
+</div>`;
+}
+
+async function deliver(to: string[], subject: string, body: string, title = subject) {
   const original = Array.from(new Set(to.filter(Boolean)));
   if (original.length === 0) return;
   const recipients = TEST_EMAIL_OVERRIDE ? [TEST_EMAIL_OVERRIDE] : original;
@@ -59,17 +104,19 @@ async function deliver(to: string[], subject: string, body: string) {
   const finalSubject = TEST_EMAIL_OVERRIDE
     ? `${subject} [teste → ${original.join(", ")}]`
     : subject;
+  const text = `${body}\n\nCom os melhores cumprimentos,\nEquipa AS Contabilidade`;
+  const html = brandHtml(title, body);
 
   for (const address of recipients) {
     if (!apiKey) {
-      console.log(`[email] (sem RESEND_API_KEY) para ${address} :: ${finalSubject}\n${body}`);
+      console.log(`[email] (sem RESEND_API_KEY) para ${address} :: ${finalSubject}\n${text}`);
       continue;
     }
     try {
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from, to: [address], subject: finalSubject, text: body }),
+        body: JSON.stringify({ from, to: [address], subject: finalSubject, text, html }),
       });
       if (!res.ok) console.error(`[email] Resend falhou (${res.status}): ${await res.text()}`);
     } catch (e) {
