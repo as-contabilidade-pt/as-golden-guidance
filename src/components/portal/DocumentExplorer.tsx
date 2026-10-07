@@ -474,6 +474,7 @@ export function DocumentExplorer({
   }
 
   async function doUpload(files: File[]) {
+    if (month === null || category === null) return;
     setBusy(true);
     try {
       for (const file of files) {
