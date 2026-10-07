@@ -54,8 +54,8 @@ async function deliver(to: string[], subject: string, body: string) {
   const original = Array.from(new Set(to.filter(Boolean)));
   if (original.length === 0) return;
   const recipients = TEST_EMAIL_OVERRIDE ? [TEST_EMAIL_OVERRIDE] : original;
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM || "AS Contabilidade <onboarding@resend.dev>";
+  const apiKey = process.env['RESEND_API_KEY'];
+  const from = process.env['RESEND_FROM'] || "AS Contabilidade <onboarding@resend.dev>";
   const finalSubject = TEST_EMAIL_OVERRIDE
     ? `${subject} [teste → ${original.join(", ")}]`
     : subject;
