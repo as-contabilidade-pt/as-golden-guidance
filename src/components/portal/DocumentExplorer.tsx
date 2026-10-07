@@ -532,9 +532,9 @@ export function DocumentExplorer({
   const currentMonth = now.getMonth() + 1;
 
   function monthStatus(m: number): "locked" | "current" | "future" | "default" {
+    if (year > currentYear || (year === currentYear && m > currentMonth)) return "future";
     if (monthLocked(m)) return "locked";
     if (year === currentYear && m === currentMonth) return "current";
-    if (year > currentYear || (year === currentYear && m > currentMonth)) return "future";
     return "default";
   }
 
@@ -704,11 +704,9 @@ export function DocumentExplorer({
                   </p>
                 )}
 
-                {otherMonths.length > 0 ? (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {otherMonths.map((m) => renderCard(m))}
-                  </div>
-                ) : null}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {allMonths.map((m) => renderCard(m))}
+                </div>
               </div>
             );
           })()
