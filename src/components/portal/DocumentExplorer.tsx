@@ -981,7 +981,7 @@ export function DocumentExplorer({
                       {!readOnly && !locked ? (
                         <button
                           type="button"
-                          onClick={() => void handleDelete(d.id)}
+                          onClick={() => handleDelete(d)}
                           className="inline-flex items-center justify-center rounded-full border border-ink/15 p-2 text-foreground/60 transition-colors hover:border-destructive hover:text-destructive"
                           aria-label="Remover documento"
                         >
