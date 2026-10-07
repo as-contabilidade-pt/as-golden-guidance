@@ -470,20 +470,13 @@ export function DocumentExplorer({
       return;
     }
     const list = Array.from(files);
-    const names = list.map((f) => f.name).join("\n");
-    if (
-      !window.confirm(
-        list.length === 1
-          ? `Tem a certeza que pretende enviar este documento?\n\n${names}`
-          : `Tem a certeza que pretende enviar ${list.length} documentos?\n\n${names}`,
-      )
-    ) {
-      if (inputRef.current) inputRef.current.value = "";
-      return;
-    }
+    setPendingConfirm({ kind: "upload", files: list });
+  }
+
+  async function doUpload(files: File[]) {
     setBusy(true);
     try {
-      for (const file of Array.from(files)) {
+      for (const file of files) {
         if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
           throw new Error(`"${file.name}" não é um PDF. Apenas são aceites ficheiros PDF.`);
         }
@@ -514,6 +507,7 @@ export function DocumentExplorer({
       setDocDate(todayInputValue());
       await loadDocs();
       await loadCounts();
+      setPendingConfirm(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao enviar o documento.");
     } finally {
