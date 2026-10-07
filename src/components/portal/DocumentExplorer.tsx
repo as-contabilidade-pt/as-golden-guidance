@@ -264,6 +264,8 @@ export function DocumentExplorer({
   }
 
   function monthLocked(m: number) {
+    const n = new Date();
+    if (year > n.getFullYear() || (year === n.getFullYear() && m > n.getMonth() + 1)) return true;
     if (!isMonthPastDeadline(year, m) && !submissionFor(m)) return false;
     return requestFor(m)?.status !== "aprovado";
   }
@@ -460,10 +462,6 @@ export function DocumentExplorer({
       setError(`Indique ${partyField.label.toLocaleLowerCase("pt-PT")} antes de enviar.`);
       return;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(docDate)) {
-      setError("Indique a data do documento.");
-      return;
-    }
     setBusy(true);
     try {
       for (const file of Array.from(files)) {
@@ -477,7 +475,6 @@ export function DocumentExplorer({
             category,
             originalName: file.name,
             supplier: supplier.trim(),
-            docDate,
             ...(clientId ? { clientId } : {}),
           },
         })) as { id: string; storage_path: string };
@@ -637,7 +634,7 @@ export function DocumentExplorer({
               ) : null}
             </div>
           ) : null}
-          {year === currentYear && otherMonths.length > 0 ? (
+          {false ? (
             <button
               type="button"
               onClick={() => setShowPast((v) => !v)}
@@ -707,7 +704,7 @@ export function DocumentExplorer({
                   </p>
                 )}
 
-                {showPast && otherMonths.length > 0 ? (
+                {otherMonths.length > 0 ? (
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {otherMonths.map((m) => renderCard(m))}
                   </div>
@@ -861,17 +858,6 @@ export function DocumentExplorer({
                       className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
                     />
                   </label>
-                  <label className="block text-left">
-                    <span className="mb-2 block text-xs font-medium text-foreground/80">
-                      Data do documento
-                    </span>
-                    <input
-                      type="date"
-                      value={docDate}
-                      onChange={(e) => setDocDate(e.target.value)}
-                      className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
-                    />
-                  </label>
                 </div>
                 <p className="text-left text-xs text-muted-foreground">
                   Nome final do documento:{" "}
@@ -879,7 +865,6 @@ export function DocumentExplorer({
                     {documentDisplayName(
                       `${String(month).padStart(2, "0")}-NN`,
                       supplier || partyField.label,
-                      docDate,
                     )}
                   </span>
                 </p>
@@ -894,7 +879,7 @@ export function DocumentExplorer({
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <button
                     type="button"
-                    disabled={busy || !supplier.trim() || !docDate}
+                    disabled={busy || !supplier.trim()}
                     onClick={() => inputRef.current?.click()}
                     className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
                   >
@@ -907,7 +892,7 @@ export function DocumentExplorer({
                   </button>
                   <button
                     type="button"
-                    disabled={busy || !supplier.trim() || !docDate}
+                    disabled={busy || !supplier.trim()}
                     onClick={() => setShowScan(true)}
                     className="inline-flex items-center gap-2 rounded-full border border-gold px-6 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink disabled:opacity-60"
                   >
