@@ -996,6 +996,69 @@ export function DocumentExplorer({
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        busy={busy}
+        destructive={pendingConfirm?.kind === "delete"}
+        icon={
+          pendingConfirm?.kind === "delete" ? (
+            <Trash2 className="h-6 w-6" />
+          ) : pendingConfirm?.kind === "submit" ? (
+            <CheckCircle2 className="h-6 w-6" />
+          ) : (
+            <Upload className="h-6 w-6" />
+          )
+        }
+        title={
+          pendingConfirm?.kind === "delete"
+            ? "Remover documento?"
+            : pendingConfirm?.kind === "submit"
+              ? "Submeter documentação?"
+              : pendingConfirm && pendingConfirm.files.length === 1
+                ? "Enviar documento?"
+                : "Enviar documentos?"
+        }
+        message={
+          pendingConfirm?.kind === "delete"
+            ? "Tem a certeza que pretende remover este documento? Esta ação não pode ser revertida."
+            : pendingConfirm?.kind === "submit"
+              ? "Tem a certeza que pretende submeter a documentação deste mês? Depois de submeter, a pasta fica em modo de visualização."
+              : pendingConfirm && pendingConfirm.files.length === 1
+                ? "Tem a certeza que pretende enviar este documento?"
+                : "Tem a certeza que pretende enviar estes documentos?"
+        }
+        details={
+          pendingConfirm?.kind === "upload" ? (
+            <div className="rounded-2xl border border-gold/20 bg-gold/5 px-5 py-4 text-xs text-muted-foreground">
+              {pendingConfirm.files.map((f) => (
+                <p key={f.name} className="truncate">
+                  {f.name}
+                </p>
+              ))}
+            </div>
+          ) : null
+        }
+        confirmLabel={
+          pendingConfirm?.kind === "delete"
+            ? "Remover"
+            : pendingConfirm?.kind === "submit"
+              ? "Submeter"
+              : "Enviar"
+        }
+        onConfirm={() => {
+          const pc = pendingConfirm;
+          if (!pc) return;
+          if (pc.kind === "upload") void doUpload(pc.files);
+          else if (pc.kind === "submit") void doSubmitMonth();
+          else void doDelete(pc.doc.id);
+        }}
+        onCancel={() => {
+          if (busy) return;
+          setPendingConfirm(null);
+          if (inputRef.current) inputRef.current.value = "";
+        }}
+      />
     </div>
   );
 }
