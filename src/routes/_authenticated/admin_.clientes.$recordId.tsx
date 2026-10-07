@@ -4,6 +4,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, FolderOpen, Loader2, Mail, Save, Trash2 } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
 import {
   getClientRecord,
   updateClientRecord,
@@ -86,6 +87,7 @@ function FichaPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -150,10 +152,14 @@ function FichaPage() {
   }
 
   async function onDelete() {
-    if (!window.confirm("Remover esta ficha de cliente?")) return;
+    setPendingDelete(true);
+  }
+
+  async function doDelete() {
     setBusy(true);
     try {
       await removeRecord({ data: { id: recordId } });
+      setPendingDelete(false);
       await navigate({ to: "/admin/clientes" });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível remover a ficha.");
@@ -275,6 +281,19 @@ function FichaPage() {
           </button>
         </div>
       </div>
+      <ConfirmDialog
+        open={pendingDelete}
+        busy={busy}
+        destructive
+        icon={<Trash2 className="h-6 w-6" />}
+        title="Remover ficha de cliente?"
+        message="Tem a certeza que pretende remover esta ficha de cliente? Esta ação não pode ser revertida."
+        confirmLabel="Remover"
+        onConfirm={() => void doDelete()}
+        onCancel={() => {
+          if (!busy) setPendingDelete(false);
+        }}
+      />
     </PortalShell>
   );
 }

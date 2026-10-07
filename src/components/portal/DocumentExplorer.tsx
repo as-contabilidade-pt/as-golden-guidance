@@ -16,6 +16,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { ScanDialog } from "@/components/portal/ScanDialog";
+import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
 import { supabase } from "@/integrations/supabase/client";
 import {
   MONTHS,
@@ -151,6 +152,12 @@ export function DocumentExplorer({
     responsibleName: string;
   } | null>(null);
   const [responsibleName, setResponsibleName] = useState("");
+  type PendingConfirm =
+    | { kind: "upload"; files: File[] }
+    | { kind: "submit" }
+    | { kind: "delete"; doc: Doc }
+    | null;
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm>(null);
 
   const fetchCounts = useServerFn(countsForYear);
   const fetchDocs = useServerFn(listDocuments);
@@ -275,12 +282,11 @@ export function DocumentExplorer({
 
   async function onSubmitMonth() {
     if (month === null) return;
-    if (
-      !window.confirm(
-        "Tem a certeza que pretende submeter a documentação deste mês? Depois de submeter, a pasta fica em modo de visualização.",
-      )
-    )
-      return;
+    setPendingConfirm({ kind: "submit" });
+  }
+
+  async function doSubmitMonth() {
+    if (month === null) return;
     setBusy(true);
     setError(null);
     try {
@@ -294,6 +300,7 @@ export function DocumentExplorer({
       });
       setShowSubmit(false);
       setSubmitAccepted(false);
+      setPendingConfirm(null);
       await Promise.all([loadSubmissions(), loadRequests()]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível submeter a documentação.");
@@ -463,20 +470,14 @@ export function DocumentExplorer({
       return;
     }
     const list = Array.from(files);
-    const names = list.map((f) => f.name).join("\n");
-    if (
-      !window.confirm(
-        list.length === 1
-          ? `Tem a certeza que pretende enviar este documento?\n\n${names}`
-          : `Tem a certeza que pretende enviar ${list.length} documentos?\n\n${names}`,
-      )
-    ) {
-      if (inputRef.current) inputRef.current.value = "";
-      return;
-    }
+    setPendingConfirm({ kind: "upload", files: list });
+  }
+
+  async function doUpload(files: File[]) {
+    if (month === null || category === null) return;
     setBusy(true);
     try {
-      for (const file of Array.from(files)) {
+      for (const file of files) {
         if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
           throw new Error(`"${file.name}" não é um PDF. Apenas são aceites ficheiros PDF.`);
         }
@@ -507,6 +508,7 @@ export function DocumentExplorer({
       setDocDate(todayInputValue());
       await loadDocs();
       await loadCounts();
+      setPendingConfirm(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao enviar o documento.");
     } finally {
@@ -525,13 +527,17 @@ export function DocumentExplorer({
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!window.confirm("Remover este documento?")) return;
+  function handleDelete(d: Doc) {
+    setPendingConfirm({ kind: "delete", doc: d });
+  }
+
+  async function doDelete(id: string) {
     setBusy(true);
     try {
       await remove({ data: { id } });
       await loadDocs();
       await loadCounts();
+      setPendingConfirm(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao remover o documento.");
     } finally {
@@ -975,7 +981,7 @@ export function DocumentExplorer({
                       {!readOnly && !locked ? (
                         <button
                           type="button"
-                          onClick={() => void handleDelete(d.id)}
+                          onClick={() => handleDelete(d)}
                           className="inline-flex items-center justify-center rounded-full border border-ink/15 p-2 text-foreground/60 transition-colors hover:border-destructive hover:text-destructive"
                           aria-label="Remover documento"
                         >
@@ -990,6 +996,69 @@ export function DocumentExplorer({
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        busy={busy}
+        destructive={pendingConfirm?.kind === "delete"}
+        icon={
+          pendingConfirm?.kind === "delete" ? (
+            <Trash2 className="h-6 w-6" />
+          ) : pendingConfirm?.kind === "submit" ? (
+            <CheckCircle2 className="h-6 w-6" />
+          ) : (
+            <Upload className="h-6 w-6" />
+          )
+        }
+        title={
+          pendingConfirm?.kind === "delete"
+            ? "Remover documento?"
+            : pendingConfirm?.kind === "submit"
+              ? "Submeter documentação?"
+              : pendingConfirm && pendingConfirm.files.length === 1
+                ? "Enviar documento?"
+                : "Enviar documentos?"
+        }
+        message={
+          pendingConfirm?.kind === "delete"
+            ? "Tem a certeza que pretende remover este documento? Esta ação não pode ser revertida."
+            : pendingConfirm?.kind === "submit"
+              ? "Tem a certeza que pretende submeter a documentação deste mês? Depois de submeter, a pasta fica em modo de visualização."
+              : pendingConfirm && pendingConfirm.files.length === 1
+                ? "Tem a certeza que pretende enviar este documento?"
+                : "Tem a certeza que pretende enviar estes documentos?"
+        }
+        details={
+          pendingConfirm?.kind === "upload" ? (
+            <div className="rounded-2xl border border-gold/20 bg-gold/5 px-5 py-4 text-xs text-muted-foreground">
+              {pendingConfirm.files.map((f) => (
+                <p key={f.name} className="truncate">
+                  {f.name}
+                </p>
+              ))}
+            </div>
+          ) : null
+        }
+        confirmLabel={
+          pendingConfirm?.kind === "delete"
+            ? "Remover"
+            : pendingConfirm?.kind === "submit"
+              ? "Submeter"
+              : "Enviar"
+        }
+        onConfirm={() => {
+          const pc = pendingConfirm;
+          if (!pc) return;
+          if (pc.kind === "upload") void doUpload(pc.files);
+          else if (pc.kind === "submit") void doSubmitMonth();
+          else void doDelete(pc.doc.id);
+        }}
+        onCancel={() => {
+          if (busy) return;
+          setPendingConfirm(null);
+          if (inputRef.current) inputRef.current.value = "";
+        }}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, FileSpreadsheet, FolderTree, Inbox, Users } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
 import {
   listPendingUnlockRequests,
   decideUnlockRequest,
@@ -128,17 +129,22 @@ function UnlockRequests() {
     void load();
   }, [load]);
 
+  const [pendingDecision, setPendingDecision] = useState<{
+    id: string;
+    decision: "aprovado" | "rejeitado" | "fechado";
+  } | null>(null);
+
   async function act(id: string, decision: "aprovado" | "rejeitado" | "fechado") {
-    const question =
-      decision === "aprovado"
-        ? "Tem a certeza que pretende aprovar este pedido? O mês ficará desbloqueado para o cliente."
-        : decision === "rejeitado"
-          ? "Tem a certeza que pretende rejeitar este pedido?"
-          : "Tem a certeza que pretende voltar a bloquear este mês?";
-    if (!window.confirm(question)) return;
-    setBusyId(id);
+    setPendingDecision({ id, decision });
+  }
+
+  async function doAct() {
+    const pending = pendingDecision;
+    if (!pending) return;
+    setBusyId(pending.id);
     try {
-      await decide({ data: { id, decision } });
+      await decide({ data: { id: pending.id, decision: pending.decision } });
+      setPendingDecision(null);
       await load();
     } finally {
       setBusyId(null);
@@ -203,6 +209,36 @@ function UnlockRequests() {
         ))}
       </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDecision !== null}
+        busy={busyId !== null}
+        destructive={pendingDecision?.decision === "rejeitado"}
+        icon={<CheckCircle2 className="h-6 w-6" />}
+        title={
+          pendingDecision?.decision === "aprovado"
+            ? "Aprovar pedido?"
+            : pendingDecision?.decision === "rejeitado"
+              ? "Rejeitar pedido?"
+              : "Voltar a bloquear mês?"
+        }
+        message={
+          pendingDecision?.decision === "aprovado"
+            ? "Tem a certeza que pretende aprovar este pedido? O mês ficará desbloqueado para o cliente."
+            : pendingDecision?.decision === "rejeitado"
+              ? "Tem a certeza que pretende rejeitar este pedido?"
+              : "Tem a certeza que pretende voltar a bloquear este mês?"
+        }
+        confirmLabel={
+          pendingDecision?.decision === "aprovado"
+            ? "Aprovar"
+            : pendingDecision?.decision === "rejeitado"
+              ? "Rejeitar"
+              : "Bloquear"
+        }
+        onConfirm={() => void doAct()}
+        onCancel={() => setPendingDecision(null)}
+      />
     </section>
   );
 }
