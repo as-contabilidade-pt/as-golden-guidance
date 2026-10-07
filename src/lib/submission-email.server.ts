@@ -66,14 +66,14 @@ function brandHtml(title: string, body: string) {
     .map((l) => {
       if (!l.trim()) return "";
       const m = l.match(/^([^:]{2,40}):\s(.*)$/);
-      if (m) return `<p style="margin:4px 0;"><strong>${esc(m[1])}:</strong> ${esc(m[2])}</p>`;
+      if (m) return `<p style="margin:4px 0;"><strong>${esc(m[1] ?? "")}:</strong> ${esc(m[2] ?? "")}</p>`;
       return `<p style="margin:12px 0;">${esc(l)}</p>`;
     })
     .join("");
 
   const declHtml = decl.length
     ? `<div style="margin:24px 0;padding:16px;background:#faf7ef;border-left:3px solid #c9a227;border-radius:4px;">
-         <p style="margin:0 0 8px;font-weight:bold;color:#0a0a0a;font-size:13px;letter-spacing:.5px;">${esc(decl[0])}</p>
+         <p style="margin:0 0 8px;font-weight:bold;color:#0a0a0a;font-size:13px;letter-spacing:.5px;">${esc(decl[0] ?? "")}</p>
          <div style="white-space:pre-wrap;color:#444;font-size:12px;line-height:1.6;">${esc(decl.slice(1).join("\n").trim())}</div>
        </div>`
     : "";
