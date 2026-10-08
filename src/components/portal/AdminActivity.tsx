@@ -46,8 +46,10 @@ export function UnlockRequests({ history = false }: { history?: boolean }) {
     id: string;
     decision: "aprovado" | "rejeitado" | "fechado";
   } | null>(null);
+  const [note, setNote] = useState("");
 
   async function act(id: string, decision: "aprovado" | "rejeitado" | "fechado") {
+    setNote("");
     setPendingDecision({ id, decision });
   }
 
@@ -56,7 +58,14 @@ export function UnlockRequests({ history = false }: { history?: boolean }) {
     if (!pending) return;
     setBusyId(pending.id);
     try {
-      await decide({ data: { id: pending.id, decision: pending.decision } });
+      const trimmed = note.trim();
+      await decide({
+        data: {
+          id: pending.id,
+          decision: pending.decision,
+          ...(trimmed ? { note: trimmed } : {}),
+        },
+      });
       setPendingDecision(null);
       await load();
     } catch {
