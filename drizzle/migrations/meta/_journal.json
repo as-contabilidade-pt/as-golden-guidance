@@ -8,6 +8,13 @@
       "when": 1791472005457,
       "tag": "0000_client_allowed_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791495035793,
+      "tag": "0001_statement_history",
+      "breakpoints": true
     }
   ]
 }

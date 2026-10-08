@@ -257,6 +257,42 @@ export type Database = {
         }
         Relationships: []
       }
+      statement_conversions: {
+        Row: {
+          client_name: string
+          created_at: string
+          created_by: string
+          filename: string
+          id: string
+          row_count: number
+          rows: Json
+          source_document_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_name?: string
+          created_at?: string
+          created_by: string
+          filename?: string
+          id?: string
+          row_count?: number
+          rows?: Json
+          source_document_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_name?: string
+          created_at?: string
+          created_by?: string
+          filename?: string
+          id?: string
+          row_count?: number
+          rows?: Json
+          source_document_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       unlock_requests: {
         Row: {
           admin_note: string | null
