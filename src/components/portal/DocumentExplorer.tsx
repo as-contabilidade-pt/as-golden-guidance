@@ -345,7 +345,7 @@ export function DocumentExplorer({
       setPendingConfirm(null);
       await Promise.all([loadSubmissions(), loadRequests()]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível submeter a documentação.");
+      setError(friendlyErrorMessage(err, "Não foi possível submeter a documentação."));
     } finally {
       setBusy(false);
     }
@@ -569,7 +569,7 @@ export function DocumentExplorer({
       await loadCounts();
       setPendingConfirm(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao enviar o documento.");
+      setError(friendlyErrorMessage(e, "Erro ao enviar o documento."));
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";
