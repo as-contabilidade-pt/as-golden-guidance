@@ -319,7 +319,7 @@ export function DocumentExplorer({
     if (!s) return null;
     // Reaberto por aprovação: a submissão anterior deixa de contar (mês "como novo").
     const r = requests.find((x) => x.month === m && x.status === "aprovado");
-    if (r?.decided_at && new Date(s.submitted_at).getTime() <= new Date(r.decided_at).getTime()) return null;
+    if (r?.decided_at && unlockIsActive(year, m, r.decided_at, new Date(tick)) && new Date(s.submitted_at).getTime() <= new Date(r.decided_at).getTime()) return null;
     return s;
   }
 
