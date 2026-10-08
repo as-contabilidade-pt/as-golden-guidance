@@ -799,7 +799,7 @@ export function DocumentExplorer({
       <div className="mt-8">
         {month === null ? (
           (() => {
-            const renderCard = (m: number, size: "md" | "lg" = "md") => {
+            const renderCard = (m: number, size: "md" | "lg" | "md-lg" = "md") => {
               const name = MONTHS[m - 1]!;
               const submitted = submissionFor(m);
               const pendingRequest = pendingRequestFor(m);
@@ -1218,7 +1218,7 @@ function FolderCard({
   meta: string;
   onClick: () => void;
   status?: "locked" | "submitted" | "current" | "future" | "default";
-  size?: "md" | "lg";
+  size?: "md" | "lg" | "md-lg";
 }) {
   const styles = {
     locked: {
