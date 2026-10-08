@@ -17,6 +17,7 @@ import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDocumentosRouteImport } from './routes/_authenticated/documentos'
+import { Route as AuthenticatedAdminBackupsRouteImport } from './routes/_authenticated/admin_.backups'
 import { Route as AuthenticatedAdminDesbloqueiosRouteImport } from './routes/_authenticated/admin_.desbloqueios'
 import { Route as AuthenticatedAdminExtratosRouteImport } from './routes/_authenticated/admin_.extratos'
 import { Route as AuthenticatedAdminSubmissoesRouteImport } from './routes/_authenticated/admin_.submissoes'
@@ -65,6 +66,12 @@ const AuthenticatedDocumentosRoute = AuthenticatedDocumentosRouteImport.update({
   path: '/documentos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminBackupsRoute =
+  AuthenticatedAdminBackupsRouteImport.update({
+    id: '/admin_/backups',
+    path: '/admin/backups',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminDesbloqueiosRoute =
   AuthenticatedAdminDesbloqueiosRouteImport.update({
     id: '/admin_/desbloqueios',
@@ -122,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/documentos': typeof AuthenticatedDocumentosRoute
+  '/admin/backups': typeof AuthenticatedAdminBackupsRoute
   '/admin/desbloqueios': typeof AuthenticatedAdminDesbloqueiosRoute
   '/admin/extratos': typeof AuthenticatedAdminExtratosRoute
   '/admin/submissoes': typeof AuthenticatedAdminSubmissoesRoute
@@ -139,6 +147,7 @@ export interface FileRoutesByTo {
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/documentos': typeof AuthenticatedDocumentosRoute
+  '/admin/backups': typeof AuthenticatedAdminBackupsRoute
   '/admin/desbloqueios': typeof AuthenticatedAdminDesbloqueiosRoute
   '/admin/extratos': typeof AuthenticatedAdminExtratosRoute
   '/admin/submissoes': typeof AuthenticatedAdminSubmissoesRoute
@@ -158,6 +167,7 @@ export interface FileRoutesById {
   '/termos': typeof TermosRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/documentos': typeof AuthenticatedDocumentosRoute
+  '/_authenticated/admin_/backups': typeof AuthenticatedAdminBackupsRoute
   '/_authenticated/admin_/desbloqueios': typeof AuthenticatedAdminDesbloqueiosRoute
   '/_authenticated/admin_/extratos': typeof AuthenticatedAdminExtratosRoute
   '/_authenticated/admin_/submissoes': typeof AuthenticatedAdminSubmissoesRoute
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/admin'
     | '/documentos'
+    | '/admin/backups'
     | '/admin/desbloqueios'
     | '/admin/extratos'
     | '/admin/submissoes'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/admin'
     | '/documentos'
+    | '/admin/backups'
     | '/admin/desbloqueios'
     | '/admin/extratos'
     | '/admin/submissoes'
@@ -212,6 +224,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/_authenticated/admin'
     | '/_authenticated/documentos'
+    | '/_authenticated/admin_/backups'
     | '/_authenticated/admin_/desbloqueios'
     | '/_authenticated/admin_/extratos'
     | '/_authenticated/admin_/submissoes'
@@ -290,6 +303,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDocumentosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin_/backups': {
+      id: '/_authenticated/admin_/backups'
+      path: '/admin/backups'
+      fullPath: '/admin/backups'
+      preLoaderRoute: typeof AuthenticatedAdminBackupsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin_/desbloqueios': {
       id: '/_authenticated/admin_/desbloqueios'
       path: '/admin/desbloqueios'
@@ -352,6 +372,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDocumentosRoute: typeof AuthenticatedDocumentosRoute
+  AuthenticatedAdminBackupsRoute: typeof AuthenticatedAdminBackupsRoute
   AuthenticatedAdminDesbloqueiosRoute: typeof AuthenticatedAdminDesbloqueiosRoute
   AuthenticatedAdminExtratosRoute: typeof AuthenticatedAdminExtratosRoute
   AuthenticatedAdminSubmissoesRoute: typeof AuthenticatedAdminSubmissoesRoute
@@ -364,6 +385,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDocumentosRoute: AuthenticatedDocumentosRoute,
+  AuthenticatedAdminBackupsRoute: AuthenticatedAdminBackupsRoute,
   AuthenticatedAdminDesbloqueiosRoute: AuthenticatedAdminDesbloqueiosRoute,
   AuthenticatedAdminExtratosRoute: AuthenticatedAdminExtratosRoute,
   AuthenticatedAdminSubmissoesRoute: AuthenticatedAdminSubmissoesRoute,
