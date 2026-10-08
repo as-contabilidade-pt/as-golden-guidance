@@ -523,7 +523,7 @@ function NewRecordDialog({ onCreated, onImport, importBusy }: {
     phone: "",
     email: "",
     notes: "",
-    folderActive: false,
+    folderActive: true,
   });
   const set = (k: keyof typeof f, v: string | boolean) => setF((x) => ({ ...x, [k]: v }));
 
@@ -531,6 +531,14 @@ function NewRecordDialog({ onCreated, onImport, importBusy }: {
     e.preventDefault();
     if (f.name.trim().length < 2) {
       setError("Indique o nome do cliente.");
+      return;
+    }
+    if (!/^\d{9}$/.test(f.nif.replace(/\s/g, ""))) {
+      setError("Indique um NIF / NIPC válido com 9 dígitos.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) {
+      setError("Indique um email válido.");
       return;
     }
     setBusy(true);
@@ -551,13 +559,13 @@ function NewRecordDialog({ onCreated, onImport, importBusy }: {
   const fields: [keyof typeof f, string, string?][] = [
     ["clientNumber", "Nº de cliente"],
     ["name", "Nome / Denominação *"],
-    ["nif", "NIF / NIPC"],
+    ["nif", "NIF / NIPC *"],
     ["responsibleName", "Nome do contacto"],
     ["address", "Morada / Sede"],
     ["postalCode", "Código postal"],
     ["locality", "Localidade"],
     ["phone", "Telemóvel"],
-    ["email", "Email", "email"],
+    ["email", "Email *", "email"],
   ];
 
   return (
