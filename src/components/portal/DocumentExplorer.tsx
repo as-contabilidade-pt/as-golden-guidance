@@ -344,7 +344,7 @@ export function DocumentExplorer({
 
   function monthLocked(m: number) {
     const n = new Date();
-    if (year > n.getFullYear() || (year === n.getFullYear() && m > n.getMonth() + 1)) return true;
+    if (year > n.getFullYear() || (year === n.getFullYear() && m > n.getMonth() + 1)) return !activeUnlock(m);
     if (!isMonthPastDeadline(year, m) && !submissionFor(m)) return false;
     return !activeUnlock(m);
   }
@@ -912,7 +912,7 @@ export function DocumentExplorer({
               </div>
             ) : null}
 
-            {readOnly && clientId && !isFutureMonth(month) ? (
+            {readOnly && clientId ? (
               <div className="soft-card flex flex-wrap items-center gap-4 p-6">
                 <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
                   <Lock className="h-5 w-5" />
@@ -1231,7 +1231,9 @@ export function DocumentExplorer({
             : pendingConfirm?.kind === "submit"
               ? "Tem a certeza que pretende submeter a documentação deste mês? Depois de submeter, a pasta fica em modo de visualização."
               : pendingConfirm?.kind === "lock"
-                ? `Tem a certeza que pretende ${pendingConfirm.action === "unlock" ? "desbloquear" : "bloquear"} ${month ? monthLabel(month) : ""} ${year} deste cliente? O cliente e a administração recebem um email.`
+                ? pendingConfirm.action === "unlock"
+                  ? `Tem a certeza que pretende desbloquear ${month ? monthLabel(month) : ""} ${year} deste cliente? Se for antes do dia 10 do mês seguinte, fica desbloqueado até ao dia 10; se já tiver passado, o cliente tem 72 horas úteis para submeter. O cliente e a administração recebem um email.`
+                  : `Tem a certeza que pretende bloquear ${month ? monthLabel(month) : ""} ${year} deste cliente? O cliente e a administração recebem um email.`
                 : pendingConfirm && pendingConfirm.files.length === 1
                   ? "Tem a certeza que pretende enviar este documento?"
                   : "Tem a certeza que pretende enviar estes documentos?"
