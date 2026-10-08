@@ -582,7 +582,7 @@ export function DocumentExplorer({
       const { url } = (await download({ data: { id } })) as { url: string };
       window.open(url, "_blank", "noopener");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao abrir o documento.");
+      setError(friendlyErrorMessage(e, "Erro ao abrir o documento."));
     }
   }
 
@@ -598,7 +598,7 @@ export function DocumentExplorer({
       await loadCounts();
       setPendingConfirm(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao remover o documento.");
+      setError(friendlyErrorMessage(e, "Erro ao remover o documento."));
     } finally {
       setBusy(false);
     }
