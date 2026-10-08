@@ -3,6 +3,7 @@ import {
   formatDateTimePt,
   REMINDER_SUBJECT,
   REMINDER_BODY,
+  unlockExpiry,
 } from "@/lib/portal";
 
 type SubmissionInfo = {
@@ -190,6 +191,9 @@ export async function notifyUnlockDecision(info: UnlockDecisionInfo) {
     "",
     `Resultado: ${resultado}`,
     `Data/hora da decisão: ${formatDateTimePt(info.decidedAt)}`,
+    ...(info.decision === "aprovado"
+      ? [`Prazo para submeter: até ${formatDateTimePt(unlockExpiry(info.year, info.month, info.decidedAt))}`]
+      : []),
     "",
     "AS | Contabilidade, Fiscalidade e Gestão",
   ].join("\n");
