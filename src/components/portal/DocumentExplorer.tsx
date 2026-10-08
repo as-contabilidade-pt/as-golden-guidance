@@ -286,7 +286,7 @@ export function DocumentExplorer({
         })) as Doc[],
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao carregar documentos.");
+      setError(friendlyErrorMessage(e, "Erro ao carregar documentos."));
     } finally {
       setLoading(false);
     }
@@ -487,8 +487,12 @@ export function DocumentExplorer({
   async function onSubmitRequest(e: React.FormEvent) {
     e.preventDefault();
     if (month === null || !accepted) return;
+    if (reason.trim().length < 5) {
+      setRequestError("O motivo está demasiado curto. Escreva pelo menos 5 caracteres.");
+      return;
+    }
     setBusy(true);
-    setError(null);
+    setRequestError(null);
     try {
       await submitRequest({
         data: {
@@ -505,7 +509,9 @@ export function DocumentExplorer({
       setShowForm(false);
       await loadRequests();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível enviar o pedido.");
+      setRequestError(
+        friendlyErrorMessage(err, "Não foi possível enviar o pedido. Tente novamente."),
+      );
     } finally {
       setBusy(false);
     }
