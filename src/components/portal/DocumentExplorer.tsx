@@ -327,6 +327,11 @@ export function DocumentExplorer({
     return requests.find((r) => r.month === m && r.status !== "fechado") ?? null;
   }
 
+  function pendingRequestFor(m: number) {
+    const request = requestFor(m);
+    return request?.status === "pendente" ? request : null;
+  }
+
   function isFutureMonth(m: number) {
     const n = new Date();
     return year > n.getFullYear() || (year === n.getFullYear() && m > n.getMonth() + 1);
@@ -394,6 +399,7 @@ export function DocumentExplorer({
   }
   const locked = month !== null && !readOnly && monthLocked(month);
   function renderLockPanel(month: number) {
+    const pendingRequest = pendingRequestFor(month);
     return (
               <div className="soft-card p-6">
                 <div className="flex flex-wrap items-center gap-3">
@@ -402,14 +408,19 @@ export function DocumentExplorer({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-serif text-lg text-foreground">
-                      {monthLabel(month)} {year} bloqueado
+                      {pendingRequest
+                        ? "Pedido pendente de aprovação"
+                        : `${monthLabel(month)} ${year} bloqueado`}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {currentSubmission
+                      {pendingRequest
+                        ? `O pedido de desbloqueio de ${monthLabel(month)} ${year} aguarda a decisão da administração.`
+                        : currentSubmission
                         ? `Submetido em ${formatDateTimePt(currentSubmission.submitted_at)} (${currentSubmission.document_count} documento(s)).`
                         : `Bloqueado desde ${formatDatePt(lockDate(year, month))}.`}{" "}
-                      Todas as pastas deste mês podem ser consultadas e descarregadas, mas não é
-                      possível adicionar ou remover documentos.
+                      {pendingRequest
+                        ? "Receberá uma notificação assim que existir uma decisão."
+                        : "Todas as pastas deste mês podem ser consultadas e descarregadas, mas não é possível adicionar ou remover documentos."}
                     </p>
                   </div>
                 </div>
@@ -551,6 +562,9 @@ export function DocumentExplorer({
       setAccepted(false);
       setShowForm(false);
       await loadRequests();
+      setCategory(null);
+      setMonth(null);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       setRequestError(
         friendlyErrorMessage(err, "Não foi possível enviar o pedido. Tente novamente."),
@@ -788,12 +802,15 @@ export function DocumentExplorer({
             const renderCard = (m: number, size: "md" | "lg" = "md") => {
               const name = MONTHS[m - 1]!;
               const submitted = submissionFor(m);
+              const pendingRequest = pendingRequestFor(m);
               return (
                 <FolderCard
                   key={name}
                   title={name}
                   meta={
-                    unlockCountdown(m)
+                    pendingRequest
+                      ? "Pedido de desbloqueio pendente de aprovação"
+                      : unlockCountdown(m)
                       ? `Desbloqueada · ${unlockCountdown(m)!.text} úteis para submeter`
                       : submitted
                       ? `${counts[`${m}`] ?? 0} documento(s) · submetida em ${formatDatePt(
