@@ -692,7 +692,7 @@ export function DocumentExplorer({
   const allMonths = MONTHS.map((_, i) => i + 1);
   const openMonths = allMonths.filter((m) => {
     const s = monthStatus(m);
-    return s === "current" || s === "default" || m === 8; // TEMP-CHECK-3
+    return s === "current" || s === "default";
   });
   const otherMonths = allMonths.filter((m) => !openMonths.includes(m));
 
