@@ -50,8 +50,8 @@ function BackupPage() {
   useEffect(() => { fetchClients().then(setClients).catch(() => {}); }, [fetchClients]);
 
   const nowY = new Date().getFullYear();
-  const years = Array.from({ length: 6 }, (_, i) => nowY + 1 - i);
-  const minKey = (nowY - 5) * 12;
+  const years = Array.from({ length: 11 }, (_, i) => nowY + 1 - i);
+  const minKey = (nowY - 9) * 12;
   const maxKey = (nowY + 1) * 12 + 11;
   const nowKey = nowY * 12 + new Date().getMonth();
   const [range, setRange] = useState<[number, number]>([nowKey - 11, nowKey]);
