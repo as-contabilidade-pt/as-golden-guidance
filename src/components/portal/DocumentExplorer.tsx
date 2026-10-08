@@ -832,17 +832,17 @@ export function DocumentExplorer({
               );
             }
             return (
-              <div className="space-y-8">
+              <div className="space-y-10">
                 {openMonths.length > 0 ? (
                   <div
-                    className={`mx-auto grid gap-5 ${
+                    className={`grid gap-5 ${
                       openMonths.length === 1
-                        ? "max-w-md grid-cols-1"
+                        ? "mx-auto max-w-md grid-cols-1"
                         : openMonths.length === 3
-                          ? "grid-cols-1 sm:grid-cols-3"
+                          ? "-mx-3 sm:-mx-5 grid-cols-1 sm:grid-cols-3"
                           : openMonths.length >= 5
-                            ? "grid-cols-1 sm:grid-cols-3"
-                            : "max-w-3xl sm:grid-cols-2"
+                            ? "-mx-3 sm:-mx-5 grid-cols-1 sm:grid-cols-3"
+                            : "mx-auto max-w-3xl sm:grid-cols-2"
                     }`}
                   >
                     {openMonths.map((m) =>
