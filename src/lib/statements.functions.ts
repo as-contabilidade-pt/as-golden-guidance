@@ -5,8 +5,28 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const inputSchema = z.object({
   filename: z.string().min(1),
   mimeType: z.string().min(1),
-  fileData: z.string().min(10),
+  fileData: z.string().min(10).optional(),
+  documentId: z.string().uuid().optional(),
+  clientName: z.string().max(200).optional(),
 });
+
+async function assertAdmin(context: { supabase: any; userId: string }) {
+  const { data: isAdmin } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+  if (isAdmin !== true) throw new Error("Acesso restrito.");
+}
+
+function toBase64(buf: ArrayBuffer) {
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
 
 export type StatementRow = {
   data: string;
@@ -37,11 +57,24 @@ export const extractBankStatement = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => inputSchema.parse(data))
   .handler(async ({ data, context }) => {
-    const { data: isAdmin } = await context.supabase.rpc("has_role", {
-      _user_id: context.userId,
-      _role: "admin",
-    });
-    if (isAdmin !== true) throw new Error("Acesso restrito.");
+    await assertAdmin(context);
+
+    let fileData = data.fileData;
+    if (!fileData && data.documentId) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: doc } = await supabaseAdmin
+        .from("documents")
+        .select("storage_path")
+        .eq("id", data.documentId)
+        .maybeSingle();
+      if (!doc) throw new Error("Documento não encontrado.");
+      const { data: blob, error } = await supabaseAdmin.storage
+        .from("documentos")
+        .download(doc.storage_path);
+      if (error || !blob) throw new Error("Não foi possível abrir o documento do cliente.");
+      fileData = toBase64(await blob.arrayBuffer());
+    }
+    if (!fileData) throw new Error("Nenhum ficheiro indicado.");
 
     const apiKey = process.env["ANTHROPIC_API_KEY"];
     if (!apiKey) throw new Error("Serviço de processamento não configurado.");
@@ -65,7 +98,7 @@ export const extractBankStatement = createServerFn({ method: "POST" })
                 source: {
                   type: "base64",
                   media_type: "application/pdf",
-                  data: data.fileData,
+                  data: fileData,
                 },
               },
               { type: "text", text: PROMPT },
@@ -115,8 +148,7 @@ export const extractBankStatement = createServerFn({ method: "POST" })
     const rows = Array.isArray(parsed.movimentos) ? parsed.movimentos : [];
     const clean = (v: unknown) => (typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : "");
 
-    return {
-      rows: rows.map((r) => {
+    const mapped = rows.map((r) => {
         const row = (r ?? {}) as Record<string, unknown>;
         return {
           data: clean(row["data"]),
@@ -125,6 +157,137 @@ export const extractBankStatement = createServerFn({ method: "POST" })
           credito: clean(row["credito"]),
           saldo: clean(row["saldo"]),
         } satisfies StatementRow;
-      }),
-    };
+      });
+
+    const { data: saved } = await context.supabase
+      .from("statement_conversions")
+      .insert({
+        created_by: context.userId,
+        client_name: data.clientName?.trim() ?? "",
+        filename: data.filename,
+        source_document_id: data.documentId ?? null,
+        rows: mapped,
+        row_count: mapped.length,
+      })
+      .select("id")
+      .maybeSingle();
+
+    return { rows: mapped, historyId: (saved?.id as string | undefined) ?? null };
+  });
+
+export type HistoryItem = {
+  id: string;
+  client_name: string;
+  filename: string;
+  row_count: number;
+  created_at: string;
+  rows: StatementRow[];
+};
+
+export const listStatementHistory = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    await context.supabase.from("statement_conversions").delete().lt("created_at", since);
+    const { data, error } = await context.supabase
+      .from("statement_conversions")
+      .select("id, client_name, filename, row_count, created_at, rows")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error("Não foi possível carregar o histórico.");
+    return (data ?? []) as unknown as HistoryItem[];
+  });
+
+export const updateStatementHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        clientName: z.string().max(200),
+        rows: z.array(
+          z.object({
+            data: z.string(),
+            descricao: z.string(),
+            debito: z.string(),
+            credito: z.string(),
+            saldo: z.string(),
+          }),
+        ),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { error } = await context.supabase
+      .from("statement_conversions")
+      .update({ rows: data.rows, row_count: data.rows.length, client_name: data.clientName })
+      .eq("id", data.id);
+    if (error) throw new Error("Não foi possível guardar as alterações.");
+    return { ok: true };
+  });
+
+export const deleteStatementHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    await context.supabase.from("statement_conversions").delete().eq("id", data.id);
+    return { ok: true };
+  });
+
+export type ClientStatement = {
+  id: string;
+  user_id: string;
+  year: number;
+  month: number;
+  original_name: string;
+  label: string;
+  created_at: string;
+  client_name: string;
+  nif: string;
+};
+
+export const listClientStatements = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { data: docs, error } = await context.supabase
+      .from("documents")
+      .select("id, user_id, year, month, original_name, label, created_at")
+      .eq("category", "extratos_bancarios")
+      .order("year", { ascending: false })
+      .order("month", { ascending: false })
+      .order("created_at", { ascending: false });
+    if (error) throw new Error("Não foi possível carregar os extratos dos clientes.");
+    const ids = [...new Set((docs ?? []).map((d: any) => d.user_id))];
+    const { data: profiles } = ids.length
+      ? await context.supabase.from("profiles").select("id, full_name, nif").in("id", ids)
+      : { data: [] as any[] };
+    const map = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+    return (docs ?? []).map((d: any) => ({
+      ...d,
+      client_name: (map.get(d.user_id) as any)?.full_name ?? "Cliente",
+      nif: (map.get(d.user_id) as any)?.nif ?? "",
+    })) as ClientStatement[];
+  });
+
+export const getClientStatementUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: doc } = await supabaseAdmin
+      .from("documents")
+      .select("storage_path")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!doc) throw new Error("Documento não encontrado.");
+    const { data: signed } = await supabaseAdmin.storage
+      .from("documentos")
+      .createSignedUrl(doc.storage_path, 300);
+    if (!signed?.signedUrl) throw new Error("Não foi possível abrir o documento.");
+    return { url: signed.signedUrl };
   });
