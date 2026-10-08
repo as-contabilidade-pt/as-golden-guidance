@@ -453,17 +453,28 @@ export function DocumentExplorer({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setShowForm(false)}
+                        onClick={() => {
+                          setShowForm(false);
+                          setRequestError(null);
+                        }}
                         className="rounded-full border border-ink/15 px-6 py-3 text-sm text-foreground transition-colors hover:border-gold hover:text-gold"
                       >
                         Cancelar
                       </button>
                     </div>
+                    {requestError ? (
+                      <p className="rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-3 text-sm leading-relaxed text-destructive">
+                        {requestError}
+                      </p>
+                    ) : null}
                   </form>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setShowForm(true)}
+                    onClick={() => {
+                      setShowForm(true);
+                      setRequestError(null);
+                    }}
                     className="mt-5 inline-flex items-center gap-2 rounded-full border border-gold px-6 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink"
                   >
                     Pedir desbloqueio para entrega fora de prazo
