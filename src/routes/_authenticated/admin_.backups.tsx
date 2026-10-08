@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { zipSync, strToU8 } from "fflate";
 import * as XLSX from "xlsx";
-import { Download, Loader2 } from "lucide-react";
+import { Archive, CalendarRange, Download, Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
 import { requireAdmin } from "@/lib/admin-guard";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Button } from "@/components/ui/button";
@@ -35,9 +38,11 @@ function BackupPage() {
   const fetchClients = useServerFn(listBackupClients);
   const fetchManifest = useServerFn(buildBackupManifest);
   const [clients, setClients] = useState<{ id: string; full_name: string; nif: string }[]>([]);
-  const [clientId, setClientId] = useState("");
-  const [year, setYear] = useState("");
-  const [month, setMonth] = useState("");
+  const [clientId, setClientId] = useState("all");
+  const [year, setYear] = useState("all");
+  const [month, setMonth] = useState("all");
+  const [mode, setMode] = useState<"simple" | "range">("simple");
+  const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
@@ -46,15 +51,28 @@ function BackupPage() {
 
   const nowY = new Date().getFullYear();
   const years = Array.from({ length: 6 }, (_, i) => nowY + 1 - i);
+  const minKey = (nowY - 5) * 12;
+  const maxKey = (nowY + 1) * 12 + 11;
+  const nowKey = nowY * 12 + new Date().getMonth();
+  const [range, setRange] = useState<[number, number]>([nowKey - 11, nowKey]);
+  const keyLabel = (k: number) => `${MONTHS[k % 12]} ${Math.floor(k / 12)}`;
+  const cId = clientId === "all" ? "" : clientId;
+  const clientName = cId ? clients.find((c) => c.id === cId)?.full_name ?? "" : "Todos os clientes";
+  const periodLabel = mode === "range"
+    ? `${keyLabel(range[0])} a ${keyLabel(range[1])}`
+    : `${month === "all" ? "Todos os meses" : MONTHS[Number(month) - 1]} · ${year === "all" ? "Todos os anos" : year}`;
 
   async function run() {
+    setConfirm(false);
     setBusy(true); setError(""); setProgress("A preparar a lista de ficheiros…");
     try {
-      const m = await fetchManifest({ data: {
-        clientId: clientId || undefined,
-        year: year ? Number(year) : undefined,
-        month: month ? Number(month) : undefined,
-      } });
+      const m = await fetchManifest({ data: mode === "range"
+        ? { clientId: cId || undefined, fromKey: range[0], toKey: range[1] }
+        : {
+          clientId: cId || undefined,
+          year: year !== "all" ? Number(year) : undefined,
+          month: month !== "all" ? Number(month) : undefined,
+        } });
       const prof = new Map((m.profiles as any[]).map((p) => [p.id, p]));
       const cat = new Map((m.categories as any[]).map((c) => [c.slug, c.label]));
       const files: Record<string, Uint8Array> = {};
@@ -112,8 +130,8 @@ function BackupPage() {
       const zip = zipSync(files, { level: 0 });
       const label = [
         "Backup",
-        clientId ? safe(clients.find((c) => c.id === clientId)?.full_name ?? "") : "Todos",
-        year || "", month ? MONTHS[Number(month) - 1] : "",
+        cId ? safe(clientName) : "Todos",
+        safe(periodLabel.replace(/ · /g, "_").replace(/ /g, "-")),
         formatDatePt(new Date().toISOString()).replace(/\//g, "-"),
       ].filter(Boolean).join("_");
       const blob = new Blob([zip], { type: "application/zip" });
@@ -127,43 +145,95 @@ function BackupPage() {
     } finally { setBusy(false); }
   }
 
-  const sel = "h-11 w-full rounded-full border border-border bg-background px-4 text-sm";
+  const trig = "h-12 w-full rounded-full border-gold/25 bg-secondary/40 px-5 text-sm hover:border-gold/60 focus:ring-gold/40";
+  const content = "max-h-72 rounded-2xl border-gold/20 bg-card p-1 shadow-xl";
+  const item = "rounded-xl py-2.5 pl-8 pr-4 focus:bg-gold/15 focus:text-foreground";
+  const tab = (on: boolean) => `flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm transition-colors ${on ? "bg-gold text-ink shadow" : "text-muted-foreground hover:text-foreground"}`;
   return (
     <PortalShell title="Cópias de Segurança" subtitle="Exporte dados e documentos num ficheiro ZIP organizado por cliente, ano, mês e pasta.">
-      <div className="soft-card mx-auto max-w-3xl space-y-6 p-6 sm:p-8">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <label className="space-y-2 text-sm">
-            <span className="text-muted-foreground">Cliente</span>
-            <select className={sel} value={clientId} onChange={(e) => setClientId(e.target.value)} disabled={busy}>
-              <option value="">Todos os clientes</option>
-              {clients.map((c) => <option key={c.id} value={c.id}>{c.full_name}{c.nif ? ` (${c.nif})` : ""}</option>)}
-            </select>
-          </label>
-          <label className="space-y-2 text-sm">
-            <span className="text-muted-foreground">Ano</span>
-            <select className={sel} value={year} onChange={(e) => setYear(e.target.value)} disabled={busy}>
-              <option value="">Todos os anos</option>
-              {years.map((y) => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </label>
-          <label className="space-y-2 text-sm">
-            <span className="text-muted-foreground">Mês</span>
-            <select className={sel} value={month} onChange={(e) => setMonth(e.target.value)} disabled={busy}>
-              <option value="">Todos os meses</option>
-              {MONTHS.map((n, i) => <option key={n} value={i + 1}>{n}</option>)}
-            </select>
-          </label>
+      <div className="soft-card mx-auto max-w-3xl space-y-7 p-6 sm:p-8">
+        <div className="space-y-2 text-sm">
+          <span className="text-muted-foreground">Cliente</span>
+          <Select value={clientId} onValueChange={setClientId} disabled={busy}>
+            <SelectTrigger className={trig}><SelectValue /></SelectTrigger>
+            <SelectContent className={content}>
+              <SelectItem className={item} value="all">Todos os clientes</SelectItem>
+              {clients.map((c) => <SelectItem className={item} key={c.id} value={c.id}>{c.full_name}{c.nif ? ` (${c.nif})` : ""}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
+
+        <div className="flex gap-1 rounded-full border border-gold/20 bg-secondary/40 p-1">
+          <button type="button" className={tab(mode === "simple")} onClick={() => setMode("simple")} disabled={busy}>
+            <Archive className="h-4 w-4" /> Por ano e mês
+          </button>
+          <button type="button" className={tab(mode === "range")} onClick={() => setMode("range")} disabled={busy}>
+            <CalendarRange className="h-4 w-4" /> Intervalo de datas
+          </button>
+        </div>
+
+        {mode === "simple" ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 text-sm">
+              <span className="text-muted-foreground">Ano</span>
+              <Select value={year} onValueChange={setYear} disabled={busy}>
+                <SelectTrigger className={trig}><SelectValue /></SelectTrigger>
+                <SelectContent className={content}>
+                  <SelectItem className={item} value="all">Todos os anos</SelectItem>
+                  {years.map((y) => <SelectItem className={item} key={y} value={String(y)}>{y}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 text-sm">
+              <span className="text-muted-foreground">Mês</span>
+              <Select value={month} onValueChange={setMonth} disabled={busy}>
+                <SelectTrigger className={trig}><SelectValue /></SelectTrigger>
+                <SelectContent className={content}>
+                  <SelectItem className={item} value="all">Todos os meses</SelectItem>
+                  {MONTHS.map((n, i) => <SelectItem className={item} key={n} value={String(i + 1)}>{n}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-5 rounded-3xl border border-gold/20 bg-secondary/30 p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <div><span className="block text-xs text-muted-foreground">De</span><span className="font-serif text-lg text-foreground">{keyLabel(range[0])}</span></div>
+              <span className="h-px flex-1 bg-gold/30" />
+              <div className="text-right"><span className="block text-xs text-muted-foreground">Até</span><span className="font-serif text-lg text-foreground">{keyLabel(range[1])}</span></div>
+            </div>
+            <Slider min={minKey} max={maxKey} step={1} minStepsBetweenThumbs={0} value={range}
+              onValueChange={(v) => setRange([v[0]!, v[1]!])} disabled={busy} />
+            <div className="flex justify-between text-[11px] text-muted-foreground">
+              {Array.from({ length: maxKey / 12 - minKey / 12 + 1 }, (_, i) => Math.floor(minKey / 12) + i).map((y) => <span key={y}>{y}</span>)}
+            </div>
+            <p className="text-xs text-muted-foreground">Arraste os dois pontos para escolher o período: {range[1] - range[0] + 1} mês(es).</p>
+          </div>
+        )}
+
         <p className="text-sm text-muted-foreground">
           O ZIP inclui um Excel com clientes, submissões, pedidos de desbloqueio e lista de documentos, e todos os PDFs em pastas. Para arquivos muito grandes, prefira exportar por mês ou por cliente.
         </p>
-        <Button onClick={run} disabled={busy} className="h-11 rounded-full px-6">
+        <Button onClick={() => setConfirm(true)} disabled={busy} className="h-12 rounded-full px-7">
           {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
           Descarregar cópia de segurança
         </Button>
         {progress && <p className="text-sm text-gold">{progress}</p>}
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
+      <ConfirmDialog
+        open={confirm}
+        icon={<Archive className="h-6 w-6" />}
+        title="Criar cópia de segurança?"
+        message="Tem a certeza que pretende descarregar esta cópia de segurança? Pode demorar alguns minutos se houver muitos documentos."
+        details={<div className="space-y-1 rounded-2xl bg-secondary/50 p-4 text-left text-sm">
+          <div><span className="text-muted-foreground">Cliente: </span>{clientName}</div>
+          <div><span className="text-muted-foreground">Período: </span>{periodLabel}</div>
+        </div>}
+        confirmLabel="Descarregar"
+        onConfirm={() => void run()}
+        onCancel={() => setConfirm(false)}
+      />
     </PortalShell>
   );
 }
