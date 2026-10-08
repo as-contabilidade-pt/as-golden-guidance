@@ -597,7 +597,13 @@ export const adminSetMonthLock = createServerFn({ method: "POST" })
         declaration_text: reason,
       });
       if (error) throw new Error(error.message);
-    } else {
+    } else if (
+      !(
+        data.year > new Date().getFullYear() ||
+        (data.year === new Date().getFullYear() && data.month > new Date().getMonth() + 1)
+      )
+    ) {
+      // Meses futuros voltam a ficar bloqueados só por fechar o desbloqueio.
       const { data: sub } = await supabaseAdmin
         .from("month_submissions")
         .select("id")
