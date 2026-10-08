@@ -140,6 +140,7 @@ export function DocumentExplorer({
   const inputRef = useRef<HTMLInputElement>(null);
   const [requests, setRequests] = useState<UnlockRequest[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [submissions, setSubmissions] = useState<MonthSubmission[]>([]);
