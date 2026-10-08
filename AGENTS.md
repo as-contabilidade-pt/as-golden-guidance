@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep administration activity in shared portal components with separate submissions and unlock-history routes; the main panel shows only pending unlock requests to prioritize decisions.
