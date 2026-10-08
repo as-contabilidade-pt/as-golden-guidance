@@ -402,6 +402,21 @@ export function DocumentExplorer({
       setBusy(false);
     }
   }
+  async function doSetLock(action: "lock" | "unlock") {
+    if (month === null || !clientId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await setMonthLock({ data: { clientId, year, month, action } });
+      await Promise.all([loadSubmissions(), loadRequests()]);
+    } catch (e) {
+      setError(friendlyErrorMessage(e, "Não foi possível alterar o estado do mês."));
+    } finally {
+      setBusy(false);
+      setPendingConfirm(null);
+    }
+  }
+
   const locked = month !== null && !readOnly && monthLocked(month);
   function renderLockPanel(month: number) {
     const pendingRequest = pendingRequestFor(month);
@@ -1191,6 +1206,8 @@ export function DocumentExplorer({
             <Trash2 className="h-6 w-6" />
           ) : pendingConfirm?.kind === "submit" ? (
             <CheckCircle2 className="h-6 w-6" />
+          ) : pendingConfirm?.kind === "lock" ? (
+            <Lock className="h-6 w-6" />
           ) : (
             <Upload className="h-6 w-6" />
           )
@@ -1200,18 +1217,24 @@ export function DocumentExplorer({
             ? "Remover documento?"
             : pendingConfirm?.kind === "submit"
               ? "Submeter documentação?"
-              : pendingConfirm && pendingConfirm.files.length === 1
-                ? "Enviar documento?"
-                : "Enviar documentos?"
+              : pendingConfirm?.kind === "lock"
+                ? pendingConfirm.action === "unlock"
+                  ? "Desbloquear mês?"
+                  : "Bloquear mês?"
+                : pendingConfirm && pendingConfirm.files.length === 1
+                  ? "Enviar documento?"
+                  : "Enviar documentos?"
         }
         message={
           pendingConfirm?.kind === "delete"
             ? "Tem a certeza que pretende remover este documento? Esta ação não pode ser revertida."
             : pendingConfirm?.kind === "submit"
               ? "Tem a certeza que pretende submeter a documentação deste mês? Depois de submeter, a pasta fica em modo de visualização."
-              : pendingConfirm && pendingConfirm.files.length === 1
-                ? "Tem a certeza que pretende enviar este documento?"
-                : "Tem a certeza que pretende enviar estes documentos?"
+              : pendingConfirm?.kind === "lock"
+                ? `Tem a certeza que pretende ${pendingConfirm.action === "unlock" ? "desbloquear" : "bloquear"} ${month ? monthLabel(month) : ""} ${year} deste cliente? O cliente e a administração recebem um email.`
+                : pendingConfirm && pendingConfirm.files.length === 1
+                  ? "Tem a certeza que pretende enviar este documento?"
+                  : "Tem a certeza que pretende enviar estes documentos?"
         }
         details={
           pendingConfirm?.kind === "upload" ? (
@@ -1229,13 +1252,18 @@ export function DocumentExplorer({
             ? "Remover"
             : pendingConfirm?.kind === "submit"
               ? "Submeter"
-              : "Enviar"
+              : pendingConfirm?.kind === "lock"
+                ? pendingConfirm.action === "unlock"
+                  ? "Desbloquear"
+                  : "Bloquear"
+                : "Enviar"
         }
         onConfirm={() => {
           const pc = pendingConfirm;
           if (!pc) return;
           if (pc.kind === "upload") void doUpload(pc.files);
           else if (pc.kind === "submit") void doSubmitMonth();
+          else if (pc.kind === "lock") void doSetLock(pc.action);
           else void doDelete(pc.doc.id);
         }}
         onCancel={() => {
