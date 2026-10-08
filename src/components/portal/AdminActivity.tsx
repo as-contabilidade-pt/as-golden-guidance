@@ -112,6 +112,7 @@ export function UnlockRequests({ history = false }: { history?: boolean }) {
                     Aprovar
                   </Button>
                   <Button
+                    variant="outline"
                     type="button"
                     disabled={busyId === r.id}
                     onClick={() => void act(r.id, "rejeitado")}
@@ -122,6 +123,7 @@ export function UnlockRequests({ history = false }: { history?: boolean }) {
                 </>
               ) : r.status === "aprovado" ? (
                 <Button
+                  variant="outline"
                   type="button"
                   disabled={busyId === r.id}
                   onClick={() => void act(r.id, "fechado")}
@@ -200,6 +202,7 @@ export function RecentSubmissions() {
         <h2 className="font-serif text-2xl text-foreground">Submissões Recentes</h2>
         {rows.length > 5 ? (
           <Button
+            variant="ghost"
             type="button"
             onClick={() => setAll((v) => !v)}
             className="text-xs text-gold hover:underline"
