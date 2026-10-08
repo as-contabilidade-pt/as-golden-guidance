@@ -371,6 +371,8 @@ export function DocumentExplorer({
       setSubmitAccepted(false);
       setPendingConfirm(null);
       await Promise.all([loadSubmissions(), loadRequests()]);
+      setMonth(null);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       setError(friendlyErrorMessage(err, "Não foi possível submeter a documentação."));
     } finally {
@@ -635,9 +637,14 @@ export function DocumentExplorer({
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  function monthStatus(m: number): "locked" | "current" | "future" | "default" {
+  function monthStatus(m: number): "locked" | "submitted" | "current" | "future" | "default" {
     if (year > currentYear || (year === currentYear && m > currentMonth)) return "future";
-    if (monthLocked(m)) return "locked";
+    if (monthLocked(m)) {
+      // Submetido mas ainda dentro do prazo (antes do dia 10 do mês seguinte):
+      // bloqueado, mas a mostrar que o prazo ainda não terminou.
+      if (submissionFor(m) && !isMonthPastDeadline(year, m)) return "submitted";
+      return "locked";
+    }
     if (year === currentYear && m === currentMonth) return "current";
     return "default";
   }
@@ -764,7 +771,6 @@ export function DocumentExplorer({
       <div className="mt-8">
         {month === null ? (
           (() => {
-            const highlight = openMonths.length === 1 ? openMonths[0]! : null;
             const renderCard = (m: number, size: "md" | "lg" = "md") => {
               const name = MONTHS[m - 1]!;
               const submitted = submissionFor(m);
@@ -781,7 +787,7 @@ export function DocumentExplorer({
                         )}`
                       : `${counts[`${m}`] ?? 0} documento(s)`
                   }
-                  status={highlight === m ? "current" : monthStatus(m)}
+                  status={openMonths.includes(m) ? "current" : monthStatus(m)}
                   size={size}
                   onClick={() => setMonth(m)}
                 />
@@ -804,11 +810,7 @@ export function DocumentExplorer({
                   >
                     {openMonths.map((m) => renderCard(m, "lg"))}
                   </div>
-                ) : (
-                  <p className="soft-card px-6 py-5 text-sm text-muted-foreground">
-                    Não existem meses abertos para submissão neste ano.
-                  </p>
-                )}
+                ) : null}
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {allMonths.map((m) => renderCard(m))}
@@ -1180,7 +1182,7 @@ function FolderCard({
   title: string;
   meta: string;
   onClick: () => void;
-  status?: "locked" | "current" | "future" | "default";
+  status?: "locked" | "submitted" | "current" | "future" | "default";
   size?: "md" | "lg";
 }) {
   const styles = {
@@ -1190,6 +1192,13 @@ function FolderCard({
       icon: "text-[oklch(0.55_0.18_25)]",
       title: "text-foreground",
       meta: "text-[oklch(0.55_0.18_25)]",
+    },
+    submitted: {
+      card: "border-gold/50 bg-gold/[6%] hover:border-[oklch(0.55_0.18_25)/55%]",
+      iconBg: "bg-[oklch(0.62_0.15_55/18%)]",
+      icon: "text-[oklch(0.52_0.16_40)]",
+      title: "text-foreground",
+      meta: "text-[oklch(0.52_0.16_40)]",
     },
     current: {
       card: "border-gold/70 bg-gold/[8%] shadow-[0_4px_28px_-10px_color-mix(in_oklab,var(--gold)_28%,transparent)] hover:border-gold hover:-translate-y-0.5",
@@ -1225,7 +1234,7 @@ function FolderCard({
       <span
         className={`inline-flex items-center justify-center rounded-2xl ${large ? "h-16 w-16" : "h-12 w-12"} ${styles.iconBg} ${styles.icon}`}
       >
-        {status === "locked" ? (
+        {status === "locked" || status === "submitted" ? (
           <Lock className={large ? "h-7 w-7" : "h-5 w-5"} />
         ) : (
           <Folder className={large ? "h-7 w-7" : "h-5 w-5"} />
@@ -1239,7 +1248,7 @@ function FolderCard({
         </span>
         <span className={`block ${large ? "text-sm" : "text-xs"} ${styles.meta}`}>
           {meta}
-          {status === "locked" ? " · bloqueada" : ""}
+          {status === "locked" || status === "submitted" ? " · bloqueada" : ""}
         </span>
       </span>
     </button>
