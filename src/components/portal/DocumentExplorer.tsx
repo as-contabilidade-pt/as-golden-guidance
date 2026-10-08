@@ -771,7 +771,6 @@ export function DocumentExplorer({
       <div className="mt-8">
         {month === null ? (
           (() => {
-            const highlight = openMonths.length === 1 ? openMonths[0]! : null;
             const renderCard = (m: number, size: "md" | "lg" = "md") => {
               const name = MONTHS[m - 1]!;
               const submitted = submissionFor(m);
@@ -788,7 +787,7 @@ export function DocumentExplorer({
                         )}`
                       : `${counts[`${m}`] ?? 0} documento(s)`
                   }
-                  status={highlight === m ? "current" : monthStatus(m)}
+                  status={openMonths.includes(m) ? "current" : monthStatus(m)}
                   size={size}
                   onClick={() => setMonth(m)}
                 />
@@ -811,11 +810,7 @@ export function DocumentExplorer({
                   >
                     {openMonths.map((m) => renderCard(m, "lg"))}
                   </div>
-                ) : (
-                  <p className="soft-card px-6 py-5 text-sm text-muted-foreground">
-                    Não existem meses abertos para submissão neste ano.
-                  </p>
-                )}
+                ) : null}
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {allMonths.map((m) => renderCard(m))}
