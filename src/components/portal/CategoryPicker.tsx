@@ -7,10 +7,11 @@ type Category = { id: string; slug: string; label: string };
 
 /** Seleção das pastas (categorias) a que um cliente tem acesso. */
 export function CategoryPicker({
-  value,
+  value: raw,
   onChange,
 }: {
-  value: string[];
+  /** null = todas as pastas */
+  value: string[] | null;
   onChange: (next: string[]) => void;
 }) {
   const fetchList = useServerFn(listCategories);
@@ -25,6 +26,8 @@ export function CategoryPicker({
       }
     })();
   }, [fetchList]);
+
+  const value = raw ?? items.map((i) => i.slug);
 
   function toggle(slug: string) {
     onChange(value.includes(slug) ? value.filter((s) => s !== slug) : [...value, slug]);

@@ -222,7 +222,7 @@ function FichaPage() {
 
         <div className="sm:col-span-2">
           <CategoryPicker
-            value={form.categories ?? allSlugs}
+            value={form.categories}
             onChange={(v) => set("categories", v)}
           />
           {form.categories === null ? (
