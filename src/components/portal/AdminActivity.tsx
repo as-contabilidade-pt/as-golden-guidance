@@ -46,8 +46,10 @@ export function UnlockRequests({ history = false }: { history?: boolean }) {
     id: string;
     decision: "aprovado" | "rejeitado" | "fechado";
   } | null>(null);
+  const [note, setNote] = useState("");
 
   async function act(id: string, decision: "aprovado" | "rejeitado" | "fechado") {
+    setNote("");
     setPendingDecision({ id, decision });
   }
 
@@ -56,7 +58,14 @@ export function UnlockRequests({ history = false }: { history?: boolean }) {
     if (!pending) return;
     setBusyId(pending.id);
     try {
-      await decide({ data: { id: pending.id, decision: pending.decision } });
+      const trimmed = note.trim();
+      await decide({
+        data: {
+          id: pending.id,
+          decision: pending.decision,
+          ...(trimmed ? { note: trimmed } : {}),
+        },
+      });
       setPendingDecision(null);
       await load();
     } catch {
@@ -67,6 +76,8 @@ export function UnlockRequests({ history = false }: { history?: boolean }) {
   }
 
   const visibleRows = rows.filter((r) => history ? filter === "todos" || r.status === filter : r.status === "pendente");
+
+  if (!history && !loading && visibleRows.length === 0) return null;
 
   return (
     <section id="desbloqueios" className="mb-10 scroll-mt-24">
@@ -163,6 +174,22 @@ export function UnlockRequests({ history = false }: { history?: boolean }) {
             : pendingDecision?.decision === "rejeitado"
               ? "Rejeitar"
               : "Bloquear"
+        }
+        details={
+          <div className="text-left">
+            <label htmlFor="decision-note" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+              Motivo para o cliente (opcional)
+            </label>
+            <textarea
+              id="decision-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={500}
+              rows={3}
+              placeholder="Ex.: Documentos em falta; corrija e volte a submeter."
+              className="w-full resize-none rounded-2xl border border-ink/10 bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-gold focus:outline-none"
+            />
+          </div>
         }
         onConfirm={() => void doAct()}
         onCancel={() => setPendingDecision(null)}
