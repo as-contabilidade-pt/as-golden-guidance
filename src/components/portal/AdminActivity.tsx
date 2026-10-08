@@ -175,6 +175,22 @@ export function UnlockRequests({ history = false }: { history?: boolean }) {
               ? "Rejeitar"
               : "Bloquear"
         }
+        details={
+          <div className="text-left">
+            <label htmlFor="decision-note" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+              Motivo para o cliente (opcional)
+            </label>
+            <textarea
+              id="decision-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={500}
+              rows={3}
+              placeholder="Ex.: Documentos em falta; corrija e volte a submeter."
+              className="w-full resize-none rounded-2xl border border-ink/10 bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-gold focus:outline-none"
+            />
+          </div>
+        }
         onConfirm={() => void doAct()}
         onCancel={() => setPendingDecision(null)}
       />
