@@ -1,0 +1,2 @@
+ALTER TABLE public.client_records ADD COLUMN IF NOT EXISTS allowed_categories text[];
+COMMENT ON COLUMN public.client_records.allowed_categories IS 'Category slugs the client can access; NULL means all categories.';

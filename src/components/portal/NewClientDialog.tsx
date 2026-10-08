@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { createClient } from "@/lib/portal.functions";
+import { CategoryPicker } from "@/components/portal/CategoryPicker";
 
 export function NewClientDialog({
   onCreated,
@@ -14,11 +15,16 @@ export function NewClientDialog({
   const [fullName, setFullName] = useState("");
   const [nif, setNif] = useState("");
   const [email, setEmail] = useState("");
+  const [categories, setCategories] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (categories.length === 0) {
+      setError("Selecione pelo menos uma pasta para este cliente.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -27,6 +33,7 @@ export function NewClientDialog({
           fullName,
           nif,
           email,
+          categories,
           redirectTo: `${window.location.origin}/definir-password`,
         },
       });
@@ -34,6 +41,7 @@ export function NewClientDialog({
       setFullName("");
       setNif("");
       setEmail("");
+      setCategories([]);
       setOpen(false);
       await onCreated?.(sent);
     } catch (err) {
@@ -56,7 +64,7 @@ export function NewClientDialog({
         <Plus className="h-4 w-4" /> Novo cliente
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="rounded-3xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-3xl">
           <DialogHeader>
             <DialogTitle className="font-serif text-2xl">Novo cliente</DialogTitle>
           </DialogHeader>
@@ -79,6 +87,7 @@ export function NewClientDialog({
                 />
               </label>
             ))}
+            <CategoryPicker value={categories} onChange={setCategories} />
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <button
               type="submit"

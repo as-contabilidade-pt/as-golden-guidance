@@ -62,7 +62,7 @@ function CategoriesPage() {
 
   const load = useCallback(async () => {
     try {
-      const rows = (await fetchList()) as unknown as Category[];
+      const rows = (await fetchList({ data: { all: true } })) as unknown as Category[];
       setItems(rows);
       setLabels(Object.fromEntries(rows.map((r) => [r.id, r.label])));
     } catch (e) {

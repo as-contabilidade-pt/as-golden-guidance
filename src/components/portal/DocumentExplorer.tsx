@@ -221,12 +221,14 @@ export function DocumentExplorer({
   useEffect(() => {
     void (async () => {
       try {
-        setCategories((await fetchCategories()) as unknown as Category[]);
+        setCategories(
+          (await fetchCategories({ data: clientId ? { clientId } : {} })) as unknown as Category[],
+        );
       } catch {
         /* ignore */
       }
     })();
-  }, [fetchCategories]);
+  }, [fetchCategories, clientId]);
 
   useEffect(() => {
     if (readOnly) return;

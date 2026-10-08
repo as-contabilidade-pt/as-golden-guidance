@@ -2,7 +2,7 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, FileSpreadsheet, FolderTree, Inbox, Users } from "lucide-react";
+import { CheckCircle2, FileSpreadsheet, Inbox, Users } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
 import {
@@ -37,12 +37,6 @@ const QUICK = [
     icon: Users,
     title: "Clientes",
     text: "Todos os clientes em grelha, pesquisa e acesso aos documentos.",
-  },
-  {
-    to: "/admin/definicoes/categorias",
-    icon: FolderTree,
-    title: "Categorias",
-    text: "Configurar as pastas de submissão de documentos.",
   },
   {
     to: "/admin/extratos",
