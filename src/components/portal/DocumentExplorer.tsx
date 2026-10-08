@@ -371,6 +371,8 @@ export function DocumentExplorer({
       setSubmitAccepted(false);
       setPendingConfirm(null);
       await Promise.all([loadSubmissions(), loadRequests()]);
+      setMonth(null);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       setError(friendlyErrorMessage(err, "Não foi possível submeter a documentação."));
     } finally {
@@ -635,9 +637,14 @@ export function DocumentExplorer({
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  function monthStatus(m: number): "locked" | "current" | "future" | "default" {
+  function monthStatus(m: number): "locked" | "submitted" | "current" | "future" | "default" {
     if (year > currentYear || (year === currentYear && m > currentMonth)) return "future";
-    if (monthLocked(m)) return "locked";
+    if (monthLocked(m)) {
+      // Submetido mas ainda dentro do prazo (antes do dia 10 do mês seguinte):
+      // bloqueado, mas a mostrar que o prazo ainda não terminou.
+      if (submissionFor(m) && !isMonthPastDeadline(year, m)) return "submitted";
+      return "locked";
+    }
     if (year === currentYear && m === currentMonth) return "current";
     return "default";
   }
