@@ -431,6 +431,33 @@ export const listPendingUnlockRequests = createServerFn({ method: "GET" })
     }));
   });
 
+export const listAdminUnlockRequests = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { data: rows, error } = await context.supabase
+      .from("unlock_requests")
+      .select("id, user_id, nif, year, month, reason, status, created_at, decided_at")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const ids = Array.from(new Set((rows ?? []).map((r: { user_id: string }) => r.user_id)));
+    let names: Record<string, string> = {};
+    if (ids.length > 0) {
+      const { data: profiles } = await context.supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", ids);
+      names = Object.fromEntries(
+        (profiles ?? []).map((p: { id: string; full_name: string }) => [p.id, p.full_name]),
+      );
+    }
+    return (rows ?? []).map((r: { user_id: string }) => ({
+      ...r,
+      full_name: names[r.user_id] ?? "Cliente",
+    }));
+  });
+
 export const createUnlockRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
