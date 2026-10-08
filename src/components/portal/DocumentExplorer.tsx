@@ -52,6 +52,7 @@ import {
   submitMonth,
   listCategories,
   getMyClientIdentity,
+  adminSetMonthLock,
 } from "@/lib/portal.functions";
 
 function friendlyErrorMessage(err: unknown, fallback: string): string {
@@ -202,6 +203,7 @@ export function DocumentExplorer({
     | { kind: "upload"; files: File[] }
     | { kind: "submit" }
     | { kind: "delete"; doc: Doc }
+    | { kind: "lock"; action: "lock" | "unlock" }
     | null;
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm>(null);
 
@@ -217,6 +219,7 @@ export function DocumentExplorer({
   const sendSubmission = useServerFn(submitMonth);
   const fetchCategories = useServerFn(listCategories);
   const fetchIdentity = useServerFn(getMyClientIdentity);
+  const setMonthLock = useServerFn(adminSetMonthLock);
 
   useEffect(() => {
     void (async () => {
@@ -399,6 +402,21 @@ export function DocumentExplorer({
       setBusy(false);
     }
   }
+  async function doSetLock(action: "lock" | "unlock") {
+    if (month === null || !clientId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await setMonthLock({ data: { clientId, year, month, action } });
+      await Promise.all([loadSubmissions(), loadRequests()]);
+    } catch (e) {
+      setError(friendlyErrorMessage(e, "Não foi possível alterar o estado do mês."));
+    } finally {
+      setBusy(false);
+      setPendingConfirm(null);
+    }
+  }
+
   const locked = month !== null && !readOnly && monthLocked(month);
   function renderLockPanel(month: number) {
     const pendingRequest = pendingRequestFor(month);
@@ -894,6 +912,31 @@ export function DocumentExplorer({
               </div>
             ) : null}
 
+            {readOnly && clientId && !isFutureMonth(month) ? (
+              <div className="soft-card flex flex-wrap items-center gap-4 p-6">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
+                  <Lock className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-serif text-lg text-foreground">
+                    {monthLabel(month)} {year} {monthLocked(month) ? "está bloqueado" : "está aberto"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    O cliente e a administração recebem um email com a alteração.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPendingConfirm({ kind: "lock", action: monthLocked(month) ? "unlock" : "lock" })
+                  }
+                  className="rounded-full bg-gold px-6 py-2.5 text-sm font-medium text-ink transition-opacity hover:opacity-90"
+                >
+                  {monthLocked(month) ? "Desbloquear mês" : "Bloquear mês"}
+                </button>
+              </div>
+            ) : null}
+
             {!readOnly && monthLocked(month) && !isFutureMonth(month) ? (
               renderLockPanel(month)
             ) : readOnly && currentSubmission ? (
@@ -1163,6 +1206,8 @@ export function DocumentExplorer({
             <Trash2 className="h-6 w-6" />
           ) : pendingConfirm?.kind === "submit" ? (
             <CheckCircle2 className="h-6 w-6" />
+          ) : pendingConfirm?.kind === "lock" ? (
+            <Lock className="h-6 w-6" />
           ) : (
             <Upload className="h-6 w-6" />
           )
@@ -1172,18 +1217,24 @@ export function DocumentExplorer({
             ? "Remover documento?"
             : pendingConfirm?.kind === "submit"
               ? "Submeter documentação?"
-              : pendingConfirm && pendingConfirm.files.length === 1
-                ? "Enviar documento?"
-                : "Enviar documentos?"
+              : pendingConfirm?.kind === "lock"
+                ? pendingConfirm.action === "unlock"
+                  ? "Desbloquear mês?"
+                  : "Bloquear mês?"
+                : pendingConfirm && pendingConfirm.files.length === 1
+                  ? "Enviar documento?"
+                  : "Enviar documentos?"
         }
         message={
           pendingConfirm?.kind === "delete"
             ? "Tem a certeza que pretende remover este documento? Esta ação não pode ser revertida."
             : pendingConfirm?.kind === "submit"
               ? "Tem a certeza que pretende submeter a documentação deste mês? Depois de submeter, a pasta fica em modo de visualização."
-              : pendingConfirm && pendingConfirm.files.length === 1
-                ? "Tem a certeza que pretende enviar este documento?"
-                : "Tem a certeza que pretende enviar estes documentos?"
+              : pendingConfirm?.kind === "lock"
+                ? `Tem a certeza que pretende ${pendingConfirm.action === "unlock" ? "desbloquear" : "bloquear"} ${month ? monthLabel(month) : ""} ${year} deste cliente? O cliente e a administração recebem um email.`
+                : pendingConfirm && pendingConfirm.files.length === 1
+                  ? "Tem a certeza que pretende enviar este documento?"
+                  : "Tem a certeza que pretende enviar estes documentos?"
         }
         details={
           pendingConfirm?.kind === "upload" ? (
@@ -1201,13 +1252,18 @@ export function DocumentExplorer({
             ? "Remover"
             : pendingConfirm?.kind === "submit"
               ? "Submeter"
-              : "Enviar"
+              : pendingConfirm?.kind === "lock"
+                ? pendingConfirm.action === "unlock"
+                  ? "Desbloquear"
+                  : "Bloquear"
+                : "Enviar"
         }
         onConfirm={() => {
           const pc = pendingConfirm;
           if (!pc) return;
           if (pc.kind === "upload") void doUpload(pc.files);
           else if (pc.kind === "submit") void doSubmitMonth();
+          else if (pc.kind === "lock") void doSetLock(pc.action);
           else void doDelete(pc.doc.id);
         }}
         onCancel={() => {

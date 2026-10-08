@@ -548,6 +548,104 @@ export const decideUnlockRequest = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Admin bloqueia ou desbloqueia diretamente o mês de um cliente. */
+export const adminSetMonthLock = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        clientId: z.string().uuid(),
+        year: z.number().int(),
+        month: z.number().int().min(1).max(12),
+        action: z.enum(["lock", "unlock"]),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const now = new Date().toISOString();
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("full_name, email, nif")
+      .eq("id", data.clientId)
+      .maybeSingle();
+    const reason =
+      data.action === "unlock" ? "Desbloqueio pela administração" : "Bloqueio pela administração";
+
+    // Fecha qualquer desbloqueio ativo/pendente anterior.
+    await supabaseAdmin
+      .from("unlock_requests")
+      .update({ status: "fechado", decided_by: context.userId, decided_at: now })
+      .eq("user_id", data.clientId)
+      .eq("year", data.year)
+      .eq("month", data.month)
+      .in("status", ["aprovado", "pendente"]);
+
+    if (data.action === "unlock") {
+      const { error } = await supabaseAdmin.from("unlock_requests").insert({
+        user_id: data.clientId,
+        nif: profile?.nif ?? "",
+        year: data.year,
+        month: data.month,
+        reason,
+        declaration_accepted: true,
+        status: "aprovado",
+        decided_by: context.userId,
+        decided_at: now,
+        company_name: profile?.full_name ?? "",
+        declaration_text: reason,
+      });
+      if (error) throw new Error(error.message);
+    } else {
+      const { data: sub } = await supabaseAdmin
+        .from("month_submissions")
+        .select("id")
+        .eq("user_id", data.clientId)
+        .eq("year", data.year)
+        .eq("month", data.month)
+        .maybeSingle();
+      if (!sub) {
+        const { count } = await supabaseAdmin
+          .from("documents")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", data.clientId)
+          .eq("year", data.year)
+          .eq("month", data.month);
+        const { error } = await supabaseAdmin.from("month_submissions").insert({
+          user_id: data.clientId,
+          nif: profile?.nif ?? "",
+          year: data.year,
+          month: data.month,
+          declaration_accepted: true,
+          document_count: count ?? 0,
+          submitted_at: now,
+          company_name: profile?.full_name ?? "",
+          declaration_text: reason,
+        });
+        if (error) throw new Error(error.message);
+      }
+    }
+
+    try {
+      const { notifyUnlockDecision } = await import("@/lib/submission-email.server");
+      await notifyUnlockDecision({
+        fullName: profile?.full_name || "Cliente",
+        nif: profile?.nif ?? "",
+        ...(profile?.email ? { email: profile.email as string } : {}),
+        year: data.year,
+        month: data.month,
+        reason,
+        decision: data.action === "unlock" ? "aprovado" : "fechado",
+        decidedAt: now,
+        declarationText: "Ação realizada diretamente pela administração.",
+      });
+    } catch (e) {
+      console.error("[adminSetMonthLock] falha ao enviar email:", e);
+    }
+    return { ok: true };
+  });
+
 /* ------------------------- Submissão final do mês ------------------------- */
 
 export const listMonthSubmissions = createServerFn({ method: "POST" })
