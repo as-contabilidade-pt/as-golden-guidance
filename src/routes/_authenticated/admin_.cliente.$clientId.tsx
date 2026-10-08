@@ -54,7 +54,7 @@ function AdminClientPage() {
       subtitle={client ? `NIF ${client.nif} · ${client.email}` : undefined}
       action={
         <Link
-          to="/admin"
+          to="/admin/clientes"
           className="rounded-full border border-ink/15 px-5 py-2.5 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
         >
           ← Voltar aos clientes
