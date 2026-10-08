@@ -6,6 +6,8 @@ const schema = z.object({
   clientId: z.string().uuid().optional(),
   year: z.number().int().min(2000).max(2100).optional(),
   month: z.number().int().min(1).max(12).optional(),
+  fromKey: z.number().int().optional(),
+  toKey: z.number().int().optional(),
 });
 
 async function assertAdmin(context: { supabase: any; userId: string }) {
@@ -32,6 +34,8 @@ export const buildBackupManifest = createServerFn({ method: "POST" })
       if (data.clientId) q = q.eq("user_id", data.clientId);
       if (data.year) q = q.eq("year", data.year);
       if (data.month) q = q.eq("month", data.month);
+      if (data.fromKey !== undefined) q = q.gte("year", Math.floor(data.fromKey / 12));
+      if (data.toKey !== undefined) q = q.lte("year", Math.floor(data.toKey / 12));
       return q;
     };
     const [docs, subs, reqs, profiles, cats] = await Promise.all([
@@ -46,7 +50,13 @@ export const buildBackupManifest = createServerFn({ method: "POST" })
     const records = await recQ;
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const docRows = (docs.data ?? []) as any[];
+    const inRange = (r: any) => {
+      const k = r.year * 12 + (r.month - 1);
+      return (data.fromKey === undefined || k >= data.fromKey) && (data.toKey === undefined || k <= data.toKey);
+    };
+    const docRows = ((docs.data ?? []) as any[]).filter(inRange);
+    subs.data = (subs.data ?? []).filter(inRange);
+    reqs.data = (reqs.data ?? []).filter(inRange);
     const paths = docRows.map((d) => d.storage_path);
     const urls: Record<string, string> = {};
     for (let i = 0; i < paths.length; i += 100) {
