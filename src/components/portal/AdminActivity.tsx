@@ -77,6 +77,8 @@ export function UnlockRequests({ history = false }: { history?: boolean }) {
 
   const visibleRows = rows.filter((r) => history ? filter === "todos" || r.status === filter : r.status === "pendente");
 
+  if (!history && !loading && visibleRows.length === 0) return null;
+
   return (
     <section id="desbloqueios" className="mb-10 scroll-mt-24">
       <h2 className="mb-4 font-serif text-2xl text-foreground">{history ? "Pedidos e histórico" : "Pedidos de desbloqueio pendentes"}</h2>
