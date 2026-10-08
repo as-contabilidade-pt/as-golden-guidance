@@ -79,8 +79,10 @@ function brandHtml(title: string, body: string, admin = false) {
        </div>`
     : "";
 
+  const siteUrl = (process.env["SITE_URL"] || "https://as-golden-guidance.lovable.app").replace(/\/$/, "");
   return `<div style="font-family:Arial,Helvetica,sans-serif;color:#222;font-size:14px;line-height:1.5;max-width:600px;margin:0 auto;">
   <div style="background-color:#0a0a0a;padding:24px;text-align:center;">
+    <img src="${siteUrl}/as-logo.png" alt="AS | Contabilidade" width="72" height="72" style="display:block;margin:0 auto 10px;width:72px;height:72px;border-radius:50%;object-fit:cover;" />
     <span style="color:#c9a227;font-size:20px;font-weight:bold;letter-spacing:1px;">AS | CONTABILIDADE</span>
   </div>
   <div style="padding:32px 24px;">
