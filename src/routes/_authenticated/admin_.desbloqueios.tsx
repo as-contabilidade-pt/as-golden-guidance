@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { requireAdmin } from "@/lib/admin-guard";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { UnlockRequests } from "@/components/portal/AdminActivity";
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/admin_/desbloqueios")({
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },
   ] }),
-  component: () => <PortalShell title="Pedidos de Desbloqueio" action={<Link to="/admin" className="text-sm text-gold hover:underline">← Voltar ao painel</Link>}>
+  component: () => <PortalShell title="Pedidos de Desbloqueio">
     <UnlockRequests history />
   </PortalShell>,
 });
