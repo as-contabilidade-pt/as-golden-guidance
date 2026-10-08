@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, FolderOpen, Loader2, Mail, Save, Trash2 } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
+import { CategoryPicker } from "@/components/portal/CategoryPicker";
 import {
   getClientRecord,
   updateClientRecord,
@@ -58,6 +59,7 @@ type Form = {
   responsibleName: string;
   notes: string;
   folderActive: boolean;
+  categories: string[] | null;
 };
 
 const empty: Form = {
@@ -72,6 +74,7 @@ const empty: Form = {
   responsibleName: "",
   notes: "",
   folderActive: false,
+  categories: null,
 };
 
 function FichaPage() {
@@ -106,6 +109,7 @@ function FichaPage() {
           responsibleName: String(r["responsible_name"] ?? ""),
           notes: String(r["notes"] ?? ""),
           folderActive: Boolean(r["folder_active"]),
+          categories: (r["allowed_categories"] as string[] | null) ?? null,
         });
       } catch (e) {
         setError(e instanceof Error ? e.message : "Erro ao carregar a ficha.");
@@ -215,6 +219,18 @@ function FichaPage() {
             className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50"
           />
         </label>
+
+        <div className="sm:col-span-2">
+          <CategoryPicker
+            value={form.categories ?? allSlugs}
+            onChange={(v) => set("categories", v)}
+          />
+          {form.categories === null ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Este cliente tem acesso a todas as pastas. Desmarque as que não se aplicam.
+            </p>
+          ) : null}
+        </div>
 
         <div className="sm:col-span-2 rounded-2xl border border-gold/25 bg-gold/5 px-5 py-4">
           <label className="flex items-start gap-3">
