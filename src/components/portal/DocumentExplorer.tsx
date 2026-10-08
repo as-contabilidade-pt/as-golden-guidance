@@ -50,6 +50,47 @@ import {
   getMyClientIdentity,
 } from "@/lib/portal.functions";
 
+function friendlyErrorMessage(err: unknown, fallback: string): string {
+  const raw = err instanceof Error ? err.message : typeof err === "string" ? err : "";
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    parsed = null;
+  }
+  if (parsed === null || typeof parsed !== "object") {
+    return raw && !raw.startsWith("[") && !raw.startsWith("{") ? raw : fallback;
+  }
+  const issues = Array.isArray(parsed) ? parsed : [parsed];
+  const messages: string[] = [];
+  for (const issue of issues) {
+    const t = issue && typeof issue === "object" ? (issue as Record<string, unknown>) : null;
+    if (!t) continue;
+    const code = typeof t["code"] === "string" ? t["code"] : "";
+    const path = Array.isArray(t["path"]) ? t["path"].map(String).join(".") : String(t["path"] ?? "");
+    const min = typeof t["minimum"] === "number" ? t["minimum"] : null;
+    const max = typeof t["maximum"] === "number" ? t["maximum"] : null;
+    if (path === "reason") {
+      if (code === "too_small") {
+        messages.push(`O motivo está demasiado curto. Escreva pelo menos ${min ?? 5} caracteres.`);
+      } else if (code === "too_big") {
+        messages.push(`O motivo está demasiado longo. Reduza para o máximo de ${max ?? 2000} caracteres.`);
+      } else {
+        messages.push("Verifique o campo do motivo e tente novamente.");
+      }
+    } else if (path === "responsibleName") {
+      messages.push("Verifique o nome do responsável e tente novamente.");
+    } else if (path === "supplier") {
+      messages.push("Indique o campo de identificação antes de enviar.");
+    } else if (code === "invalid_type") {
+      messages.push("Verifique os campos do formulário e tente novamente.");
+    } else {
+      messages.push(fallback);
+    }
+  }
+  const unique = Array.from(new Set(messages));
+  return unique.length ? unique.join(" ") : fallback;
+}
 
 type Category = { id: string; slug: string; label: string; position: number };
 
@@ -140,6 +181,7 @@ export function DocumentExplorer({
   const inputRef = useRef<HTMLInputElement>(null);
   const [requests, setRequests] = useState<UnlockRequest[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [submissions, setSubmissions] = useState<MonthSubmission[]>([]);
@@ -244,7 +286,7 @@ export function DocumentExplorer({
         })) as Doc[],
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao carregar documentos.");
+      setError(friendlyErrorMessage(e, "Erro ao carregar documentos."));
     } finally {
       setLoading(false);
     }
@@ -303,7 +345,7 @@ export function DocumentExplorer({
       setPendingConfirm(null);
       await Promise.all([loadSubmissions(), loadRequests()]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível submeter a documentação.");
+      setError(friendlyErrorMessage(err, "Não foi possível submeter a documentação."));
     } finally {
       setBusy(false);
     }
@@ -411,17 +453,28 @@ export function DocumentExplorer({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setShowForm(false)}
+                        onClick={() => {
+                          setShowForm(false);
+                          setRequestError(null);
+                        }}
                         className="rounded-full border border-ink/15 px-6 py-3 text-sm text-foreground transition-colors hover:border-gold hover:text-gold"
                       >
                         Cancelar
                       </button>
                     </div>
+                    {requestError ? (
+                      <p className="rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-3 text-sm leading-relaxed text-destructive">
+                        {requestError}
+                      </p>
+                    ) : null}
                   </form>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setShowForm(true)}
+                    onClick={() => {
+                      setShowForm(true);
+                      setRequestError(null);
+                    }}
                     className="mt-5 inline-flex items-center gap-2 rounded-full border border-gold px-6 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink"
                   >
                     Pedir desbloqueio para entrega fora de prazo
@@ -434,8 +487,12 @@ export function DocumentExplorer({
   async function onSubmitRequest(e: React.FormEvent) {
     e.preventDefault();
     if (month === null || !accepted) return;
+    if (reason.trim().length < 5) {
+      setRequestError("O motivo está demasiado curto. Escreva pelo menos 5 caracteres.");
+      return;
+    }
     setBusy(true);
-    setError(null);
+    setRequestError(null);
     try {
       await submitRequest({
         data: {
@@ -452,7 +509,9 @@ export function DocumentExplorer({
       setShowForm(false);
       await loadRequests();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível enviar o pedido.");
+      setRequestError(
+        friendlyErrorMessage(err, "Não foi possível enviar o pedido. Tente novamente."),
+      );
     } finally {
       setBusy(false);
     }
@@ -510,7 +569,7 @@ export function DocumentExplorer({
       await loadCounts();
       setPendingConfirm(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao enviar o documento.");
+      setError(friendlyErrorMessage(e, "Erro ao enviar o documento."));
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -523,7 +582,7 @@ export function DocumentExplorer({
       const { url } = (await download({ data: { id } })) as { url: string };
       window.open(url, "_blank", "noopener");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao abrir o documento.");
+      setError(friendlyErrorMessage(e, "Erro ao abrir o documento."));
     }
   }
 
@@ -539,7 +598,7 @@ export function DocumentExplorer({
       await loadCounts();
       setPendingConfirm(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao remover o documento.");
+      setError(friendlyErrorMessage(e, "Erro ao remover o documento."));
     } finally {
       setBusy(false);
     }
