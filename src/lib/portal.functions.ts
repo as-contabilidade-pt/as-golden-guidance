@@ -196,6 +196,10 @@ export const reserveDocument = createServerFn({ method: "POST" })
       .eq("slug", data.category)
       .maybeSingle();
     if (!cat) throw new Error("Esta categoria já não existe.");
+    const allowedCats = await allowedCategoriesFor(context, target);
+    if (allowedCats && !allowedCats.includes(data.category)) {
+      throw new Error("Esta categoria não está disponível para este cliente.");
+    }
 
     const lateEntry =
       isMonthPastDeadline(data.year, data.month) ||
@@ -336,6 +340,7 @@ export const createClient = createServerFn({ method: "POST" })
         nif: z.string().min(9).max(20),
         email: z.string().email(),
         redirectTo: z.string().url(),
+        categories: z.array(categoryEnum).min(1).max(50),
       })
       .parse(d),
   )
@@ -364,6 +369,16 @@ export const createClient = createServerFn({ method: "POST" })
       .from("user_roles")
       .insert({ user_id: invited.user.id, role: "cliente" });
     if (roleError) throw new Error(roleError.message);
+
+    const { error: recError } = await supabaseAdmin.from("client_records").insert({
+      user_id: invited.user.id,
+      name: data.fullName,
+      nif: data.nif,
+      email: data.email,
+      folder_active: true,
+      allowed_categories: data.categories,
+    });
+    if (recError) throw new Error(recError.message);
 
     return { id: invited.user.id };
   });
@@ -711,16 +726,37 @@ function slugify(label: string) {
     .slice(0, 60);
 }
 
-export const listCategories = createServerFn({ method: "GET" })
+async function allowedCategoriesFor(context: { supabase: any }, userId: string) {
+  const { data } = await context.supabase
+    .from("client_records")
+    .select("allowed_categories")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return (data?.allowed_categories as string[] | null | undefined) ?? null;
+}
+
+export const listCategories = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+  .inputValidator((d: unknown) =>
+    z
+      .object({ clientId: z.string().uuid().optional(), all: z.boolean().optional() })
+      .optional()
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
       .from("document_categories")
       .select("id, slug, label, position")
       .order("position", { ascending: true })
       .order("label", { ascending: true });
     if (error) throw new Error(error.message);
-    return data ?? [];
+    const list = rows ?? [];
+    const admin = await isAdmin(context);
+    if (admin && data?.all) return list;
+    const target = admin && data?.clientId ? data.clientId : admin ? null : context.userId;
+    if (!target) return list;
+    const allowed = await allowedCategoriesFor(context, target);
+    return allowed ? list.filter((c: { slug: string }) => allowed.includes(c.slug)) : list;
   });
 
 export const createCategory = createServerFn({ method: "POST" })
@@ -816,6 +852,7 @@ const recordSchema = z.object({
   responsibleName: z.string().trim().max(120).default(""),
   notes: z.string().trim().max(4000).default(""),
   folderActive: z.boolean().default(false),
+  categories: z.array(categoryEnum).max(50).nullable().optional(),
 });
 
 function recordColumns(v: z.infer<typeof recordSchema>) {
@@ -831,6 +868,7 @@ function recordColumns(v: z.infer<typeof recordSchema>) {
     responsible_name: v.responsibleName,
     notes: v.notes,
     folder_active: v.folderActive,
+    ...(v.categories !== undefined ? { allowed_categories: v.categories } : {}),
   };
 }
 
