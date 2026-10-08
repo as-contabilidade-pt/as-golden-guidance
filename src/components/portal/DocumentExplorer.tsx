@@ -327,6 +327,11 @@ export function DocumentExplorer({
     return requests.find((r) => r.month === m && r.status !== "fechado") ?? null;
   }
 
+  function isFutureMonth(m: number) {
+    const n = new Date();
+    return year > n.getFullYear() || (year === n.getFullYear() && m > n.getMonth() + 1);
+  }
+
   function monthLocked(m: number) {
     const n = new Date();
     if (year > n.getFullYear() || (year === n.getFullYear() && m > n.getMonth() + 1)) return true;
@@ -396,14 +401,15 @@ export function DocumentExplorer({
                     <Lock className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="font-serif text-lg text-foreground">Pasta bloqueada</p>
+                    <p className="font-serif text-lg text-foreground">
+                      {monthLabel(month)} {year} bloqueado
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      Bloqueada desde{" "}
                       {currentSubmission
-                        ? formatDatePt(currentSubmission.submitted_at)
-                        : formatDatePt(lockDate(year, month))}
-                      . Pode consultar e
-                      descarregar os documentos, mas não adicionar ou remover.
+                        ? `Submetido em ${formatDateTimePt(currentSubmission.submitted_at)} (${currentSubmission.document_count} documento(s)).`
+                        : `Bloqueado desde ${formatDatePt(lockDate(year, month))}.`}{" "}
+                      Todas as pastas deste mês podem ser consultadas e descarregadas, mas não é
+                      possível adicionar ou remover documentos.
                     </p>
                   </div>
                 </div>
@@ -456,7 +462,7 @@ export function DocumentExplorer({
                     </label>
                     <label className="block">
                       <span className="mb-2 block text-xs font-medium text-foreground/80">
-                        Motivo da entrega fora de prazo
+                        Motivo do pedido de desbloqueio
                       </span>
                       <textarea
                         required
@@ -514,7 +520,7 @@ export function DocumentExplorer({
                     }}
                     className="mt-5 inline-flex items-center gap-2 rounded-full border border-gold px-6 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink"
                   >
-                    Pedir desbloqueio para entrega fora de prazo
+                    Pedir desbloqueio do mês
                   </button>
                 )}
               </div>
@@ -858,7 +864,9 @@ export function DocumentExplorer({
               </div>
             ) : null}
 
-            {currentSubmission && monthLocked(month) ? (
+            {!readOnly && monthLocked(month) && !isFutureMonth(month) ? (
+              renderLockPanel(month)
+            ) : readOnly && currentSubmission ? (
               <>
               <div className="soft-card flex flex-wrap items-center gap-4 p-6">
                 <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
@@ -875,7 +883,6 @@ export function DocumentExplorer({
                   </p>
                 </div>
               </div>
-              {!readOnly ? renderLockPanel(month) : null}
               </>
             ) : !readOnly && !monthLocked(month) ? (
               <div className="soft-card p-6">
@@ -972,7 +979,10 @@ export function DocumentExplorer({
         ) : (
           <div>
             {locked ? (
-              renderLockPanel(month)
+              <div className="soft-card flex items-center gap-3 p-6 text-sm text-muted-foreground">
+                <Lock className="h-4 w-4 text-gold" />
+                Mês bloqueado. Para pedir o desbloqueio, volte à página do mês {monthLabel(month)}.
+              </div>
             ) : !readOnly ? (
               <div className="soft-card flex flex-col gap-4 p-6 sm:p-8">
                 <p className="text-sm text-muted-foreground">

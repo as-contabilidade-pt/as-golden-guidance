@@ -169,7 +169,7 @@ export function formatDateTimePt(value: string | Date) {
 /* --------------------------- Textos oficiais --------------------------- */
 
 export const DECLARATION_TEXT =
-  "Solicito a reabertura do período de submissão de documentos acima identificado, para entrega de documentação após o prazo previsto no contrato de prestação de serviços. Declaro ter conhecimento de que esta entrega ocorre fora do prazo contratual e das eventuais consequências daí decorrentes, nomeadamente de natureza contratual, contabilística e fiscal.";
+  "Solicito a reabertura do período de submissão de documentos acima identificado, para entrega ou correção de documentação. Declaro ter conhecimento de que, caso a entrega ocorra após o prazo previsto no contrato de prestação de serviços, poderão existir consequências daí decorrentes, nomeadamente de natureza contratual, contabilística e fiscal.";
 
 export const DECLARATION_CHECKBOX =
   "Confirmo que tomei conhecimento e solicito a reabertura do período.";

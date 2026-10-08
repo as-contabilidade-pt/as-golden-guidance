@@ -248,7 +248,7 @@ export async function notifyUnlockRequested(info: {
         `Data/hora do pedido: ${formatDateTimePt(info.requestedAt)}`,
         `Motivo: ${info.reason}`,
         "",
-        "Será notificado por email assim que o pedido for analisado. Se for aprovado fora do prazo, terá 72 horas para submeter a documentação.",
+        "Será notificado por email assim que o pedido for analisado. Se for aprovado depois do dia 10 do mês seguinte, terá 72 horas úteis para submeter a documentação.",
       ].join("\n"),
       "Pedido de desbloqueio recebido",
     );

@@ -183,7 +183,7 @@ export const reserveDocument = createServerFn({ method: "POST" })
     const target = admin && data.clientId ? data.clientId : context.userId;
 
     if (!admin && !(await monthIsWritable(context, target, data.year, data.month))) {
-      throw new Error("Esta pasta está bloqueada. Peça o desbloqueio para entrega fora de prazo.");
+      throw new Error("Esta pasta está bloqueada. Peça o desbloqueio do mês.");
     }
 
     if (!data.originalName.toLowerCase().endsWith(".pdf")) {
