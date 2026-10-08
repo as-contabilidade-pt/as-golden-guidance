@@ -839,9 +839,9 @@ export function DocumentExplorer({
                       openMonths.length === 1
                         ? "mx-auto max-w-md grid-cols-1"
                         : openMonths.length === 3
-                          ? "-mx-3 sm:-mx-5 grid-cols-1 sm:grid-cols-3"
+                          ? "-mx-2 sm:-mx-5 grid-cols-1 sm:grid-cols-3"
                           : openMonths.length >= 5
-                            ? "-mx-3 sm:-mx-5 grid-cols-1 sm:grid-cols-3"
+                            ? "-mx-2 sm:-mx-5 grid-cols-1 sm:grid-cols-3"
                             : "mx-auto max-w-3xl sm:grid-cols-2"
                     }`}
                   >
