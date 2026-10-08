@@ -26,6 +26,7 @@ import {
   isMonthPastDeadline,
   lockDate,
   unlockExpiry,
+  businessMsUntil,
   unlockIsActive,
   unlockIsGrace,
   formatDatePt,
@@ -314,7 +315,12 @@ export function DocumentExplorer({
   }, []);
 
   function submissionFor(m: number) {
-    return submissions.find((s) => s.month === m) ?? null;
+    const s = submissions.find((x) => x.month === m) ?? null;
+    if (!s) return null;
+    // Reaberto por aprovação: a submissão anterior deixa de contar (mês "como novo").
+    const r = requests.find((x) => x.month === m && x.status === "aprovado");
+    if (r?.decided_at && new Date(s.submitted_at).getTime() <= new Date(r.decided_at).getTime()) return null;
+    return s;
   }
 
   function requestFor(m: number) {
@@ -340,7 +346,7 @@ export function DocumentExplorer({
     const r = activeUnlock(m);
     if (!r?.decided_at) return null;
     if (!unlockIsGrace(year, m, r.decided_at)) return null;
-    const ms = unlockExpiry(year, m, r.decided_at).getTime() - tick;
+    const ms = businessMsUntil(unlockExpiry(year, m, r.decided_at), new Date(tick));
     if (ms <= 0) return null;
     const h = Math.floor(ms / 3600000);
     const min = Math.floor((ms % 3600000) / 60000);
@@ -782,7 +788,7 @@ export function DocumentExplorer({
                   title={name}
                   meta={
                     unlockCountdown(m)
-                      ? `Desbloqueada · ${unlockCountdown(m)!.text} para submeter`
+                      ? `Desbloqueada · ${unlockCountdown(m)!.text} úteis para submeter`
                       : submitted
                       ? `${counts[`${m}`] ?? 0} documento(s) · submetida em ${formatDatePt(
                           submitted.submitted_at,
