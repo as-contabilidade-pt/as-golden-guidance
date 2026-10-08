@@ -50,6 +50,47 @@ import {
   getMyClientIdentity,
 } from "@/lib/portal.functions";
 
+function friendlyErrorMessage(err: unknown, fallback: string): string {
+  const raw = err instanceof Error ? err.message : typeof err === "string" ? err : "";
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    parsed = null;
+  }
+  if (parsed === null || typeof parsed !== "object") {
+    return raw && !raw.startsWith("[") && !raw.startsWith("{") ? raw : fallback;
+  }
+  const issues = Array.isArray(parsed) ? parsed : [parsed];
+  const messages: string[] = [];
+  for (const issue of issues) {
+    const t = issue && typeof issue === "object" ? (issue as Record<string, unknown>) : null;
+    if (!t) continue;
+    const code = typeof t.code === "string" ? t.code : "";
+    const path = Array.isArray(t.path) ? t.path.map(String).join(".") : String(t.path ?? "");
+    const min = typeof t.minimum === "number" ? t.minimum : null;
+    const max = typeof t.maximum === "number" ? t.maximum : null;
+    if (path === "reason") {
+      if (code === "too_small") {
+        messages.push(`O motivo está demasiado curto. Escreva pelo menos ${min ?? 5} caracteres.`);
+      } else if (code === "too_big") {
+        messages.push(`O motivo está demasiado longo. Reduza para o máximo de ${max ?? 2000} caracteres.`);
+      } else {
+        messages.push("Verifique o campo do motivo e tente novamente.");
+      }
+    } else if (path === "responsibleName") {
+      messages.push("Verifique o nome do responsável e tente novamente.");
+    } else if (path === "supplier") {
+      messages.push("Indique o campo de identificação antes de enviar.");
+    } else if (code === "invalid_type") {
+      messages.push("Verifique os campos do formulário e tente novamente.");
+    } else {
+      messages.push(fallback);
+    }
+  }
+  const unique = Array.from(new Set(messages));
+  return unique.length ? unique.join(" ") : fallback;
+}
 
 type Category = { id: string; slug: string; label: string; position: number };
 
