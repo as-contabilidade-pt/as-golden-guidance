@@ -57,7 +57,7 @@ function esc(s: string) {
 
 
 /** Converte o texto do email no modelo visual da marca (cabeçalho preto/dourado). */
-function brandHtml(title: string, body: string) {
+function brandHtml(title: string, body: string, admin = false) {
   const lines = body.split("\n").filter((l) => l.trim() !== "AS | Contabilidade, Fiscalidade e Gestão");
   const declIdx = lines.findIndex((l) => /^DECLARAÇÃO/.test(l.trim()));
   const main = declIdx >= 0 ? lines.slice(0, declIdx) : lines;
@@ -88,14 +88,14 @@ function brandHtml(title: string, body: string) {
     ${mainHtml}
     ${declHtml}
     <p style="margin:24px 0;">
-      <a href="${esc((process.env["SITE_URL"] || "https://as-golden-guidance.lovable.app").replace(/\/$/, "") + "/login")}" style="background-color:#c9a227;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;display:inline-block;">Aceder ao Portal</a>
+      <a href="${esc((process.env["SITE_URL"] || "https://as-golden-guidance.lovable.app").replace(/\/$/, "") + "/" + (admin ? "admin" : "login"))}" style="background-color:#c9a227;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;display:inline-block;">${admin ? "Ver no Painel de Administração" : "Aceder ao Portal"}</a>
     </p>
-    <p>Com os melhores cumprimentos,<br><strong>Equipa AS Contabilidade</strong></p>
+    ${admin ? '<p style="color:#888;font-size:12px;font-style:italic;">Notificação automática do Portal AS Contabilidade</p>' : "<p>Com os melhores cumprimentos,<br><strong>Equipa AS Contabilidade</strong></p>"}
   </div>
 </div>`;
 }
 
-async function deliver(to: string[], subject: string, body: string, title = subject) {
+async function deliver(to: string[], subject: string, body: string, title = subject, admin = false) {
   const original = Array.from(new Set(to.filter(Boolean)));
   if (original.length === 0) return;
   const recipients = TEST_EMAIL_OVERRIDE ? [TEST_EMAIL_OVERRIDE] : original;
@@ -104,8 +104,8 @@ async function deliver(to: string[], subject: string, body: string, title = subj
   const finalSubject = TEST_EMAIL_OVERRIDE
     ? `${subject} [teste → ${original.join(", ")}]`
     : subject;
-  const text = `${body}\n\nCom os melhores cumprimentos,\nEquipa AS Contabilidade`;
-  const html = brandHtml(title, body);
+  const text = admin ? `${body}\n\n— Notificação automática do Portal AS Contabilidade` : `${body}\n\nCom os melhores cumprimentos,\nEquipa AS Contabilidade`;
+  const html = brandHtml(title, body, admin);
 
   for (const address of recipients) {
     if (!apiKey) {
@@ -145,6 +145,7 @@ export async function notifyAdminOfSubmission(info: SubmissionInfo) {
       info.declarationText,
     ].join("\n"),
     "Nova submissão de documentação",
+    true,
   );
 }
 
@@ -235,6 +236,7 @@ export async function notifyUnlockRequested(info: {
         "Aceda ao portal para aprovar ou rejeitar o pedido.",
       ].join("\n"),
       "Novo pedido de desbloqueio",
+      true,
     );
   }
   if (info.email) {
