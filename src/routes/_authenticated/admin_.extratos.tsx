@@ -1,12 +1,25 @@
 import { requireAdmin } from "@/lib/admin-guard";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { FileSpreadsheet, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import { Eye, FileSpreadsheet, History, Loader2, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import { PortalShell } from "@/components/portal/PortalShell";
-import { extractBankStatement, type StatementRow } from "@/lib/statements.functions";
+import {
+  deleteStatementHistory,
+  extractBankStatement,
+  getClientStatementUrl,
+  listClientStatements,
+  listStatementHistory,
+  updateStatementHistory,
+  type ClientStatement,
+  type HistoryItem,
+  type StatementRow,
+} from "@/lib/statements.functions";
+import { formatDateTimePt } from "@/lib/portal";
+
+const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 export const Route = createFileRoute("/_authenticated/admin_/extratos")({
   beforeLoad: requireAdmin,
@@ -53,18 +66,117 @@ function StatementConverterPage() {
   const [rows, setRows] = useState<StatementRow[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [historyId, setHistoryId] = useState<string | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [clientDocs, setClientDocs] = useState<ClientStatement[]>([]);
+  const [docFilter, setDocFilter] = useState("");
+  const [busyDoc, setBusyDoc] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const fetchHistory = useServerFn(listStatementHistory);
+  const fetchClientDocs = useServerFn(listClientStatements);
+  const saveHistory = useServerFn(updateStatementHistory);
+  const removeHistory = useServerFn(deleteStatementHistory);
+  const getUrl = useServerFn(getClientStatementUrl);
+
+  async function loadHistory() {
+    try {
+      setHistory(await fetchHistory());
+    } catch {
+      /* ignore */
+    }
+  }
+  useEffect(() => {
+    void loadHistory();
+    fetchClientDocs().then(setClientDocs).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const groupedDocs = useMemo(() => {
+    const q = docFilter.trim().toLowerCase();
+    const groups = new Map<string, { name: string; nif: string; docs: ClientStatement[] }>();
+    for (const d of clientDocs) {
+      if (q && !`${d.client_name} ${d.nif}`.toLowerCase().includes(q)) continue;
+      const g = groups.get(d.user_id) ?? { name: d.client_name, nif: d.nif, docs: [] };
+      g.docs.push(d);
+      groups.set(d.user_id, g);
+    }
+    return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name, "pt"));
+  }, [clientDocs, docFilter]);
+
+  async function openClientDoc(id: string) {
+    try {
+      const { url } = await getUrl({ data: { id } });
+      window.open(url, "_blank", "noopener");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível abrir o documento.");
+    }
+  }
+
+  async function processClientDoc(d: ClientStatement) {
+    setBusyDoc(d.id);
+    setBusy(true);
+    setError(null);
+    setRows(null);
+    setSaved(false);
+    const name = d.client_name;
+    setClientName(name);
+    try {
+      const result = await extract({
+        data: { filename: d.original_name, mimeType: "application/pdf", documentId: d.id, clientName: name },
+      });
+      setRows(result.rows);
+      setHistoryId(result.historyId);
+      void loadHistory();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (result.rows.length === 0) setError("Não foram encontrados movimentos neste extrato.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao processar o extrato.");
+    } finally {
+      setBusy(false);
+      setBusyDoc(null);
+    }
+  }
+
+  function openHistory(h: HistoryItem) {
+    setRows(h.rows);
+    setClientName(h.client_name);
+    setHistoryId(h.id);
+    setError(null);
+    setSaved(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function onSaveEdits() {
+    if (!historyId || !rows) return;
+    try {
+      await saveHistory({ data: { id: historyId, clientName, rows } });
+      setSaved(true);
+      void loadHistory();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível guardar.");
+    }
+  }
+
+  async function onDeleteHistory(id: string) {
+    await removeHistory({ data: { id } });
+    if (id === historyId) setHistoryId(null);
+    void loadHistory();
+  }
 
   async function onProcess() {
     if (!file) return;
     setBusy(true);
     setError(null);
     setRows(null);
+    setSaved(false);
     try {
       const fileData = await fileToBase64(file);
-      const result = (await extract({
-        data: { filename: file.name, mimeType: file.type || "application/pdf", fileData },
-      })) as { rows: StatementRow[] };
+      const result = await extract({
+        data: { filename: file.name, mimeType: file.type || "application/pdf", fileData, clientName },
+      });
       setRows(result.rows);
+      setHistoryId(result.historyId);
+      void loadHistory();
       if (result.rows.length === 0) {
         setError("Não foram encontrados movimentos neste extrato. Verifique o ficheiro.");
       }
@@ -83,6 +195,13 @@ function StatementConverterPage() {
     );
   }
 
+  function rowsState() {
+    return rows;
+  }
+  function clientNameState() {
+    return clientName;
+  }
+
   function parseAmount(value: string): number | null {
     let cleaned = value.replace(/[€\s]/g, "");
     if (cleaned.includes(",")) cleaned = cleaned.replace(/\./g, "").replace(",", ".");
@@ -91,7 +210,9 @@ function StatementConverterPage() {
     return Number.isFinite(n) ? n : null;
   }
 
-  function generateExcel() {
+  function generateExcel(source?: StatementRow[], nameOverride?: string) {
+    const rows = source ?? rowsState();
+    const clientName = nameOverride ?? clientNameState();
     if (!rows || rows.length === 0) return;
     const money = "#,##0.00"; // vírgula decimal garantida pela localização portuguesa do Excel
     const aoa: (string | number)[][] = [["Data", "Descrição", "Débito", "Crédito", "Saldo"]];
@@ -202,9 +323,18 @@ function StatementConverterPage() {
               >
                 <Plus className="h-4 w-4" /> Adicionar linha
               </button>
+              {historyId ? (
+                <button
+                  type="button"
+                  onClick={onSaveEdits}
+                  className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
+                >
+                  <Save className="h-4 w-4" /> {saved ? "Alterações guardadas" : "Guardar alterações"}
+                </button>
+              ) : null}
               <button
                 type="button"
-                onClick={generateExcel}
+                onClick={() => generateExcel()}
                 disabled={rows.length === 0}
                 className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-2.5 text-xs font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
               >
@@ -261,6 +391,106 @@ function StatementConverterPage() {
           </div>
         </section>
       ) : null}
+
+      <section className="mt-12">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-serif text-2xl text-foreground">Extratos enviados pelos clientes</h2>
+          <input
+            value={docFilter}
+            onChange={(e) => setDocFilter(e.target.value)}
+            placeholder="Procurar cliente ou NIF"
+            className="w-full max-w-xs rounded-full border border-ink/15 bg-transparent px-5 py-2.5 text-sm text-foreground outline-none focus:border-gold"
+          />
+        </div>
+        {groupedDocs.length === 0 ? (
+          <p className="soft-card p-6 text-sm text-muted-foreground">
+            Ainda não existem extratos bancários enviados pelos clientes.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {groupedDocs.map((g) => (
+              <details key={g.name + g.nif} className="soft-card group p-5" open={groupedDocs.length <= 3}>
+                <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2">
+                  <span className="font-medium text-foreground">
+                    {g.name} {g.nif ? <span className="text-sm text-muted-foreground">· NIF {g.nif}</span> : null}
+                  </span>
+                  <span className="rounded-full bg-gold/10 px-3 py-1 text-xs text-foreground">
+                    {g.docs.length} {g.docs.length === 1 ? "extrato" : "extratos"}
+                  </span>
+                </summary>
+                <ul className="mt-4 divide-y divide-ink/10">
+                  {g.docs.map((d) => (
+                    <li key={d.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm text-foreground">
+                          <span className="font-medium">{MONTHS[d.month - 1]} {d.year}</span> · {d.original_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Enviado em {formatDateTimePt(d.created_at)}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openClientDoc(d.id)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-4 py-2 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
+                        >
+                          <Eye className="h-3.5 w-3.5" /> Ver PDF
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => processClientDoc(d)}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
+                        >
+                          {busyDoc === d.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                          Converter
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mt-12">
+        <h2 className="mb-1 flex items-center gap-2 font-serif text-2xl text-foreground">
+          <History className="h-5 w-5 text-gold" /> Histórico (últimos 30 dias)
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Reabra ou descarregue de novo o Excel sem voltar a processar o PDF.
+        </p>
+        {history.length === 0 ? (
+          <p className="soft-card p-6 text-sm text-muted-foreground">Ainda não há conversões.</p>
+        ) : (
+          <ul className="soft-card divide-y divide-ink/10 p-2">
+            {history.map((h) => (
+              <li key={h.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {h.client_name || "Sem cliente"} · <span className="font-normal">{h.filename}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDateTimePt(h.created_at)} · {h.row_count} movimentos
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => openHistory(h)} className="rounded-full border border-ink/15 px-4 py-2 text-xs text-foreground transition-colors hover:border-gold hover:text-gold">
+                    Abrir
+                  </button>
+                  <button type="button" onClick={() => generateExcel(h.rows, h.client_name)} className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-gold-deep">
+                    <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
+                  </button>
+                  <button type="button" aria-label="Apagar do histórico" onClick={() => onDeleteHistory(h.id)} className="rounded-full border border-ink/15 p-2 text-muted-foreground transition-colors hover:border-destructive hover:text-destructive">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </PortalShell>
   );
 }
