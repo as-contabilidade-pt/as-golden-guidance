@@ -66,10 +66,10 @@ function friendlyErrorMessage(err: unknown, fallback: string): string {
   for (const issue of issues) {
     const t = issue && typeof issue === "object" ? (issue as Record<string, unknown>) : null;
     if (!t) continue;
-    const code = typeof t.code === "string" ? t.code : "";
-    const path = Array.isArray(t.path) ? t.path.map(String).join(".") : String(t.path ?? "");
-    const min = typeof t.minimum === "number" ? t.minimum : null;
-    const max = typeof t.maximum === "number" ? t.maximum : null;
+    const code = typeof t["code"] === "string" ? t["code"] : "";
+    const path = Array.isArray(t["path"]) ? t["path"].map(String).join(".") : String(t["path"] ?? "");
+    const min = typeof t["minimum"] === "number" ? t["minimum"] : null;
+    const max = typeof t["maximum"] === "number" ? t["maximum"] : null;
     if (path === "reason") {
       if (code === "too_small") {
         messages.push(`O motivo está demasiado curto. Escreva pelo menos ${min ?? 5} caracteres.`);
