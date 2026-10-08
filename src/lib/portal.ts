@@ -90,6 +90,30 @@ export function isMonthPastDeadline(year: number, month: number, now: Date = new
   return now.getTime() >= lockDate(year, month).getTime();
 }
 
+/** Horas concedidas para submeter após um desbloqueio aprovado fora do prazo. */
+export const UNLOCK_GRACE_HOURS = 72;
+
+/**
+ * Fim da janela de um desbloqueio aprovado: se aprovado dentro do prazo, vai até
+ * ao prazo normal; se aprovado fora do prazo, 72 h a contar da aprovação.
+ */
+export function unlockExpiry(year: number, month: number, decidedAt: string | Date) {
+  const decided = new Date(decidedAt);
+  const limit = lockDate(year, month);
+  if (decided.getTime() < limit.getTime()) return limit;
+  return new Date(decided.getTime() + UNLOCK_GRACE_HOURS * 3600 * 1000);
+}
+
+export function unlockIsActive(
+  year: number,
+  month: number,
+  decidedAt: string | Date | null | undefined,
+  now: Date = new Date(),
+) {
+  if (!decidedAt) return true;
+  return now.getTime() < unlockExpiry(year, month, decidedAt).getTime();
+}
+
 export function formatDatePt(value: string | Date) {
   const d = typeof value === "string" ? new Date(value) : value;
   return d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Lisbon" });

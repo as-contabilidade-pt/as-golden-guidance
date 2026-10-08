@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   isMonthPastDeadline,
+  unlockIsActive,
   buildUnlockDeclaration,
   buildSubmissionDeclaration,
 } from "@/lib/portal";
@@ -74,13 +75,14 @@ async function monthIsWritable(
 
   const { data } = await context.supabase
     .from("unlock_requests")
-    .select("id")
+    .select("id, decided_at")
     .eq("user_id", userId)
     .eq("year", year)
     .eq("month", month)
-    .eq("status", "aprovado")
-    .limit(1);
-  return Boolean(data && data.length > 0);
+    .eq("status", "aprovado");
+  return (data ?? []).some((r: { decided_at: string | null }) =>
+    unlockIsActive(year, month, r.decided_at),
+  );
 }
 
 export const getSessionInfo = createServerFn({ method: "GET" })
