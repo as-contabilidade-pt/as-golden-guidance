@@ -52,6 +52,7 @@ import {
   submitMonth,
   listCategories,
   getMyClientIdentity,
+  adminSetMonthLock,
 } from "@/lib/portal.functions";
 
 function friendlyErrorMessage(err: unknown, fallback: string): string {
@@ -202,6 +203,7 @@ export function DocumentExplorer({
     | { kind: "upload"; files: File[] }
     | { kind: "submit" }
     | { kind: "delete"; doc: Doc }
+    | { kind: "lock"; action: "lock" | "unlock" }
     | null;
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm>(null);
 
@@ -217,6 +219,7 @@ export function DocumentExplorer({
   const sendSubmission = useServerFn(submitMonth);
   const fetchCategories = useServerFn(listCategories);
   const fetchIdentity = useServerFn(getMyClientIdentity);
+  const setMonthLock = useServerFn(adminSetMonthLock);
 
   useEffect(() => {
     void (async () => {
@@ -891,6 +894,31 @@ export function DocumentExplorer({
                     Até {formatDateTimePt(unlockCountdown(month)!.until)}. Depois deste prazo a pasta volta a fechar.
                   </p>
                 </div>
+              </div>
+            ) : null}
+
+            {readOnly && clientId && !isFutureMonth(month) ? (
+              <div className="soft-card flex flex-wrap items-center gap-4 p-6">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
+                  <Lock className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-serif text-lg text-foreground">
+                    {monthLabel(month)} {year} {monthLocked(month) ? "está bloqueado" : "está aberto"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    O cliente e a administração recebem um email com a alteração.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPendingConfirm({ kind: "lock", action: monthLocked(month) ? "unlock" : "lock" })
+                  }
+                  className="rounded-full bg-gold px-6 py-2.5 text-sm font-medium text-ink transition-opacity hover:opacity-90"
+                >
+                  {monthLocked(month) ? "Desbloquear mês" : "Bloquear mês"}
+                </button>
               </div>
             ) : null}
 
