@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/admin-guard";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CheckCircle2, FileSpreadsheet, Inbox, Users } from "lucide-react";
+import { Archive, CheckCircle2, FileSpreadsheet, Inbox, Users } from "lucide-react";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { UnlockRequests } from "@/components/portal/AdminActivity";
 
@@ -38,6 +38,7 @@ const QUICK = [
   },
   { to: "/admin/desbloqueios", icon: Inbox, title: "Pedidos de Desbloqueio", text: "Pedidos pendentes e histórico de decisões." },
   { to: "/admin/submissoes", icon: CheckCircle2, title: "Submissões Recentes", text: "Documentação submetida pelos clientes." },
+  { to: "/admin/backups", icon: Archive, title: "Cópias de Segurança", text: "Exportar dados e documentos em ZIP por cliente ou mês." },
 ] as const;
 
 function AdminPage() {
@@ -47,7 +48,7 @@ function AdminPage() {
       subtitle="Clientes da AS | Contabilidade, Fiscalidade e Gestão."
     >
 
-      <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {QUICK.map(({ to, icon: Icon, title, text }) => (
           <Link
             key={to}
