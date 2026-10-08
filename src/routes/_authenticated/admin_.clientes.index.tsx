@@ -2,7 +2,10 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Download, FolderOpen, Loader2, Plus, Search, Upload } from "lucide-react";
+import { ChevronDown, Download, FolderOpen, Loader2, Plus, Search, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -62,7 +65,6 @@ type Row = {
 };
 type Account = { id: string; full_name: string; nif: string; email: string };
 type SortKey = "client_number" | "name" | "nif" | "locality" | "folder_active";
-type Filter = "todos" | "ativa" | "inativa";
 
 const norm = (s: string) =>
   s
@@ -84,7 +86,6 @@ function ClientesPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<Filter>("todos");
   const [sort, setSort] = useState<SortKey>("name");
   const [asc, setAsc] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -122,7 +123,6 @@ function ClientesPage() {
     const q = query.trim().toLowerCase();
     const list = rows.filter(
       (r) =>
-        (filter === "todos" || (filter === "ativa") === r.folder_active) &&
         (!q ||
           [r.name, r.nif, r.client_number, r.locality].some((v) =>
             (v ?? "").toLowerCase().includes(q),
@@ -137,7 +137,7 @@ function ClientesPage() {
       return String(a[sort] ?? "").localeCompare(String(b[sort] ?? ""), "pt");
     });
     return asc ? sorted : sorted.reverse();
-  }, [rows, query, filter, sort, asc]);
+  }, [rows, query, sort, asc]);
 
   const activeCount = rows.filter((r) => r.folder_active).length;
 
@@ -316,15 +316,14 @@ function ClientesPage() {
     }
   }
 
-  const btnOutline =
-    "inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-3 text-sm text-foreground transition-colors hover:border-gold hover:text-gold disabled:opacity-60";
-
   return (
     <PortalShell
       title="Clientes"
       subtitle={`${rows.length} cliente(s) · ${activeCount} com pasta de documentos ativa`}
       action={
         <NewRecordDialog
+          onImport={() => fileRef.current?.click()}
+          importBusy={busy}
           onCreated={(id) => navigate({ to: "/admin/clientes/$recordId", params: { recordId: id } })}
         />
       }
@@ -352,26 +351,30 @@ function ClientesPage() {
               className="w-full rounded-full border border-gold/20 bg-background py-3 pl-11 pr-5 text-sm text-foreground outline-none transition-colors focus:border-gold/50"
             />
           </label>
-          <div className="flex rounded-full border border-gold/20 p-1 text-xs">
-            {(
-              [
-                ["todos", "Todos"],
-                ["ativa", "Com pasta"],
-                ["inativa", "Sem pasta"],
-              ] as [Filter, string][]
-            ).map(([k, l]) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setFilter(k)}
-                className={`rounded-full px-4 py-2 transition-colors ${
-                  filter === k ? "bg-gold text-ink" : "text-muted-foreground hover:text-gold"
-                }`}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
+          <Select
+            value={`${sort}:${asc ? "asc" : "desc"}`}
+            onValueChange={(value) => {
+              const [key, direction] = value.split(":");
+              setSort(key as SortKey);
+              setAsc(direction === "asc");
+            }}
+          >
+            <SelectTrigger aria-label="Ordenar clientes" className="h-11 w-full rounded-full border-gold/20 shadow-none sm:w-52">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name:asc">Nome: A–Z</SelectItem>
+              <SelectItem value="name:desc">Nome: Z–A</SelectItem>
+              <SelectItem value="client_number:asc">Número: crescente</SelectItem>
+              <SelectItem value="client_number:desc">Número: decrescente</SelectItem>
+              <SelectItem value="nif:asc">NIF: crescente</SelectItem>
+              <SelectItem value="nif:desc">NIF: decrescente</SelectItem>
+              <SelectItem value="locality:asc">Localidade: A–Z</SelectItem>
+              <SelectItem value="locality:desc">Localidade: Z–A</SelectItem>
+              <SelectItem value="folder_active:asc">Pasta: inativas primeiro</SelectItem>
+              <SelectItem value="folder_active:desc">Pasta: ativas primeiro</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <input
@@ -384,13 +387,9 @@ function ClientesPage() {
               if (f) void onImport(f);
             }}
           />
-          <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} className={btnOutline}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Importar Excel
-          </button>
-          <button type="button" disabled={busy} onClick={() => void onExport()} className={btnOutline}>
+          <Button variant="outline" size="sm" type="button" disabled={busy} onClick={() => void onExport()} className="rounded-full border-ink/15 px-4 text-xs shadow-none hover:border-gold hover:bg-transparent hover:text-gold">
             <Download className="h-4 w-4" /> Exportar Excel
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -504,7 +503,11 @@ function ClientesPage() {
   );
 }
 
-function NewRecordDialog({ onCreated }: { onCreated: (id: string) => void | Promise<void> }) {
+function NewRecordDialog({ onCreated, onImport, importBusy }: {
+  onCreated: (id: string) => void | Promise<void>;
+  onImport: () => void;
+  importBusy: boolean;
+}) {
   const create = useServerFn(createClientRecord);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -559,13 +562,21 @@ function NewRecordDialog({ onCreated }: { onCreated: (id: string) => void | Prom
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep"
-      >
-        <Plus className="h-4 w-4" /> Novo cliente
-      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" className="h-11 rounded-full bg-gold px-6 text-ink shadow-none hover:bg-gold-deep">
+            <Plus className="h-4 w-4" /> Novo cliente <ChevronDown className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-48 border-gold/20 p-2">
+          <DropdownMenuItem onSelect={() => setOpen(true)} className="gap-2 px-3 py-2.5">
+            <Plus /> Novo cliente
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={importBusy} onSelect={onImport} className="gap-2 px-3 py-2.5">
+            <Upload /> Importar Excel
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto rounded-3xl sm:max-w-2xl">
           <DialogHeader>
