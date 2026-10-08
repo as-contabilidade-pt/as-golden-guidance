@@ -95,13 +95,46 @@ export const UNLOCK_GRACE_HOURS = 72;
 
 /**
  * Fim da janela de um desbloqueio aprovado: se aprovado dentro do prazo, vai até
- * ao prazo normal; se aprovado fora do prazo, 72 h a contar da aprovação.
+ * ao prazo normal; se aprovado fora do prazo, 72 h úteis a contar da aprovação.
  */
 export function unlockExpiry(year: number, month: number, decidedAt: string | Date) {
   const decided = new Date(decidedAt);
   const limit = lockDate(year, month);
   if (decided.getTime() < limit.getTime()) return limit;
-  return new Date(decided.getTime() + UNLOCK_GRACE_HOURS * 3600 * 1000);
+  return addBusinessHours(decided, UNLOCK_GRACE_HOURS);
+}
+
+const HOUR = 3600 * 1000;
+
+/** Sábado/domingo em Portugal (Europe/Lisbon). */
+function isWeekendLisbon(d: Date) {
+  const wd = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: "Europe/Lisbon" }).format(d);
+  return wd === "Sat" || wd === "Sun";
+}
+
+/** Soma horas úteis (ignora sábados e domingos). */
+export function addBusinessHours(start: Date, hours: number) {
+  let t = start.getTime();
+  let left = hours;
+  let guard = 0;
+  while (left > 0 && guard++ < 10000) {
+    t += HOUR;
+    if (!isWeekendLisbon(new Date(t - 1))) left--;
+  }
+  return new Date(t);
+}
+
+/** Milissegundos úteis entre agora e o fim (ignora fins de semana). */
+export function businessMsUntil(end: Date, now: Date = new Date()) {
+  let t = now.getTime();
+  const e = end.getTime();
+  let ms = 0;
+  while (t < e) {
+    const step = Math.min(HOUR - (t % HOUR) || HOUR, e - t);
+    if (!isWeekendLisbon(new Date(t))) ms += step;
+    t += step;
+  }
+  return ms;
 }
 
 /**
