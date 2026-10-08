@@ -463,6 +463,21 @@ export const createUnlockRequest = createServerFn({ method: "POST" })
       }
       throw new Error(error.message);
     }
+    try {
+      const { notifyUnlockRequested } = await import("@/lib/submission-email.server");
+      await notifyUnlockRequested({
+        fullName: identity.companyName || "Cliente",
+        nif: identity.nif,
+        ...(identity.email ? { email: identity.email } : {}),
+        year: data.year,
+        month: data.month,
+        reason: data.reason,
+        requestedAt: at,
+      });
+    } catch (e) {
+      console.error("[createUnlockRequest] falha ao enviar notificações:", e);
+    }
+
     return row;
   });
 

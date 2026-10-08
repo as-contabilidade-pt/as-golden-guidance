@@ -205,6 +205,52 @@ export async function notifyUnlockDecision(info: UnlockDecisionInfo) {
   );
 }
 
+/** Avisa cliente e administradora de que foi pedido o desbloqueio de uma pasta. */
+export async function notifyUnlockRequested(info: {
+  fullName: string;
+  nif: string;
+  email?: string;
+  year: number;
+  month: number;
+  reason: string;
+  requestedAt: string;
+}) {
+  const period = `${monthLabel(info.month)} ${info.year}`;
+  const admins = await adminEmails();
+  if (admins.length > 0) {
+    await deliver(
+      admins,
+      `Novo pedido de desbloqueio - ${info.fullName} - ${period}`,
+      [
+        `Cliente: ${info.fullName}`,
+        `NIF: ${info.nif}`,
+        `Pasta: ${period}`,
+        `Data/hora do pedido: ${formatDateTimePt(info.requestedAt)}`,
+        `Motivo: ${info.reason}`,
+        "",
+        "Aceda ao portal para aprovar ou rejeitar o pedido.",
+      ].join("\n"),
+      "Novo pedido de desbloqueio",
+    );
+  }
+  if (info.email) {
+    await deliver(
+      [info.email],
+      `Pedido de desbloqueio recebido - ${period}`,
+      [
+        `Olá ${info.fullName},`,
+        "",
+        `Recebemos o seu pedido de desbloqueio da pasta de ${period}.`,
+        `Data/hora do pedido: ${formatDateTimePt(info.requestedAt)}`,
+        `Motivo: ${info.reason}`,
+        "",
+        "Será notificado por email assim que o pedido for analisado. Se for aprovado fora do prazo, terá 72 horas para submeter a documentação.",
+      ].join("\n"),
+      "Pedido de desbloqueio recebido",
+    );
+  }
+}
+
 /** Lembrete do dia 8 para todos os clientes com pasta de submissão ativa. */
 export async function sendMonthlyReminders() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
