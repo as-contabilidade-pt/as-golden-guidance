@@ -25,6 +25,8 @@ import {
   monthLabel,
   isMonthPastDeadline,
   lockDate,
+  unlockExpiry,
+  unlockIsActive,
   formatDatePt,
   formatDateTimePt,
   documentDisplayName,
@@ -304,6 +306,12 @@ export function DocumentExplorer({
     void loadSubmissions();
   }, [loadSubmissions]);
 
+  const [tick, setTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   function submissionFor(m: number) {
     return submissions.find((s) => s.month === m) ?? null;
   }
@@ -316,7 +324,26 @@ export function DocumentExplorer({
     const n = new Date();
     if (year > n.getFullYear() || (year === n.getFullYear() && m > n.getMonth() + 1)) return true;
     if (!isMonthPastDeadline(year, m) && !submissionFor(m)) return false;
-    return requestFor(m)?.status !== "aprovado";
+    return !activeUnlock(m);
+  }
+
+  /** Pedido aprovado ainda dentro da janela de submissão (ou null). */
+  function activeUnlock(m: number) {
+    const r = requestFor(m);
+    if (!r || r.status !== "aprovado") return null;
+    return unlockIsActive(year, m, r.decided_at, new Date(tick)) ? r : null;
+  }
+
+  function unlockCountdown(m: number) {
+    const r = activeUnlock(m);
+    if (!r?.decided_at) return null;
+    const ms = unlockExpiry(year, m, r.decided_at).getTime() - tick;
+    if (ms <= 0) return null;
+    const h = Math.floor(ms / 3600000);
+    const min = Math.floor((ms % 3600000) / 60000);
+    const sec = Math.floor((ms % 60000) / 1000);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return { text: `${pad(h)}h ${pad(min)}m ${pad(sec)}s`, until: unlockExpiry(year, m, r.decided_at) };
   }
 
   const currentRequest = month !== null ? requestFor(month) : null;
@@ -746,7 +773,9 @@ export function DocumentExplorer({
                   key={name}
                   title={name}
                   meta={
-                    submitted
+                    unlockCountdown(m)
+                      ? `Desbloqueada · ${unlockCountdown(m)!.text} para submeter`
+                      : submitted
                       ? `${counts[`${m}`] ?? 0} documento(s) · submetida em ${formatDatePt(
                           submitted.submitted_at,
                         )}`
@@ -799,6 +828,25 @@ export function DocumentExplorer({
                 />
               ))}
             </div>
+
+            {!readOnly && unlockCountdown(month) ? (
+              <div className="soft-card flex flex-wrap items-center gap-4 border border-gold/40 p-6">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gold/15 text-gold">
+                  <Lock className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Pasta desbloqueada · tempo restante para submeter
+                  </p>
+                  <p className="font-serif text-3xl tabular-nums text-gold">
+                    {unlockCountdown(month)!.text}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Até {formatDateTimePt(unlockCountdown(month)!.until)}. Depois deste prazo a pasta volta a fechar.
+                  </p>
+                </div>
+              </div>
+            ) : null}
 
             {currentSubmission && monthLocked(month) ? (
               <>

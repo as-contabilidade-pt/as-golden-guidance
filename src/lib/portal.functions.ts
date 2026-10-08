@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   isMonthPastDeadline,
+  unlockIsActive,
   buildUnlockDeclaration,
   buildSubmissionDeclaration,
 } from "@/lib/portal";
@@ -74,13 +75,14 @@ async function monthIsWritable(
 
   const { data } = await context.supabase
     .from("unlock_requests")
-    .select("id")
+    .select("id, decided_at")
     .eq("user_id", userId)
     .eq("year", year)
     .eq("month", month)
-    .eq("status", "aprovado")
-    .limit(1);
-  return Boolean(data && data.length > 0);
+    .eq("status", "aprovado");
+  return (data ?? []).some((r: { decided_at: string | null }) =>
+    unlockIsActive(year, month, r.decided_at),
+  );
 }
 
 export const getSessionInfo = createServerFn({ method: "GET" })
@@ -461,6 +463,21 @@ export const createUnlockRequest = createServerFn({ method: "POST" })
       }
       throw new Error(error.message);
     }
+    try {
+      const { notifyUnlockRequested } = await import("@/lib/submission-email.server");
+      await notifyUnlockRequested({
+        fullName: identity.companyName || "Cliente",
+        nif: identity.nif,
+        ...(identity.email ? { email: identity.email } : {}),
+        year: data.year,
+        month: data.month,
+        reason: data.reason,
+        requestedAt: at,
+      });
+    } catch (e) {
+      console.error("[createUnlockRequest] falha ao enviar notificações:", e);
+    }
+
     return row;
   });
 
