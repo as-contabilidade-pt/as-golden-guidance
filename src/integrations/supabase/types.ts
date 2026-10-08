@@ -17,6 +17,7 @@ export type Database = {
       client_records: {
         Row: {
           address: string
+          allowed_categories: string[] | null
           client_number: string
           created_at: string
           email: string
@@ -34,6 +35,7 @@ export type Database = {
         }
         Insert: {
           address?: string
+          allowed_categories?: string[] | null
           client_number?: string
           created_at?: string
           email?: string
@@ -51,6 +53,7 @@ export type Database = {
         }
         Update: {
           address?: string
+          allowed_categories?: string[] | null
           client_number?: string
           created_at?: string
           email?: string
