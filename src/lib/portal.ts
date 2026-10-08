@@ -104,6 +104,15 @@ export function unlockExpiry(year: number, month: number, decidedAt: string | Da
   return new Date(decided.getTime() + UNLOCK_GRACE_HOURS * 3600 * 1000);
 }
 
+/**
+ * Diz se um desbloqueio aprovado concedeu a janela extra de 72 h (aprovação fora
+ * do prazo). Aprovações dentro do prazo não têm contagem decrescente: vão até ao
+ * prazo normal.
+ */
+export function unlockIsGrace(year: number, month: number, decidedAt: string | Date) {
+  return new Date(decidedAt).getTime() >= lockDate(year, month).getTime();
+}
+
 export function unlockIsActive(
   year: number,
   month: number,

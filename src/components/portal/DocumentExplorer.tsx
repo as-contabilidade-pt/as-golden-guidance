@@ -27,6 +27,7 @@ import {
   lockDate,
   unlockExpiry,
   unlockIsActive,
+  unlockIsGrace,
   formatDatePt,
   formatDateTimePt,
   documentDisplayName,
@@ -334,16 +335,17 @@ export function DocumentExplorer({
     return unlockIsActive(year, m, r.decided_at, new Date(tick)) ? r : null;
   }
 
+  /** Só mostra contagem decrescente nas aprovações fora do prazo (janela de 72 h). */
   function unlockCountdown(m: number) {
     const r = activeUnlock(m);
     if (!r?.decided_at) return null;
+    if (!unlockIsGrace(year, m, r.decided_at)) return null;
     const ms = unlockExpiry(year, m, r.decided_at).getTime() - tick;
     if (ms <= 0) return null;
     const h = Math.floor(ms / 3600000);
     const min = Math.floor((ms % 3600000) / 60000);
-    const sec = Math.floor((ms % 60000) / 1000);
     const pad = (n: number) => String(n).padStart(2, "0");
-    return { text: `${pad(h)}h ${pad(min)}m ${pad(sec)}s`, until: unlockExpiry(year, m, r.decided_at) };
+    return { text: `${pad(h)}h ${pad(min)}m`, until: unlockExpiry(year, m, r.decided_at) };
   }
 
   const currentRequest = month !== null ? requestFor(month) : null;
