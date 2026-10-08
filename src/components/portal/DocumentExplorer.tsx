@@ -1182,7 +1182,7 @@ function FolderCard({
   title: string;
   meta: string;
   onClick: () => void;
-  status?: "locked" | "current" | "future" | "default";
+  status?: "locked" | "submitted" | "current" | "future" | "default";
   size?: "md" | "lg";
 }) {
   const styles = {
@@ -1192,6 +1192,13 @@ function FolderCard({
       icon: "text-[oklch(0.55_0.18_25)]",
       title: "text-foreground",
       meta: "text-[oklch(0.55_0.18_25)]",
+    },
+    submitted: {
+      card: "border-gold/50 bg-gold/[6%] hover:border-[oklch(0.55_0.18_25)/55%]",
+      iconBg: "bg-[oklch(0.62_0.15_55/18%)]",
+      icon: "text-[oklch(0.52_0.16_40)]",
+      title: "text-foreground",
+      meta: "text-[oklch(0.52_0.16_40)]",
     },
     current: {
       card: "border-gold/70 bg-gold/[8%] shadow-[0_4px_28px_-10px_color-mix(in_oklab,var(--gold)_28%,transparent)] hover:border-gold hover:-translate-y-0.5",
@@ -1227,7 +1234,7 @@ function FolderCard({
       <span
         className={`inline-flex items-center justify-center rounded-2xl ${large ? "h-16 w-16" : "h-12 w-12"} ${styles.iconBg} ${styles.icon}`}
       >
-        {status === "locked" ? (
+        {status === "locked" || status === "submitted" ? (
           <Lock className={large ? "h-7 w-7" : "h-5 w-5"} />
         ) : (
           <Folder className={large ? "h-7 w-7" : "h-5 w-5"} />
@@ -1241,7 +1248,7 @@ function FolderCard({
         </span>
         <span className={`block ${large ? "text-sm" : "text-xs"} ${styles.meta}`}>
           {meta}
-          {status === "locked" ? " · bloqueada" : ""}
+          {status === "locked" || status === "submitted" ? " · bloqueada" : ""}
         </span>
       </span>
     </button>
