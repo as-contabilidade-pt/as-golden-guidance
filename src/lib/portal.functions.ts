@@ -1076,12 +1076,41 @@ export const createClientRecord = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
     const { redirectTo, ...rest } = data;
-    const { data: row, error } = await context.supabase
-      .from("client_records")
-      .insert(recordColumns(rest))
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const values: Record<string, unknown> = { ...recordColumns(rest) };
+    let row: { id: string } | null = null;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const res = await supabaseAdmin
+        .from("client_records")
+        .insert(values as never)
+        .select("id")
+        .single();
+      if (!res.error) {
+        row = res.data as { id: string };
+        break;
+      }
+      const msg = `${res.error.message ?? ""} ${res.error.details ?? ""}`;
+      console.error("createClientRecord", res.error);
+      const missing =
+        msg.match(/Could not find the '([a-z_]+)' column/i)?.[1] ??
+        msg.match(/column "?([a-z_]+)"? of relation/i)?.[1] ??
+        msg.match(/column "?([a-z_]+)"? does not exist/i)?.[1];
+      if (missing && missing in values) {
+        delete values[missing];
+        continue;
+      }
+      if (/invalid input value for enum|malformed array/i.test(msg) && "allowed_categories" in values) {
+        delete values["allowed_categories"];
+        continue;
+      }
+      if (/duplicate key|unique/i.test(msg)) {
+        throw new Error("Já existe um cliente com estes dados (por exemplo, o mesmo NIF, email ou número interno).");
+      }
+      if (/value too long/i.test(msg)) throw new Error("Um dos campos tem texto demasiado longo.");
+      if (/invalid input syntax/i.test(msg)) throw new Error("Um dos campos tem um formato inválido.");
+      throw new Error("Não foi possível criar o cliente. Verifique os dados e tente novamente.");
+    }
+    if (!row) throw new Error("Não foi possível criar o cliente. Verifique os dados e tente novamente.");
     let invited = false;
     let inviteError: string | null = null;
     if (rest.folderActive && redirectTo) {
