@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function ConfirmDialog({
   open,
@@ -37,7 +38,7 @@ export function ConfirmDialog({
         }}
         className="absolute inset-0 bg-ink/60 backdrop-blur-sm"
       />
-      <div className="relative w-full max-w-md rounded-3xl border border-ink/10 bg-background p-7 text-center shadow-[0_24px_64px_-24px_rgba(0,0,0,0.35)]">
+      <div role="dialog" aria-modal="true" aria-label={title} className="relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-3xl border border-ink/10 bg-background p-5 text-center shadow-xl sm:p-7">
         <div className="flex flex-col items-center gap-4">
           <span
             className={`inline-flex h-14 w-14 items-center justify-center rounded-full ${
@@ -50,31 +51,32 @@ export function ConfirmDialog({
           {message ? (
             <p className="text-sm leading-relaxed text-muted-foreground">{message}</p>
           ) : null}
-          {details ? <div className="w-full">{details}</div> : null}
+          {details ? <div className="min-w-0 w-full [overflow-wrap:anywhere]">{details}</div> : null}
           <div className="mt-2 flex w-full flex-col-reverse gap-3 sm:flex-row">
-            <button
+            <Button
+              variant="outline"
               type="button"
               disabled={busy}
               onClick={() => {
                 if (!busy) onCancel();
               }}
-              className="flex-1 rounded-full border border-ink/15 px-6 py-3 text-sm font-medium text-foreground transition-colors hover:border-gold hover:text-gold disabled:opacity-50"
+              className="h-auto min-h-11 min-w-0 flex-1 whitespace-normal rounded-full border border-ink/15 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:border-gold hover:text-gold disabled:opacity-50"
             >
               {cancelLabel}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={busy}
               onClick={onConfirm}
-              className={`inline-flex flex-1 items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-medium transition-colors disabled:opacity-60 ${
+              className={`inline-flex h-auto min-h-11 min-w-0 flex-1 items-center justify-center gap-2 whitespace-normal rounded-full px-4 py-3 text-sm font-medium transition-colors disabled:opacity-60 ${
                 destructive
-                  ? "bg-destructive text-white hover:bg-destructive/90"
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   : "bg-gold text-ink hover:bg-gold-deep"
               }`}
             >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {confirmLabel}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

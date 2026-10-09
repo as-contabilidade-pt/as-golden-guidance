@@ -208,7 +208,7 @@ export function ScanDialog({
           </div>
         )}
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
           {pages.length > 0 && (
             <>
               <button

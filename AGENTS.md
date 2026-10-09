@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Keep administration activity in shared portal components with separate submissions and unlock-history routes; the main panel shows only pending unlock requests to prioritize decisions.
+- Constrain shared dialogs to the dynamic viewport and use shrinkable grid tracks for mixed text/action rows so phone and tablet layouts remain usable without page-level horizontal scrolling.

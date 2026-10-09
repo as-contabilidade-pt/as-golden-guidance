@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { Logo } from "./Logo";
+import { Button } from "@/components/ui/button";
 
 const links = [
   { href: "/#sobre-nos", label: "Sobre Nós" },
@@ -24,7 +25,7 @@ export function Header() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4">
       <div
-        className={`mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-full px-5 py-3 transition-all duration-500 ${
+        className={`mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-full px-3 py-3 transition-all duration-500 sm:px-5 lg:flex lg:justify-between ${
           scrolled
             ? "border border-gold/25 bg-cream/90 backdrop-blur-xl shadow-[0_8px_30px_-12px_color-mix(in_oklab,var(--ink)_12%,transparent)]"
             : "border border-transparent bg-transparent"
@@ -62,18 +63,20 @@ export function Header() {
           </Link>
         </nav>
 
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? "Fechar menu" : "Abrir menu"}
           className="shrink-0 rounded-full bg-gold/10 p-2.5 text-gold lg:hidden"
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        </Button>
       </div>
 
       {open ? (
-        <div className="mx-auto mt-3 max-w-6xl rounded-[2rem] border border-gold/25 bg-cream/97 px-6 py-6 shadow-[0_12px_40px_-12px_color-mix(in_oklab,var(--ink)_12%,transparent)] backdrop-blur-xl lg:hidden">
+        <div className="mx-auto mt-3 max-h-[calc(100dvh-7rem)] max-w-6xl overflow-y-auto rounded-[2rem] border border-gold/25 bg-cream/97 px-6 py-6 shadow-[0_12px_40px_-12px_color-mix(in_oklab,var(--ink)_12%,transparent)] backdrop-blur-xl lg:hidden">
           <nav className="flex flex-col gap-4">
             {links.map((l) => (
               <a

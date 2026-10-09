@@ -33,7 +33,7 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
         {label}
       </span>
-      <span className="max-w-[60%] break-words text-right text-xs text-foreground">{value}</span>
+      <span className="min-w-0 max-w-[60%] [overflow-wrap:anywhere] text-right text-xs text-foreground">{value}</span>
     </div>
   );
 }
@@ -155,33 +155,33 @@ export function PortalShell({
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-gold/15 bg-background/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4">
-          <Link to={homeTo} className="flex items-center gap-3">
+        <div className="mx-auto grid max-w-6xl grid-cols-[auto_minmax(0,1fr)] items-center gap-4 px-4 py-4 sm:flex sm:justify-between sm:px-5">
+          <Link to={homeTo} className="flex min-w-0 shrink-0 items-center gap-3">
             <Logo size={34} />
             <span className="hidden font-serif text-sm text-foreground sm:block">
               AS <span className="ml-1 text-xs text-gold">Contabilidade</span>
             </span>
           </Link>
           {firstName ? (
-            <div data-user-menu className="relative">
+            <div data-user-menu className="relative min-w-0 justify-self-end">
               <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 sm:text-sm"
+                className="flex min-h-11 max-w-full items-center gap-1.5 rounded-full px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 sm:text-sm"
                 aria-expanded={open}
               >
-                <span>
+                <span className="min-w-0 truncate">
                   Bem-vindo, <span className="text-foreground">{firstName}</span>
                 </span>
                 <ChevronDown
                   className={
-                    "size-3.5 text-gold transition-transform duration-200 " +
+                    "size-3.5 shrink-0 text-gold transition-transform duration-200 " +
                     (open ? "rotate-180" : "")
                   }
                 />
               </button>
               {open && details ? (
-                <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-gold/20 bg-card p-4 shadow-xl shadow-black/5 sm:w-80">
+                <div className="absolute right-0 top-full z-50 mt-2 max-h-[calc(100dvh-6rem)] w-72 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-gold/20 bg-card p-4 shadow-xl sm:w-80">
                   {details}
                   <button
                     type="button"
@@ -198,17 +198,17 @@ export function PortalShell({
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 py-10 sm:py-14">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="font-serif text-3xl text-foreground sm:text-4xl">{title}</h1>
+      <main className="mx-auto min-w-0 max-w-6xl px-4 py-8 sm:px-5 sm:py-14">
+        <div className="grid min-w-0 gap-4 sm:flex sm:flex-wrap sm:items-end sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <h1 className="[overflow-wrap:anywhere] font-serif text-3xl text-foreground sm:text-4xl">{title}</h1>
             {subtitle ? (
               <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
             ) : null}
           </div>
           {action}
         </div>
-        <div className="mt-10">{children}</div>
+        <div className="mt-8 min-w-0 sm:mt-10">{children}</div>
       </main>
     </div>
   );

@@ -1031,7 +1031,7 @@ export function DocumentExplorer({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-wrap items-center gap-4">
+                  <div className="grid min-w-0 gap-4 sm:flex sm:flex-wrap sm:items-center">
                     <div className="min-w-0 flex-1">
                       <p className="font-serif text-xl text-foreground">
                         Submeter a documentação de {monthLabel(month)} {year}
@@ -1046,7 +1046,7 @@ export function DocumentExplorer({
                       type="button"
                       disabled={(counts[`${month}`] ?? 0) === 0}
                       onClick={() => setShowSubmit(true)}
-                      className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex w-full min-w-0 items-center justify-center gap-2 rounded-full bg-gold px-4 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-6"
                     >
                       <CheckCircle2 className="h-4 w-4" /> Submeter Documentação do Mês
                     </button>
@@ -1082,7 +1082,7 @@ export function DocumentExplorer({
                   onChange={(e) => handleFiles(e.target.files)}
                 />
 
-                <div className="flex flex-wrap items-center justify-center gap-3">
+                <div className="grid w-full gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-center">
                   <button
                     type="button"
                     disabled={busy}
@@ -1175,7 +1175,7 @@ export function DocumentExplorer({
                 docs.map((d) => (
                   <div
                     key={d.id}
-                    className={`soft-card flex flex-wrap items-center gap-4 px-5 py-4 ${
+                    className={`soft-card grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 px-4 py-4 sm:flex sm:gap-4 sm:px-5 ${
                       d.late ? "border-destructive/40 bg-destructive/5" : ""
                     }`}
                   >
@@ -1191,7 +1191,7 @@ export function DocumentExplorer({
                       )}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-serif text-lg text-foreground">
+                      <p className="[overflow-wrap:anywhere] font-serif text-lg text-foreground">
                         {documentDisplayName(d.label, d.supplier, d.doc_date)}
                       </p>
                       <p className="truncate text-xs text-muted-foreground">
@@ -1207,7 +1207,7 @@ export function DocumentExplorer({
                       ) : null}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="col-span-2 flex items-center justify-end gap-2 sm:shrink-0">
                       <button
                         type="button"
                         onClick={() => void handleDownload(d.id)}
