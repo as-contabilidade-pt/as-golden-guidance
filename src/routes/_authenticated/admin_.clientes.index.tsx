@@ -151,16 +151,19 @@ function ClientesPage() {
             (v ?? "").toLowerCase().includes(q),
           )),
     );
+    const byNumber = (a: Row, b: Row) =>
+      String(a.client_number).localeCompare(String(b.client_number), "pt", { numeric: true });
     const sorted = [...list].sort((a, b) => {
+      if (defaultView) {
+        const state = Number(b.folder_active) - Number(a.folder_active);
+        return state !== 0 ? state : byNumber(a, b);
+      }
       if (sort === "folder_active") return Number(a.folder_active) - Number(b.folder_active);
-      if (sort === "client_number")
-        return String(a.client_number).localeCompare(String(b.client_number), "pt", {
-          numeric: true,
-        });
+      if (sort === "client_number") return byNumber(a, b);
       return String(a[sort] ?? "").localeCompare(String(b[sort] ?? ""), "pt");
     });
-    return asc ? sorted : sorted.reverse();
-  }, [rows, query, sort, asc]);
+    return defaultView || asc ? sorted : sorted.reverse();
+  }, [rows, query, sort, asc, defaultView]);
 
   const activeCount = rows.filter((r) => r.folder_active).length;
 
