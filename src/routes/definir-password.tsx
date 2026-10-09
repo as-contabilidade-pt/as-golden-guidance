@@ -81,7 +81,7 @@ function SetPasswordPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-24">
-      <div className="w-full max-w-md rounded-[2.5rem] bg-card p-10 shadow-[0_24px_70px_-24px_color-mix(in_oklab,var(--ink)_12%,transparent)] ring-1 ring-gold/15 sm:p-12">
+      <div className="w-full max-w-md rounded-[2.5rem] bg-card p-6 shadow-[0_24px_70px_-24px_color-mix(in_oklab,var(--ink)_12%,transparent)] ring-1 ring-gold/15 sm:p-12">
         <h1 className="font-serif text-3xl text-foreground">Definir Palavra-passe</h1>
         <p className="mt-3 text-sm text-muted-foreground">
           Escolha uma palavra-passe para aceder à sua Área de Cliente.

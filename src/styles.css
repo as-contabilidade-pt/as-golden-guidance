@@ -97,7 +97,7 @@
   h4 {
     font-family: var(--font-serif);
     font-weight: 500;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
   }
 
 
@@ -206,7 +206,19 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .month-glow {
+  .month-glow,
+  .animate-fade-up,
+  .animate-ping {
     animation: none;
+  }
+  html { scroll-behavior: auto; }
+}
+
+/* Keep native form controls readable without iOS focus zoom. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea,
+  select {
+    font-size: 16px;
   }
 }

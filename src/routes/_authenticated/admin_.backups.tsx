@@ -148,7 +148,7 @@ function BackupPage() {
   const trig = "h-12 w-full rounded-full border-gold/25 bg-secondary/40 px-5 text-sm hover:border-gold/60 focus:ring-gold/40";
   const content = "max-h-72 rounded-2xl border-gold/20 bg-card p-1 shadow-xl";
   const item = "rounded-xl py-2.5 pl-8 pr-4 focus:bg-gold/15 focus:text-foreground";
-  const tab = (on: boolean) => `flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm transition-colors ${on ? "bg-gold text-ink shadow" : "text-muted-foreground hover:text-foreground"}`;
+  const tab = (on: boolean) => `flex min-w-0 flex-1 items-center justify-center gap-2 rounded-full px-3 py-2.5 text-xs transition-colors sm:px-4 sm:text-sm [&_svg]:shrink-0 ${on ? "bg-gold text-ink shadow" : "text-muted-foreground hover:text-foreground"}`;
   return (
     <PortalShell title="Cópias de Segurança" subtitle="Exporte dados e documentos num ficheiro ZIP organizado por cliente, ano, mês e pasta.">
       <div className="soft-card mx-auto max-w-3xl space-y-7 p-6 sm:p-8">
@@ -204,7 +204,7 @@ function BackupPage() {
             </div>
             <Slider min={minKey} max={maxKey} step={1} minStepsBetweenThumbs={0} value={range}
               onValueChange={(v) => setRange([v[0]!, v[1]!])} disabled={busy} />
-            <div className="flex justify-between text-[11px] text-muted-foreground">
+            <div className="grid grid-cols-5 gap-y-1 text-center text-[11px] text-muted-foreground sm:flex sm:justify-between">
               {Array.from({ length: maxKey / 12 - minKey / 12 + 1 }, (_, i) => Math.floor(minKey / 12) + i).map((y) => <span key={y}>{y}</span>)}
             </div>
             <p className="text-xs text-muted-foreground">Arraste os dois pontos para escolher o período: {range[1] - range[0] + 1} mês(es).</p>
@@ -214,7 +214,7 @@ function BackupPage() {
         <p className="text-sm text-muted-foreground">
           O ZIP inclui um Excel com clientes, submissões, pedidos de desbloqueio e lista de documentos, e todos os PDFs em pastas. Para arquivos muito grandes, prefira exportar por mês ou por cliente.
         </p>
-        <Button onClick={() => setConfirm(true)} disabled={busy} className="h-12 rounded-full px-7">
+        <Button onClick={() => setConfirm(true)} disabled={busy} className="h-auto min-h-12 w-full whitespace-normal rounded-full px-4 py-3 sm:w-auto sm:px-7">
           {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
           Descarregar cópia de segurança
         </Button>
