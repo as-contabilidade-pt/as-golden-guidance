@@ -102,7 +102,7 @@ export const getSessionInfo = createServerFn({ method: "GET" })
       : await context.supabase
           .from("client_records")
           .select(
-            "client_number, name, nif, email, phone, responsible_name, address, postal_code, locality, notes, folder_active",
+            "client_number, name, nif, email, phone, responsible_name, address, postal_code, locality, folder_active",
           )
           .eq("user_id", context.userId)
           .maybeSingle();

@@ -16,7 +16,6 @@ type RecordInfo = {
   address: string;
   postal_code: string;
   locality: string;
-  notes: string;
   folder_active: boolean;
 } | null;
 
@@ -111,7 +110,6 @@ export function PortalShell({
         ["Morada", r.address],
         ["Código postal", r.postal_code],
         ["Localidade", r.locality],
-        ["Observações", r.notes],
       ];
       return (
         <>
