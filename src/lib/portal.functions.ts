@@ -866,6 +866,42 @@ async function allowedCategoriesFor(context: { supabase: any }, userId: string) 
   return (data?.allowed_categories as string[] | null | undefined) ?? null;
 }
 
+const OFFICIAL_CATEGORIES = [
+  { slug: "documentos_salarios", label: "Documentos de Salários", position: 1 },
+  { slug: "faturas_despesas", label: "Faturas de Despesas", position: 2 },
+  { slug: "faturas_vendas", label: "Faturas de Vendas", position: 3 },
+  { slug: "faturas_compras", label: "Faturas de Compras de Mercadoria", position: 4 },
+  { slug: "mapas_caixa", label: "Mapas de Caixa", position: 5 },
+  { slug: "extratos_bancarios", label: "Extratos Bancários", position: 6 },
+  { slug: "outros_documentos", label: "Outros Documentos", position: 7 },
+];
+let categoriesEnsured = false;
+
+/** Garante que as 7 categorias oficiais existem (nome e ordem) na base de dados ligada. */
+async function ensureOfficialCategories() {
+  if (categoriesEnsured) return;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: existing } = await supabaseAdmin
+      .from("document_categories")
+      .select("slug");
+    const have = new Set((existing ?? []).map((r: { slug: string }) => r.slug));
+    for (const c of OFFICIAL_CATEGORIES) {
+      if (have.has(c.slug)) {
+        await supabaseAdmin
+          .from("document_categories")
+          .update({ label: c.label, position: c.position })
+          .eq("slug", c.slug);
+      } else {
+        await supabaseAdmin.from("document_categories").insert(c);
+      }
+    }
+    categoriesEnsured = true;
+  } catch (e) {
+    console.error("ensureOfficialCategories", e);
+  }
+}
+
 export const listCategories = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -875,6 +911,7 @@ export const listCategories = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
+    await ensureOfficialCategories();
     const { data: rows, error } = await context.supabase
       .from("document_categories")
       .select("id, slug, label, position")
