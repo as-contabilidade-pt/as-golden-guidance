@@ -123,11 +123,25 @@ function FichaPage() {
   }
 
   async function onSave() {
-    setBusy(true);
     setError(null);
     setNotice(null);
+    if (form.name.trim().length < 2) {
+      setError("O nome tem de ter pelo menos 2 caracteres.");
+      return;
+    }
+    const nif = form.nif.replace(/\s/g, "");
+    if (nif && !/^\d{9}$/.test(nif)) {
+      setError("O NIF deve ter 9 dígitos.");
+      return;
+    }
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      setError("O email indicado não é válido.");
+      return;
+    }
+    setBusy(true);
     try {
-      await save({ data: { id: recordId, ...form } });
+      await save({ data: { id: recordId, ...form, nif } });
+      setForm((f) => ({ ...f, nif }));
       setNotice("Ficha guardada.");
     } catch (e) {
       setError(friendlyError(e, "Não foi possível guardar a ficha."));

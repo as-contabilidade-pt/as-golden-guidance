@@ -1020,7 +1020,7 @@ const recordSchema = z.object({
   responsibleName: z.string().trim().max(120).default(""),
   notes: z.string().trim().max(4000).default(""),
   folderActive: z.boolean().default(false),
-  categories: z.array(categoryEnum).max(50).nullable().optional(),
+  categories: z.array(z.string().trim().min(1).max(60)).max(50).nullable().optional(),
 });
 
 function recordColumns(v: z.infer<typeof recordSchema>) {
@@ -1101,12 +1101,27 @@ export const updateClientRecord = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { id, ...rest } = data;
-    const { error } = await context.supabase
+    const { data: row, error } = await supabaseAdmin
       .from("client_records")
       .update(recordColumns(rest))
-      .eq("id", id);
-    if (error) throw new Error(error.message);
+      .eq("id", id)
+      .select("user_id")
+      .maybeSingle();
+    if (error) {
+      console.error("updateClientRecord", error);
+      throw new Error("Não foi possível guardar a ficha. Verifique os dados e tente novamente.");
+    }
+    if (!row) throw new Error("Ficha de cliente não encontrada.");
+    const uid = (row.user_id as string | null) ?? null;
+    if (uid) {
+      const { error: pe } = await supabaseAdmin
+        .from("profiles")
+        .update({ full_name: rest.name, nif: rest.nif, ...(rest.email ? { email: rest.email } : {}) })
+        .eq("id", uid);
+      if (pe) console.error("updateClientRecord profile sync", pe);
+    }
     return { ok: true };
   });
 
