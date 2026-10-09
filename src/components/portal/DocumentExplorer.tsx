@@ -1057,11 +1057,11 @@ export function DocumentExplorer({
                 Mês bloqueado. Para pedir o desbloqueio, volte à página do mês {monthLabel(month)}.
               </div>
             ) : !readOnly ? (
-              <div className="soft-card flex flex-col gap-4 p-6 sm:p-8">
+              <div className="soft-card mx-auto flex w-full max-w-xl flex-col items-center gap-4 p-6 text-center sm:p-8">
                 <p className="text-sm text-muted-foreground">
                   Envie os seus documentos em PDF. Cada documento recebe um número automático.
                 </p>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="w-full max-w-sm">
                   <label className="block text-left">
                     <span className="mb-2 block text-xs font-medium text-foreground/80">
                       {partyField.label}
@@ -1075,7 +1075,7 @@ export function DocumentExplorer({
                     />
                   </label>
                 </div>
-                <p className="text-left text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Nome final do documento:{" "}
                   <span className="text-gold">
                     {documentDisplayName(

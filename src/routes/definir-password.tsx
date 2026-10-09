@@ -22,6 +22,14 @@ export const Route = createFileRoute("/definir-password")({
   }),
 });
 
+const PASSWORD_RULES: { label: string; test: (p: string) => boolean }[] = [
+  { label: "Pelo menos 8 caracteres", test: (p) => p.length >= 8 },
+  { label: "Uma letra maiúscula", test: (p) => /[A-Z]/.test(p) },
+  { label: "Uma letra minúscula", test: (p) => /[a-z]/.test(p) },
+  { label: "Um número", test: (p) => /\d/.test(p) },
+  { label: "Um carácter especial (ex.: ! @ # ?)", test: (p) => /[^A-Za-z0-9]/.test(p) },
+];
+
 function SetPasswordPage() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
@@ -43,8 +51,8 @@ function SetPasswordPage() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (password.length < 8) {
-      setError("A palavra-passe deve ter pelo menos 8 caracteres.");
+    if (!PASSWORD_RULES.every((r) => r.test(password))) {
+      setError("A palavra-passe não cumpre todos os requisitos de segurança.");
       return;
     }
     if (password !== confirmPassword) {
@@ -104,6 +112,16 @@ function SetPasswordPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
             />
+            <ul className="mt-3 space-y-1 text-xs">
+              {PASSWORD_RULES.map((r) => {
+                const ok = r.test(password);
+                return (
+                  <li key={r.label} className={ok ? "text-gold-deep" : "text-muted-foreground"}>
+                    {ok ? "✓" : "•"} {r.label}
+                  </li>
+                );
+              })}
+            </ul>
           </div>
           <div>
             <label htmlFor="pw2" className="mb-2 block text-xs font-medium text-foreground/80">
