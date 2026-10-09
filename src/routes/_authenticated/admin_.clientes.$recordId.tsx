@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/admin-guard";
+import { friendlyError } from "@/lib/friendly-error";
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -112,7 +113,7 @@ function FichaPage() {
           categories: (r["allowed_categories"] as string[] | null) ?? null,
         });
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Erro ao carregar a ficha.");
+        setError(friendlyError(e, "Erro ao carregar a ficha."));
       }
     })();
   }, [fetchRecord, recordId]);
@@ -129,7 +130,7 @@ function FichaPage() {
       await save({ data: { id: recordId, ...form } });
       setNotice("Ficha guardada.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível guardar a ficha.");
+      setError(friendlyError(e, "Não foi possível guardar a ficha."));
     } finally {
       setBusy(false);
     }
@@ -149,7 +150,7 @@ function FichaPage() {
       const r = (await fetchRecord({ data: { id: recordId } })) as Record<string, unknown>;
       setUserId((r["user_id"] as string | null) ?? null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível enviar o convite.");
+      setError(friendlyError(e, "Não foi possível enviar o convite."));
     } finally {
       setBusy(false);
     }
@@ -166,7 +167,7 @@ function FichaPage() {
       setPendingDelete(false);
       await navigate({ to: "/admin/clientes" });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível remover a ficha.");
+      setError(friendlyError(e, "Não foi possível remover a ficha."));
     } finally {
       setBusy(false);
     }

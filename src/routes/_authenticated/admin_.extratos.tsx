@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/admin-guard";
+import { friendlyError } from "@/lib/friendly-error";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -108,7 +109,7 @@ function StatementConverterPage() {
       const { url } = await getUrl({ data: { id } });
       window.open(url, "_blank", "noopener");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível abrir o documento.");
+      setError(friendlyError(e, "Não foi possível abrir o documento."));
     }
   }
 
@@ -130,7 +131,7 @@ function StatementConverterPage() {
       window.scrollTo({ top: 0, behavior: "smooth" });
       if (result.rows.length === 0) setError("Não foram encontrados movimentos neste extrato.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao processar o extrato.");
+      setError(friendlyError(e, "Erro ao processar o extrato."));
     } finally {
       setBusy(false);
       setBusyDoc(null);
@@ -153,7 +154,7 @@ function StatementConverterPage() {
       setSaved(true);
       void loadHistory();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível guardar.");
+      setError(friendlyError(e, "Não foi possível guardar."));
     }
   }
 
@@ -181,7 +182,7 @@ function StatementConverterPage() {
         setError("Não foram encontrados movimentos neste extrato. Verifique o ficheiro.");
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao processar o extrato.");
+      setError(friendlyError(e, "Erro ao processar o extrato."));
     } finally {
       setBusy(false);
     }

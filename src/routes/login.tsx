@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { friendlyError } from "@/lib/friendly-error";
 import { useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,7 +52,7 @@ function LoginPage() {
       });
       navigate({ to: isAdmin ? "/admin" : "/documentos", replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível iniciar sessão.");
+      setError(friendlyError(err, "Não foi possível iniciar sessão."));
     } finally {
       setBusy(false);
     }

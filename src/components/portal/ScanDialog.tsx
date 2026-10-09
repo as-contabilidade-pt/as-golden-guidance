@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { friendlyError } from "@/lib/friendly-error";
 import { Camera, Loader2, Plus, RotateCcw, Trash2, X } from "lucide-react";
 
 type Page = { dataUrl: string; width: number; height: number };
@@ -90,9 +91,7 @@ export function ScanDialog({
       );
     } catch (e) {
       setError(
-        e instanceof Error
-          ? e.message
-          : "É necessário autorizar o acesso à câmara para digitalizar documentos.",
+        friendlyError(e, "É necessário autorizar o acesso à câmara para digitalizar documentos."),
       );
     } finally {
       setReplaceLast(false);
@@ -124,7 +123,7 @@ export function ScanDialog({
       await onReady(file);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível gerar o PDF.");
+      setError(friendlyError(e, "Não foi possível gerar o PDF."));
     } finally {
       setWorking(false);
     }

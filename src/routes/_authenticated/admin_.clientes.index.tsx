@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/admin-guard";
+import { friendlyError } from "@/lib/friendly-error";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -112,6 +113,7 @@ function ClientesPage() {
   /** Por defeito, a lista mostra primeiro os clientes ativos e depois os inativos. */
   const [defaultView, setDefaultView] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [confirmExport, setConfirmExport] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -122,7 +124,7 @@ function ClientesPage() {
       setRows(r as unknown as Row[]);
       setAccounts(a as Account[]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao carregar os clientes.");
+      setError(friendlyError(e, "Erro ao carregar os clientes."));
     }
   }, [fetchList, fetchAccounts]);
 
@@ -188,7 +190,7 @@ function ClientesPage() {
       setDeleteStage(info.documents > 0 || info.submissions > 0 ? "warn" : "simple");
       setPendingDelete(r);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível verificar o cliente.");
+      setError(friendlyError(e, "Não foi possível verificar o cliente."));
     }
   }
 
@@ -201,7 +203,7 @@ function ClientesPage() {
       setPendingDelete(null);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível apagar o cliente.");
+      setError(friendlyError(e, "Não foi possível apagar o cliente."));
       setPendingDelete(null);
     } finally {
       setDeleteBusy(false);
@@ -226,7 +228,7 @@ function ClientesPage() {
       setPendingToggle(null);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível alterar o cliente.");
+      setError(friendlyError(e, "Não foi possível alterar o cliente."));
       setPendingToggle(null);
       await load();
     } finally {
@@ -337,7 +339,7 @@ function ClientesPage() {
       );
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível importar o ficheiro.");
+      setError(friendlyError(e, "Não foi possível importar o ficheiro."));
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -372,7 +374,7 @@ function ClientesPage() {
       const p = (n: number) => String(n).padStart(2, "0");
       XLSX.writeFile(book, `clientes-${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}.xlsx`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível exportar.");
+      setError(friendlyError(e, "Não foi possível exportar."));
     } finally {
       setBusy(false);
     }
@@ -383,7 +385,7 @@ function ClientesPage() {
       const row = (await fromAccount({ data: { userId: a.id } })) as { id: string };
       await navigate({ to: "/admin/clientes/$recordId", params: { recordId: row.id } });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível criar a ficha.");
+      setError(friendlyError(e, "Não foi possível criar a ficha."));
     }
   }
 
@@ -459,7 +461,7 @@ function ClientesPage() {
               if (f) void onImport(f);
             }}
           />
-          <Button variant="outline" size="sm" type="button" disabled={busy} onClick={() => void onExport()} className="rounded-full border-ink/15 px-4 text-xs shadow-none hover:border-gold hover:bg-transparent hover:text-gold">
+          <Button variant="outline" size="sm" type="button" disabled={busy} onClick={() => setConfirmExport(true)} className="rounded-full border-ink/15 px-4 text-xs shadow-none hover:border-gold hover:bg-transparent hover:text-gold">
             <Download className="h-4 w-4" /> Exportar Excel
           </Button>
         </div>
@@ -582,6 +584,16 @@ function ClientesPage() {
           </div>
         </div>
       ) : null}
+      <ConfirmDialog
+        open={confirmExport}
+        icon={<Download className="h-5 w-5" />}
+        title="Exportar clientes?"
+        message="Tem a certeza que quer exportar a lista de clientes para Excel?"
+        confirmLabel="Exportar"
+        busy={busy}
+        onCancel={() => setConfirmExport(false)}
+        onConfirm={() => { setConfirmExport(false); void onExport(); }}
+      />
       <ConfirmDialog
         open={pendingToggle !== null}
         busy={toggleBusy}
@@ -713,11 +725,11 @@ function NewRecordDialog({ onCreated, onImport, importBusy }: {
       const row = (await create({
         data: { ...f, categories, redirectTo: `${window.location.origin}/definir-password` },
       })) as { id: string; inviteError: string | null };
-      if (row.inviteError) window.alert(`Cliente criado, mas o email não foi enviado: ${row.inviteError}`);
+      if (row.inviteError) window.alert(`Cliente criado, mas o email não foi enviado: ${friendlyError(row.inviteError, "verifique o endereço e tente novamente.")}`);
       setOpen(false);
       await onCreated(row.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível criar o cliente.");
+      setError(friendlyError(err, "Não foi possível criar o cliente."));
     } finally {
       setBusy(false);
     }
