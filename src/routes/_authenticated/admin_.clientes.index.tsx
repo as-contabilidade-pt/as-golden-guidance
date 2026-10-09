@@ -426,6 +426,7 @@ function ClientesPage() {
             value={`${sort}:${asc ? "asc" : "desc"}`}
             onValueChange={(value) => {
               const [key, direction] = value.split(":");
+              setDefaultView(false);
               setSort(key as SortKey);
               setAsc(direction === "asc");
             }}
