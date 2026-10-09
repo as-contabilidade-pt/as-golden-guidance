@@ -173,7 +173,7 @@ export const reserveDocument = createServerFn({ method: "POST" })
     listSchema
       .extend({
         originalName: z.string().min(1).max(200),
-        supplier: z.string().trim().min(1).max(80),
+        supplier: z.string().trim().max(80).optional(),
         docDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       })
       .parse(d),
@@ -231,7 +231,7 @@ export const reserveDocument = createServerFn({ method: "POST" })
           label,
           original_name: data.originalName,
           storage_path: storagePath,
-          supplier: data.supplier.trim(),
+          supplier: data.supplier?.trim() || null,
           doc_date: data.docDate ?? null,
           late: lateEntry,
           late_submitted_at: lateAt,
