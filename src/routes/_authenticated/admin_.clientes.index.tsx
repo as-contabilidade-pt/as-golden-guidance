@@ -109,6 +109,8 @@ function ClientesPage() {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("client_number");
   const [asc, setAsc] = useState(true);
+  /** Por defeito, a lista mostra primeiro os clientes ativos e depois os inativos. */
+  const [defaultView, setDefaultView] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
