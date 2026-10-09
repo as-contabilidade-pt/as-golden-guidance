@@ -1057,19 +1057,18 @@ export function DocumentExplorer({
                 Mês bloqueado. Para pedir o desbloqueio, volte à página do mês {monthLabel(month)}.
               </div>
             ) : !readOnly ? (
-              <div className="soft-card mx-auto flex w-full max-w-3xl flex-col items-center gap-6 p-8 text-center sm:p-10">
-                <div className="flex flex-col items-center gap-3">
-                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/15 text-gold">
-                    <Upload className="h-5 w-5" />
+              <div className="soft-card mx-auto flex w-full max-w-3xl flex-col items-center gap-3 p-5 text-center sm:p-6">
+                <div className="flex flex-col items-center gap-1">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gold/15 text-gold">
+                    <Upload className="h-4 w-4" />
                   </span>
-                  <h3 className="font-serif text-xl text-foreground">Enviar documento</h3>
-                  <p className="max-w-sm text-sm text-muted-foreground">
-                    Apenas PDF. Cada documento recebe um número automático.
+                  <h3 className="font-serif text-lg text-foreground">Enviar documento</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Apenas PDF · número automático por documento
                   </p>
                 </div>
-                <div className="h-px w-16 bg-gold/30" />
                 <label className="block w-full max-w-md">
-                  <span className="mb-2 block text-center text-xs font-medium uppercase tracking-[0.15em] text-foreground/70">
+                  <span className="mb-1.5 block text-center text-xs font-medium uppercase tracking-[0.15em] text-foreground/70">
                     {partyField.label}
                   </span>
                   <input
@@ -1077,7 +1076,7 @@ export function DocumentExplorer({
                     value={supplier}
                     onChange={(e) => setSupplier(e.target.value)}
                     placeholder={partyField.placeholder}
-                    className="w-full rounded-full border border-gold/25 bg-background px-6 py-3 text-center text-sm text-foreground outline-none transition-colors focus:border-gold/60 focus:ring-2 focus:ring-gold/20"
+                    className="w-full rounded-full border border-gold/25 bg-background px-6 py-2.5 text-center text-sm text-foreground outline-none transition-colors focus:border-gold/60 focus:ring-2 focus:ring-gold/20"
                   />
                 </label>
                 <p className="inline-flex items-center gap-2 rounded-full bg-gold/10 px-4 py-1.5 text-xs text-muted-foreground">
@@ -1103,7 +1102,7 @@ export function DocumentExplorer({
                     type="button"
                     disabled={busy || !supplier.trim()}
                     onClick={() => inputRef.current?.click()}
-                    className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
+                    className="inline-flex items-center gap-2 rounded-full bg-gold px-5 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
                   >
                     {busy ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1116,7 +1115,7 @@ export function DocumentExplorer({
                     type="button"
                     disabled={busy || !supplier.trim()}
                     onClick={() => setShowScan(true)}
-                    className="inline-flex items-center gap-2 rounded-full border border-gold px-6 py-3 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink disabled:opacity-60"
+                    className="inline-flex items-center gap-2 rounded-full border border-gold px-5 py-2.5 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink disabled:opacity-60"
                   >
                     <Camera className="h-4 w-4" />
                     Digitalizar Documento
