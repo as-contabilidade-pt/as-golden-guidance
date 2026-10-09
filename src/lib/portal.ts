@@ -34,6 +34,8 @@ export function categoryLabel(slug: string, categories?: { slug: string; label: 
 export function documentPartyField(slug: string) {
   switch (slug) {
     case "faturas_compras":
+    case "faturas_despesas":
+    case "mapas_caixa":
       return { label: "Fornecedor", placeholder: "Ex.: EDP" };
     case "faturas_vendas":
       return { label: "Cliente", placeholder: "Ex.: Empresa ABC" };
