@@ -1,8 +1,10 @@
 export const CATEGORIES = [
-  { slug: "faturas_compras", label: "Faturas de Compras" },
-  { slug: "faturas_vendas", label: "Faturas de Vendas" },
-  { slug: "extratos_bancarios", label: "Extratos Bancários" },
   { slug: "documentos_salarios", label: "Documentos de Salários" },
+  { slug: "faturas_despesas", label: "Faturas de Despesas" },
+  { slug: "faturas_vendas", label: "Faturas de Vendas" },
+  { slug: "faturas_compras", label: "Faturas de Compras de Mercadoria" },
+  { slug: "mapas_caixa", label: "Mapas de Caixa" },
+  { slug: "extratos_bancarios", label: "Extratos Bancários" },
   { slug: "outros_documentos", label: "Outros Documentos" },
 ] as const;
 
