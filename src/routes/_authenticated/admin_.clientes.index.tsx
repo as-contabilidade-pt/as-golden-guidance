@@ -87,7 +87,7 @@ function ClientesPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortKey>("name");
+  const [sort, setSort] = useState<SortKey>("client_number");
   const [asc, setAsc] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -360,14 +360,14 @@ function ClientesPage() {
               setAsc(direction === "asc");
             }}
           >
-            <SelectTrigger aria-label="Ordenar clientes" className="h-11 w-full rounded-full border-gold/20 shadow-none sm:w-52">
+            <SelectTrigger aria-label="Ordenar clientes" className="h-11 w-full min-w-0 shrink-0 rounded-full border-gold/20 bg-background px-5 shadow-none sm:w-56">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="name:asc">Nome: A–Z</SelectItem>
               <SelectItem value="name:desc">Nome: Z–A</SelectItem>
-              <SelectItem value="client_number:asc">Número: crescente</SelectItem>
-              <SelectItem value="client_number:desc">Número: decrescente</SelectItem>
+              <SelectItem value="client_number:asc">Número interno: crescente</SelectItem>
+              <SelectItem value="client_number:desc">Número interno: decrescente</SelectItem>
               <SelectItem value="nif:asc">NIF: crescente</SelectItem>
               <SelectItem value="nif:desc">NIF: decrescente</SelectItem>
               <SelectItem value="locality:asc">Localidade: A–Z</SelectItem>
