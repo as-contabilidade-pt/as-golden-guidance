@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { friendlyError } from "@/lib/friendly-error";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -45,7 +46,7 @@ export function NewClientDialog({
       setOpen(false);
       await onCreated?.(sent);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível criar o cliente.");
+      setError(friendlyError(err, "Não foi possível criar o cliente."));
     } finally {
       setBusy(false);
     }

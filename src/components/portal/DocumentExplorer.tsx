@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { friendlyError } from "@/lib/friendly-error";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import {
@@ -64,7 +65,7 @@ function friendlyErrorMessage(err: unknown, fallback: string): string {
     parsed = null;
   }
   if (parsed === null || typeof parsed !== "object") {
-    return raw && !raw.startsWith("[") && !raw.startsWith("{") ? raw : fallback;
+    return friendlyError(err, fallback);
   }
   const issues = Array.isArray(parsed) ? parsed : [parsed];
   const messages: string[] = [];
@@ -90,7 +91,7 @@ function friendlyErrorMessage(err: unknown, fallback: string): string {
     } else if (code === "invalid_type") {
       messages.push("Verifique os campos do formulário e tente novamente.");
     } else {
-      messages.push(fallback);
+      messages.push(friendlyError(JSON.stringify([issue]), fallback));
     }
   }
   const unique = Array.from(new Set(messages));

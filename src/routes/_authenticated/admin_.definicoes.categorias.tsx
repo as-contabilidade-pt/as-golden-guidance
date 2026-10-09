@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/admin-guard";
+import { friendlyError } from "@/lib/friendly-error";
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -66,7 +67,7 @@ function CategoriesPage() {
       setItems(rows);
       setLabels(Object.fromEntries(rows.map((r) => [r.id, r.label])));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao carregar categorias.");
+      setError(friendlyError(e, "Erro ao carregar categorias."));
     }
   }, [fetchList]);
 
@@ -83,7 +84,7 @@ function CategoriesPage() {
       setNotice(message);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Ocorreu um erro.");
+      setError(friendlyError(e, "Ocorreu um erro."));
     } finally {
       setBusy(false);
     }

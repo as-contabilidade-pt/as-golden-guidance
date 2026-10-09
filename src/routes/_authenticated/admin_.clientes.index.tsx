@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/admin-guard";
+import { friendlyError } from "@/lib/friendly-error";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -122,7 +123,7 @@ function ClientesPage() {
       setRows(r as unknown as Row[]);
       setAccounts(a as Account[]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao carregar os clientes.");
+      setError(friendlyError(e, "Erro ao carregar os clientes."));
     }
   }, [fetchList, fetchAccounts]);
 
@@ -188,7 +189,7 @@ function ClientesPage() {
       setDeleteStage(info.documents > 0 || info.submissions > 0 ? "warn" : "simple");
       setPendingDelete(r);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível verificar o cliente.");
+      setError(friendlyError(e, "Não foi possível verificar o cliente."));
     }
   }
 
@@ -201,7 +202,7 @@ function ClientesPage() {
       setPendingDelete(null);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível apagar o cliente.");
+      setError(friendlyError(e, "Não foi possível apagar o cliente."));
       setPendingDelete(null);
     } finally {
       setDeleteBusy(false);
@@ -226,7 +227,7 @@ function ClientesPage() {
       setPendingToggle(null);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível alterar o cliente.");
+      setError(friendlyError(e, "Não foi possível alterar o cliente."));
       setPendingToggle(null);
       await load();
     } finally {
@@ -337,7 +338,7 @@ function ClientesPage() {
       );
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível importar o ficheiro.");
+      setError(friendlyError(e, "Não foi possível importar o ficheiro."));
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -372,7 +373,7 @@ function ClientesPage() {
       const p = (n: number) => String(n).padStart(2, "0");
       XLSX.writeFile(book, `clientes-${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}.xlsx`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível exportar.");
+      setError(friendlyError(e, "Não foi possível exportar."));
     } finally {
       setBusy(false);
     }
@@ -383,7 +384,7 @@ function ClientesPage() {
       const row = (await fromAccount({ data: { userId: a.id } })) as { id: string };
       await navigate({ to: "/admin/clientes/$recordId", params: { recordId: row.id } });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível criar a ficha.");
+      setError(friendlyError(e, "Não foi possível criar a ficha."));
     }
   }
 
@@ -717,7 +718,7 @@ function NewRecordDialog({ onCreated, onImport, importBusy }: {
       setOpen(false);
       await onCreated(row.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível criar o cliente.");
+      setError(friendlyError(err, "Não foi possível criar o cliente."));
     } finally {
       setBusy(false);
     }
