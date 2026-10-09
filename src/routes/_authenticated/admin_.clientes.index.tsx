@@ -168,6 +168,7 @@ function ClientesPage() {
   const activeCount = rows.filter((r) => r.folder_active).length;
 
   function toggleSort(key: SortKey) {
+    setDefaultView(false);
     if (key === sort) setAsc((v) => !v);
     else {
       setSort(key);
