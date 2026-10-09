@@ -1057,31 +1057,37 @@ export function DocumentExplorer({
                 Mês bloqueado. Para pedir o desbloqueio, volte à página do mês {monthLabel(month)}.
               </div>
             ) : !readOnly ? (
-              <div className="soft-card mx-auto flex w-full max-w-xl flex-col items-center gap-4 p-6 text-center sm:p-8">
-                <p className="text-sm text-muted-foreground">
-                  Envie os seus documentos em PDF. Cada documento recebe um número automático.
-                </p>
-                <div className="w-full max-w-sm">
-                  <label className="block text-left">
-                    <span className="mb-2 block text-xs font-medium text-foreground/80">
-                      {partyField.label}
-                    </span>
-                    <input
-                      type="text"
-                      value={supplier}
-                      onChange={(e) => setSupplier(e.target.value)}
-                      placeholder={partyField.placeholder}
-                      className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
-                    />
-                  </label>
+              <div className="soft-card mx-auto flex w-full max-w-xl flex-col items-center gap-6 p-8 text-center sm:p-10">
+                <div className="flex flex-col items-center gap-3">
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/15 text-gold">
+                    <Upload className="h-5 w-5" />
+                  </span>
+                  <h3 className="font-serif text-xl text-foreground">Enviar documento</h3>
+                  <p className="max-w-sm text-sm text-muted-foreground">
+                    Apenas PDF. Cada documento recebe um número automático.
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Nome final do documento:{" "}
-                  <span className="text-gold">
+                <div className="h-px w-16 bg-gold/30" />
+                <label className="block w-full max-w-sm">
+                  <span className="mb-2 block text-center text-xs font-medium uppercase tracking-[0.15em] text-foreground/70">
+                    {partyField.label}
+                  </span>
+                  <input
+                    type="text"
+                    value={supplier}
+                    onChange={(e) => setSupplier(e.target.value)}
+                    placeholder={partyField.placeholder}
+                    className="w-full rounded-full border border-gold/25 bg-background px-6 py-3 text-center text-sm text-foreground outline-none transition-colors focus:border-gold/60 focus:ring-2 focus:ring-gold/20"
+                  />
+                </label>
+                <p className="inline-flex items-center gap-2 rounded-full bg-gold/10 px-4 py-1.5 text-xs text-muted-foreground">
+                  <FileText className="h-3.5 w-3.5 text-gold" />
+                  <span className="text-foreground/80">
                     {documentDisplayName(
                       `${String(month).padStart(2, "0")}-NN`,
                       supplier || partyField.label,
                     )}
+                    .pdf
                   </span>
                 </p>
                 <input
@@ -1131,9 +1137,12 @@ export function DocumentExplorer({
               {loading ? (
                 <p className="text-sm text-muted-foreground">A carregar…</p>
               ) : docs.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-gold/30 px-6 py-10 text-center text-sm text-muted-foreground">
-                  Ainda não existem documentos nesta pasta.
-                </p>
+                <div className="mx-auto flex max-w-xl flex-col items-center gap-2 px-6 py-8 text-center">
+                  <FileText className="h-6 w-6 text-gold/60" />
+                  <p className="text-sm text-muted-foreground">
+                    Ainda não existem documentos nesta pasta.
+                  </p>
+                </div>
               ) : (
                 docs.map((d) => (
                   <div
