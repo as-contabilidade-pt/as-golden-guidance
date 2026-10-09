@@ -1132,14 +1132,19 @@ export function DocumentExplorer({
               </div>
             ) : null}
 
-            <div className="mt-6 space-y-3">
+            <div className="mx-auto mt-5 w-full max-w-3xl space-y-3">
+              {!loading && docs.length > 0 ? (
+                <p className="pt-1 text-center text-xs font-medium uppercase tracking-[0.15em] text-foreground/70">
+                  Documentos submetidos ({docs.length})
+                </p>
+              ) : null}
               {loading ? (
                 <p className="text-sm text-muted-foreground">A carregar…</p>
               ) : docs.length === 0 ? (
-                <div className="mx-auto flex max-w-3xl flex-col items-center gap-2 px-6 py-8 text-center">
-                  <FileText className="h-6 w-6 text-gold/60" />
+                <div className="mx-auto flex max-w-3xl flex-col items-center gap-1 px-6 py-5 text-center">
+                  <FileText className="h-5 w-5 text-gold/60" />
                   <p className="text-sm text-muted-foreground">
-                    Ainda não existem documentos nesta pasta.
+                    Ainda não existem documentos nesta pasta. Envie o primeiro acima.
                   </p>
                 </div>
               ) : (
