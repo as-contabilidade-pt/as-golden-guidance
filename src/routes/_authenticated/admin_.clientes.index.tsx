@@ -113,6 +113,7 @@ function ClientesPage() {
   /** Por defeito, a lista mostra primeiro os clientes ativos e depois os inativos. */
   const [defaultView, setDefaultView] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [confirmExport, setConfirmExport] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -460,7 +461,7 @@ function ClientesPage() {
               if (f) void onImport(f);
             }}
           />
-          <Button variant="outline" size="sm" type="button" disabled={busy} onClick={() => void onExport()} className="rounded-full border-ink/15 px-4 text-xs shadow-none hover:border-gold hover:bg-transparent hover:text-gold">
+          <Button variant="outline" size="sm" type="button" disabled={busy} onClick={() => setConfirmExport(true)} className="rounded-full border-ink/15 px-4 text-xs shadow-none hover:border-gold hover:bg-transparent hover:text-gold">
             <Download className="h-4 w-4" /> Exportar Excel
           </Button>
         </div>
@@ -583,6 +584,16 @@ function ClientesPage() {
           </div>
         </div>
       ) : null}
+      <ConfirmDialog
+        open={confirmExport}
+        icon={<Download className="h-5 w-5" />}
+        title="Exportar clientes?"
+        message="Tem a certeza que quer exportar a lista de clientes para Excel?"
+        confirmLabel="Exportar"
+        busy={busy}
+        onCancel={() => setConfirmExport(false)}
+        onConfirm={() => { setConfirmExport(false); void onExport(); }}
+      />
       <ConfirmDialog
         open={pendingToggle !== null}
         busy={toggleBusy}
@@ -714,7 +725,7 @@ function NewRecordDialog({ onCreated, onImport, importBusy }: {
       const row = (await create({
         data: { ...f, categories, redirectTo: `${window.location.origin}/definir-password` },
       })) as { id: string; inviteError: string | null };
-      if (row.inviteError) window.alert(`Cliente criado, mas o email não foi enviado: ${row.inviteError}`);
+      if (row.inviteError) window.alert(`Cliente criado, mas o email não foi enviado: ${friendlyError(row.inviteError, "verifique o endereço e tente novamente.")}`);
       setOpen(false);
       await onCreated(row.id);
     } catch (err) {

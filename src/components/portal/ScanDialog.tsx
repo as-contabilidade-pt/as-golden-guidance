@@ -91,9 +91,7 @@ export function ScanDialog({
       );
     } catch (e) {
       setError(
-        e instanceof Error
-          ? e.message
-          : "É necessário autorizar o acesso à câmara para digitalizar documentos.",
+        friendlyError(e, "É necessário autorizar o acesso à câmara para digitalizar documentos."),
       );
     } finally {
       setReplaceLast(false);
