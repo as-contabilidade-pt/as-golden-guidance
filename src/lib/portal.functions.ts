@@ -231,7 +231,7 @@ export const reserveDocument = createServerFn({ method: "POST" })
           label,
           original_name: data.originalName,
           storage_path: storagePath,
-          supplier: data.supplier?.trim() || null,
+          supplier: data.supplier?.trim() ?? "",
           doc_date: data.docDate ?? null,
           late: lateEntry,
           late_submitted_at: lateAt,
