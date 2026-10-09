@@ -1103,17 +1103,47 @@ export const updateClientRecord = createServerFn({ method: "POST" })
     if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { id, ...rest } = data;
-    const { data: row, error } = await supabaseAdmin
-      .from("client_records")
-      .update(recordColumns(rest))
-      .eq("id", id)
-      .select("user_id")
-      .maybeSingle();
-    if (error) {
-      console.error("updateClientRecord", error);
+    const values: Record<string, unknown> = { ...recordColumns(rest) };
+    let row: { user_id: string | null } | null = null;
+    // Algumas bases de dados ligadas podem não ter todas as colunas (ex.: allowed_categories).
+    // Nesse caso retira-se a coluna em falta e tenta-se de novo, para não bloquear a gravação.
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const res = await supabaseAdmin
+        .from("client_records")
+        .update(values as never)
+        .eq("id", id)
+        .select("user_id")
+        .maybeSingle();
+      if (!res.error) {
+        row = (res.data as { user_id: string | null } | null) ?? null;
+        if (!row) throw new Error("Ficha de cliente não encontrada.");
+        break;
+      }
+      const msg = `${res.error.message ?? ""} ${res.error.details ?? ""}`;
+      console.error("updateClientRecord", res.error);
+      const missing =
+        msg.match(/Could not find the '([a-z_]+)' column/i)?.[1] ??
+        msg.match(/column "?([a-z_]+)"? of relation/i)?.[1] ??
+        msg.match(/column "?([a-z_]+)"? does not exist/i)?.[1];
+      if (missing && missing in values) {
+        delete values[missing];
+        continue;
+      }
+      if (/duplicate key|unique/i.test(msg)) {
+        throw new Error("Já existe outro cliente com estes dados (por exemplo, o mesmo NIF ou número interno).");
+      }
+      if (/row-level security|permission denied/i.test(msg)) {
+        throw new Error("Não tem permissão para alterar esta ficha.");
+      }
+      if (/value too long/i.test(msg)) {
+        throw new Error("Um dos campos tem texto demasiado longo.");
+      }
+      if (/invalid input syntax|malformed array/i.test(msg)) {
+        throw new Error("Um dos campos tem um formato inválido.");
+      }
       throw new Error("Não foi possível guardar a ficha. Verifique os dados e tente novamente.");
     }
-    if (!row) throw new Error("Ficha de cliente não encontrada.");
+    if (!row) throw new Error("Não foi possível guardar a ficha. Verifique os dados e tente novamente.");
     const uid = (row.user_id as string | null) ?? null;
     if (uid) {
       const { error: pe } = await supabaseAdmin
