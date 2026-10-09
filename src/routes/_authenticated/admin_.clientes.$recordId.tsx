@@ -242,12 +242,12 @@ function FichaPage() {
             />
             <span>
               <span className="block text-sm font-medium text-foreground">
-                Pasta de submissão de documentos ativa
+                Cliente ativo
               </span>
               <span className="block text-xs text-muted-foreground">
-                Se ativa, o cliente acede às pastas Ano &gt; Mês &gt; Categoria e recebe os emails
-                automáticos, incluindo o lembrete do dia 8. Se inativa, a ficha mantém-se registada
-                sem pasta nem emails.
+                Se ativo, o cliente acede à área de cliente e recebe os emails automáticos. Se
+                inativo, a ficha mantém-se registada sem acesso nem emails. Para ativar pela primeira
+                vez e enviar o email de autenticação, use a lista de clientes ou o botão abaixo.
               </span>
             </span>
           </label>

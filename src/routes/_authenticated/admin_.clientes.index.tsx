@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { CategoryPicker } from "@/components/portal/CategoryPicker";
+import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   listClientRecords,
@@ -15,7 +16,7 @@ import {
   createClientRecord,
   importClientRecords,
   exportClientRecords,
-  setFolderActive,
+  setClientActive,
   createRecordFromAccount,
 } from "@/lib/portal.functions";
 
@@ -81,7 +82,9 @@ function ClientesPage() {
   const fetchAccounts = useServerFn(listClients);
   const importRows = useServerFn(importClientRecords);
   const exportRows = useServerFn(exportClientRecords);
-  const toggleFolder = useServerFn(setFolderActive);
+  const toggleFolder = useServerFn(setClientActive);
+  const [pendingToggle, setPendingToggle] = useState<Row | null>(null);
+  const [toggleBusy, setToggleBusy] = useState(false);
   const fromAccount = useServerFn(createRecordFromAccount);
 
   const [rows, setRows] = useState<Row[]>([]);
@@ -150,15 +153,24 @@ function ClientesPage() {
     }
   }
 
-  async function onToggle(r: Row) {
-    setRows((list) =>
-      list.map((x) => (x.id === r.id ? { ...x, folder_active: !r.folder_active } : x)),
-    );
+  async function doToggle(r: Row) {
+    setToggleBusy(true);
+    setError(null);
+    setNotice(null);
     try {
-      await toggleFolder({ data: { id: r.id, active: !r.folder_active } });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível alterar a pasta.");
+      const res = (await toggleFolder({
+        data: { id: r.id, active: !r.folder_active, redirectTo: `${window.location.origin}/definir-password` },
+      })) as { invited: boolean; email: string };
+      if (res.invited) setNotice(`Cliente ativado. Email de autenticação enviado para ${res.email}.`);
+      else setNotice(r.folder_active ? "Cliente desativado." : "Cliente ativado.");
+      setPendingToggle(null);
       await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível alterar o cliente.");
+      setPendingToggle(null);
+      await load();
+    } finally {
+      setToggleBusy(false);
     }
   }
 
@@ -234,9 +246,7 @@ function ClientesPage() {
           phone: cell(row, idx.phone).slice(0, 40),
           responsibleName: cell(row, idx.responsible).slice(0, 120),
           notes: cell(row, idx.notes).slice(0, 4000),
-          folderActive: ["sim", "s", "true", "1", "ativa", "ativo", "x"].includes(
-            cell(row, idx.folder).toLowerCase(),
-          ),
+          folderActive: false,
         }))
         .filter((r) => {
           if (r.name.length < 2) return false;
@@ -263,7 +273,7 @@ function ClientesPage() {
         imported += res.imported;
       }
       setNotice(
-        `${imported} cliente(s) importado(s).${skipped ? ` ${skipped} já existiam e foram ignorados.` : ""}`,
+        `${imported} cliente(s) importado(s) como inativos — ative-os manualmente para enviar o email de acesso.${skipped ? ` ${skipped} já existiam e foram ignorados.` : ""}`,
       );
       await load();
     } catch (e) {
@@ -292,7 +302,7 @@ function ClientesPage() {
           "Nº Telemóvel": r["phone"] ?? "",
           "Endereço de email": r["email"] ?? "",
           Observações: r["notes"] ?? "",
-          "Pasta ativa": r["folder_active"] ? "Sim" : "Não",
+          "Cliente ativo": r["folder_active"] ? "Sim" : "Não",
         })),
       );
       sheet["!cols"] = [8, 40, 14, 24, 36, 12, 18, 16, 30, 40, 11].map((w) => ({ wch: w }));
@@ -320,7 +330,7 @@ function ClientesPage() {
   return (
     <PortalShell
       title="Clientes"
-      subtitle={`${rows.length} cliente(s) · ${activeCount} com pasta de documentos ativa`}
+      subtitle={`${rows.length} cliente(s) · ${activeCount} ativo(s)`}
       action={
         <NewRecordDialog
           onImport={() => fileRef.current?.click()}
@@ -372,8 +382,8 @@ function ClientesPage() {
               <SelectItem value="nif:desc">NIF: decrescente</SelectItem>
               <SelectItem value="locality:asc">Localidade: A–Z</SelectItem>
               <SelectItem value="locality:desc">Localidade: Z–A</SelectItem>
-              <SelectItem value="folder_active:asc">Pasta: inativas primeiro</SelectItem>
-              <SelectItem value="folder_active:desc">Pasta: ativas primeiro</SelectItem>
+              <SelectItem value="folder_active:asc">Estado: inativos primeiro</SelectItem>
+              <SelectItem value="folder_active:desc">Estado: ativos primeiro</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -404,7 +414,7 @@ function ClientesPage() {
                   ["name", "Nome / Denominação"],
                   ["nif", "NIF"],
                   ["locality", "Localidade"],
-                  ["folder_active", "Pasta de documentos"],
+                  ["folder_active", "Cliente"],
                 ] as [SortKey, string][]
               ).map(([key, label]) => (
                 <th key={key} className="px-5 py-4">
@@ -442,7 +452,7 @@ function ClientesPage() {
                         type="button"
                         role="switch"
                         aria-checked={r.folder_active}
-                        onClick={() => void onToggle(r)}
+                        onClick={() => setPendingToggle(r)}
                         className="inline-flex items-center gap-2 text-xs"
                       >
                         <span
@@ -457,7 +467,7 @@ function ClientesPage() {
                           />
                         </span>
                         <span className={r.folder_active ? "text-gold" : "text-muted-foreground"}>
-                          {r.folder_active ? "Ativa" : "Inativa"}
+                          {r.folder_active ? "Ativo" : "Inativo"}
                         </span>
                       </button>
                     </td>
@@ -500,6 +510,24 @@ function ClientesPage() {
           </div>
         </div>
       ) : null}
+      <ConfirmDialog
+        open={pendingToggle !== null}
+        busy={toggleBusy}
+        destructive={Boolean(pendingToggle?.folder_active)}
+        title={pendingToggle?.folder_active ? "Desativar cliente?" : "Ativar cliente?"}
+        message={
+          pendingToggle?.folder_active
+            ? `Tem a certeza que pretende desativar ${pendingToggle?.name}? Deixa de ter acesso à pasta de documentos na área de cliente.`
+            : pendingToggle && !pendingToggle.user_id
+              ? `Tem a certeza que pretende ativar ${pendingToggle.name}? Será enviado um email para ${pendingToggle.email || "(sem email)"} para autenticar e definir a palavra-passe.`
+              : `Tem a certeza que pretende ativar ${pendingToggle?.name}? Volta a ter acesso à área de cliente.`
+        }
+        confirmLabel={pendingToggle?.folder_active ? "Desativar" : "Ativar"}
+        onConfirm={() => pendingToggle && void doToggle(pendingToggle)}
+        onCancel={() => {
+          if (!toggleBusy) setPendingToggle(null);
+        }}
+      />
     </PortalShell>
   );
 }
@@ -550,7 +578,10 @@ function NewRecordDialog({ onCreated, onImport, importBusy }: {
     setBusy(true);
     setError(null);
     try {
-      const row = (await create({ data: { ...f, categories } })) as { id: string };
+      const row = (await create({
+        data: { ...f, categories, redirectTo: `${window.location.origin}/definir-password` },
+      })) as { id: string; inviteError: string | null };
+      if (row.inviteError) window.alert(`Cliente criado, mas o email não foi enviado: ${row.inviteError}`);
       setOpen(false);
       await onCreated(row.id);
     } catch (err) {
@@ -619,7 +650,7 @@ function NewRecordDialog({ onCreated, onImport, importBusy }: {
                 onChange={(e) => set("folderActive", e.target.checked)}
                 className="h-4 w-4 accent-[color:var(--gold)]"
               />
-              <span className="text-sm text-foreground">Tem pasta de submissão de documentos</span>
+              <span className="text-sm text-foreground">Cliente ativo (recebe email para aceder à área de cliente)</span>
             </label>
             <div className="sm:col-span-2">
               <CategoryPicker value={categories} onChange={setCategories} />
