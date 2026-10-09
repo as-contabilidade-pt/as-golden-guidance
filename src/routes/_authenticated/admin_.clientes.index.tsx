@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { CategoryPicker } from "@/components/portal/CategoryPicker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   listClientRecords,
@@ -526,6 +527,7 @@ function NewRecordDialog({ onCreated, onImport, importBusy }: {
     folderActive: true,
   });
   const set = (k: keyof typeof f, v: string | boolean) => setF((x) => ({ ...x, [k]: v }));
+  const [categories, setCategories] = useState<string[] | null>(null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -541,10 +543,14 @@ function NewRecordDialog({ onCreated, onImport, importBusy }: {
       setError("Indique um email válido.");
       return;
     }
+    if (categories !== null && categories.length === 0) {
+      setError("Selecione pelo menos uma categoria para este cliente.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      const row = (await create({ data: f })) as { id: string };
+      const row = (await create({ data: { ...f, categories } })) as { id: string };
       setOpen(false);
       await onCreated(row.id);
     } catch (err) {
@@ -615,6 +621,9 @@ function NewRecordDialog({ onCreated, onImport, importBusy }: {
               />
               <span className="text-sm text-foreground">Tem pasta de submissão de documentos</span>
             </label>
+            <div className="sm:col-span-2">
+              <CategoryPicker value={categories} onChange={setCategories} />
+            </div>
             {error ? <p className="text-sm text-destructive sm:col-span-2">{error}</p> : null}
             <button
               type="submit"
