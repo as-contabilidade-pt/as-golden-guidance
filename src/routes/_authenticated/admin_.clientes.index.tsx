@@ -2,7 +2,7 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronDown, Download, FolderOpen, Loader2, Plus, Search, Upload } from "lucide-react";
+import { ChevronDown, Download, FolderOpen, Loader2, Plus, Search, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +17,8 @@ import {
   importClientRecords,
   exportClientRecords,
   setClientActive,
+  getClientDeleteInfo,
+  deleteClientRecord,
   createRecordFromAccount,
 } from "@/lib/portal.functions";
 
@@ -83,7 +85,22 @@ function ClientesPage() {
   const importRows = useServerFn(importClientRecords);
   const exportRows = useServerFn(exportClientRecords);
   const toggleFolder = useServerFn(setClientActive);
+  const fetchDeleteInfo = useServerFn(getClientDeleteInfo);
+  const removeRecord = useServerFn(deleteClientRecord);
   const [pendingToggle, setPendingToggle] = useState<Row | null>(null);
+  const [emailInput, setEmailInput] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const needsEmail = Boolean(
+    pendingToggle && !pendingToggle.folder_active && !pendingToggle.user_id && !pendingToggle.email?.trim(),
+  );
+  useEffect(() => {
+    setEmailInput("");
+    setEmailError(null);
+  }, [pendingToggle]);
+  const [pendingDelete, setPendingDelete] = useState<Row | null>(null);
+  const [deleteStage, setDeleteStage] = useState<"simple" | "warn" | "final">("simple");
+  const [deleteInfo, setDeleteInfo] = useState({ documents: 0, submissions: 0 });
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [toggleBusy, setToggleBusy] = useState(false);
   const fromAccount = useServerFn(createRecordFromAccount);
 
@@ -153,13 +170,50 @@ function ClientesPage() {
     }
   }
 
-  async function doToggle(r: Row) {
+  async function askDelete(r: Row) {
+    setError(null);
+    setNotice(null);
+    try {
+      const info = (await fetchDeleteInfo({ data: { id: r.id } })) as {
+        documents: number;
+        submissions: number;
+      };
+      setDeleteInfo(info);
+      setDeleteStage(info.documents > 0 || info.submissions > 0 ? "warn" : "simple");
+      setPendingDelete(r);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível verificar o cliente.");
+    }
+  }
+
+  async function doDelete() {
+    if (!pendingDelete) return;
+    setDeleteBusy(true);
+    try {
+      await removeRecord({ data: { id: pendingDelete.id, force: deleteStage === "final" } });
+      setNotice(`Cliente ${pendingDelete.name} apagado.`);
+      setPendingDelete(null);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível apagar o cliente.");
+      setPendingDelete(null);
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
+  async function doToggle(r: Row, email?: string) {
     setToggleBusy(true);
     setError(null);
     setNotice(null);
     try {
       const res = (await toggleFolder({
-        data: { id: r.id, active: !r.folder_active, redirectTo: `${window.location.origin}/definir-password` },
+        data: {
+          id: r.id,
+          active: !r.folder_active,
+          redirectTo: `${window.location.origin}/definir-password`,
+          ...(email ? { email } : {}),
+        },
       })) as { invited: boolean; email: string };
       if (res.invited) setNotice(`Cliente ativado. Email de autenticação enviado para ${res.email}.`);
       else setNotice(r.folder_active ? "Cliente desativado." : "Cliente ativado.");
@@ -425,12 +479,13 @@ function ClientesPage() {
                 </th>
               ))}
               <th className="px-5 py-4" />
+              <th className="px-3 py-4" />
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">
+                <td colSpan={7} className="px-5 py-10 text-center text-muted-foreground">
                   Nenhum cliente encontrado.
                 </td>
               </tr>
@@ -482,6 +537,16 @@ function ClientesPage() {
                         </Link>
                       ) : null}
                     </td>
+                    <td className="px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        aria-label={`Apagar ${r.name}`}
+                        onClick={() => void askDelete(r)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
                   </tr>
                 );
               })
@@ -518,14 +583,74 @@ function ClientesPage() {
         message={
           pendingToggle?.folder_active
             ? `Tem a certeza que pretende desativar ${pendingToggle?.name}? Deixa de ter acesso à pasta de documentos na área de cliente.`
-            : pendingToggle && !pendingToggle.user_id
-              ? `Tem a certeza que pretende ativar ${pendingToggle.name}? Será enviado um email para ${pendingToggle.email || "(sem email)"} para autenticar e definir a palavra-passe.`
-              : `Tem a certeza que pretende ativar ${pendingToggle?.name}? Volta a ter acesso à área de cliente.`
+            : pendingToggle && !pendingToggle.user_id && needsEmail
+              ? `${pendingToggle.name} não tem email registado. Introduza o email para ativar o cliente e enviar o acesso ao portal.`
+              : pendingToggle && !pendingToggle.user_id
+                ? `Tem a certeza que pretende ativar ${pendingToggle.name}? Será enviado um email para ${pendingToggle.email} para autenticar e definir a palavra-passe.`
+                : `Tem a certeza que pretende ativar ${pendingToggle?.name}? Volta a ter acesso à área de cliente.`
         }
-        confirmLabel={pendingToggle?.folder_active ? "Desativar" : "Ativar"}
-        onConfirm={() => pendingToggle && void doToggle(pendingToggle)}
+        details={
+          needsEmail ? (
+            <div className="text-left">
+              <input
+                type="email"
+                autoFocus
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="email@exemplo.pt"
+                className="w-full rounded-2xl border border-gold/30 bg-background px-5 py-3 text-sm text-foreground outline-none focus:border-gold"
+              />
+              {emailError ? <p className="mt-2 text-xs text-destructive">{emailError}</p> : null}
+            </div>
+          ) : null
+        }
+        confirmLabel={
+          pendingToggle?.folder_active ? "Desativar" : needsEmail ? "Guardar e enviar convite" : "Ativar"
+        }
+        onConfirm={() => {
+          if (!pendingToggle) return;
+          if (needsEmail) {
+            const v = emailInput.trim();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
+              setEmailError("Introduza um email válido.");
+              return;
+            }
+            void doToggle(pendingToggle, v);
+          } else void doToggle(pendingToggle);
+        }}
         onCancel={() => {
           if (!toggleBusy) setPendingToggle(null);
+        }}
+      />
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        busy={deleteBusy}
+        destructive
+        icon={<Trash2 className="h-6 w-6" />}
+        title={
+          deleteStage === "final"
+            ? "Eliminação definitiva"
+            : deleteStage === "warn"
+              ? "Cliente com documentos"
+              : "Apagar cliente?"
+        }
+        message={
+          deleteStage === "final"
+            ? `Vai apagar definitivamente ${pendingDelete?.name}, o acesso à área de cliente e todos os documentos e submissões. Esta ação não pode ser revertida. Confirma?`
+            : deleteStage === "warn"
+              ? `${pendingDelete?.name} já tem ${deleteInfo.documents} documento(s) e ${deleteInfo.submissions} submissão(ões) no portal. Recomenda-se desativar o cliente em vez de apagar, para preservar o arquivo legal.`
+              : `Tem a certeza que pretende apagar ${pendingDelete?.name}? A ficha será eliminada definitivamente.`
+        }
+        confirmLabel={
+          deleteStage === "warn" ? "Apagar mesmo assim" : deleteStage === "final" ? "Apagar tudo" : "Apagar"
+        }
+        cancelLabel={deleteStage === "warn" ? "Manter cliente" : "Cancelar"}
+        onConfirm={() => {
+          if (deleteStage === "warn") setDeleteStage("final");
+          else void doDelete();
+        }}
+        onCancel={() => {
+          if (!deleteBusy) setPendingDelete(null);
         }}
       />
     </PortalShell>
