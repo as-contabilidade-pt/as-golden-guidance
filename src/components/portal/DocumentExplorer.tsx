@@ -1057,7 +1057,7 @@ export function DocumentExplorer({
                 Mês bloqueado. Para pedir o desbloqueio, volte à página do mês {monthLabel(month)}.
               </div>
             ) : !readOnly ? (
-              <div className="soft-card mx-auto flex w-full max-w-xl flex-col items-center gap-6 p-8 text-center sm:p-10">
+              <div className="soft-card mx-auto flex w-full max-w-3xl flex-col items-center gap-6 p-8 text-center sm:p-10">
                 <div className="flex flex-col items-center gap-3">
                   <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/15 text-gold">
                     <Upload className="h-5 w-5" />
@@ -1068,7 +1068,7 @@ export function DocumentExplorer({
                   </p>
                 </div>
                 <div className="h-px w-16 bg-gold/30" />
-                <label className="block w-full max-w-sm">
+                <label className="block w-full max-w-md">
                   <span className="mb-2 block text-center text-xs font-medium uppercase tracking-[0.15em] text-foreground/70">
                     {partyField.label}
                   </span>
@@ -1137,7 +1137,7 @@ export function DocumentExplorer({
               {loading ? (
                 <p className="text-sm text-muted-foreground">A carregar…</p>
               ) : docs.length === 0 ? (
-                <div className="mx-auto flex max-w-xl flex-col items-center gap-2 px-6 py-8 text-center">
+                <div className="mx-auto flex max-w-3xl flex-col items-center gap-2 px-6 py-8 text-center">
                   <FileText className="h-6 w-6 text-gold/60" />
                   <p className="text-sm text-muted-foreground">
                     Ainda não existem documentos nesta pasta.
