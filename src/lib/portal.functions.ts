@@ -1129,6 +1129,10 @@ export const updateClientRecord = createServerFn({ method: "POST" })
         delete values[missing];
         continue;
       }
+      if (/invalid input value for enum|malformed array/i.test(msg) && "allowed_categories" in values) {
+        delete values["allowed_categories"];
+        continue;
+      }
       if (/duplicate key|unique/i.test(msg)) {
         throw new Error("Já existe outro cliente com estes dados (por exemplo, o mesmo NIF ou número interno).");
       }
