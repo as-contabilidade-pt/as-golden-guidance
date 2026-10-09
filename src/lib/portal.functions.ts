@@ -1110,13 +1110,63 @@ export const updateClientRecord = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const deleteClientRecord = createServerFn({ method: "POST" })
+/** Indica quantos documentos/submissões o cliente tem, antes de apagar. */
+export const getClientDeleteInfo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
-    const { error } = await context.supabase.from("client_records").delete().eq("id", data.id);
+    const { data: rec } = await context.supabase
+      .from("client_records")
+      .select("user_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    const uid = (rec?.user_id as string | null) ?? null;
+    if (!uid) return { documents: 0, submissions: 0 };
+    const [d, s] = await Promise.all([
+      context.supabase.from("documents").select("id", { count: "exact", head: true }).eq("user_id", uid),
+      context.supabase.from("month_submissions").select("id", { count: "exact", head: true }).eq("user_id", uid),
+    ]);
+    return { documents: d.count ?? 0, submissions: s.count ?? 0 };
+  });
+
+export const deleteClientRecord = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), force: z.boolean().optional() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rec } = await supabaseAdmin
+      .from("client_records")
+      .select("user_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    const uid = (rec?.user_id as string | null) ?? null;
+    if (uid) {
+      const { data: docs } = await supabaseAdmin
+        .from("documents")
+        .select("storage_path")
+        .eq("user_id", uid);
+      const { count: subs } = await supabaseAdmin
+        .from("month_submissions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", uid);
+      if (((docs?.length ?? 0) > 0 || (subs ?? 0) > 0) && !data.force) {
+        throw new Error("Este cliente tem documentos submetidos. Confirme a eliminação total.");
+      }
+      const paths = (docs ?? []).map((x) => x.storage_path).filter(Boolean);
+      for (let i = 0; i < paths.length; i += 100) {
+        await supabaseAdmin.storage.from("documentos").remove(paths.slice(i, i + 100));
+      }
+      await supabaseAdmin.from("documents").delete().eq("user_id", uid);
+      await supabaseAdmin.from("month_submissions").delete().eq("user_id", uid);
+      await supabaseAdmin.from("unlock_requests").delete().eq("user_id", uid);
+    }
+    const { error } = await supabaseAdmin.from("client_records").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    if (uid) await supabaseAdmin.auth.admin.deleteUser(uid);
     return { ok: true };
   });
 
@@ -1226,14 +1276,23 @@ export const setClientActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
-      .object({ id: z.string().uuid(), active: z.boolean(), redirectTo: z.string().url() })
+      .object({
+        id: z.string().uuid(),
+        active: z.boolean(),
+        redirectTo: z.string().url(),
+        email: z.string().trim().email("Introduza um email válido.").optional(),
+      })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
     if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
     const { error } = await context.supabase
       .from("client_records")
-      .update({ folder_active: data.active })
+      .update(
+        data.email
+          ? { folder_active: data.active, email: data.email.toLowerCase() }
+          : { folder_active: data.active },
+      )
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     if (!data.active) return { invited: false, email: "" };
