@@ -1070,16 +1070,28 @@ export const getClientRecord = createServerFn({ method: "POST" })
 
 export const createClientRecord = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => recordSchema.parse(d))
+  .inputValidator((d: unknown) =>
+    recordSchema.extend({ redirectTo: z.string().url().optional() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { redirectTo, ...rest } = data;
     const { data: row, error } = await context.supabase
       .from("client_records")
-      .insert(recordColumns(data))
+      .insert(recordColumns(rest))
       .select("id")
       .single();
     if (error) throw new Error(error.message);
-    return row;
+    let invited = false;
+    let inviteError: string | null = null;
+    if (rest.folderActive && redirectTo) {
+      try {
+        invited = (await sendAccessInvite(row.id, redirectTo)).invited;
+      } catch (e) {
+        inviteError = e instanceof Error ? e.message : "Falha ao enviar o convite.";
+      }
+    }
+    return { id: row.id as string, invited, inviteError };
   });
 
 export const updateClientRecord = createServerFn({ method: "POST" })
@@ -1115,9 +1127,10 @@ export const importClientRecords = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    // Clientes importados entram sempre inativos; a ativação (e o email) é manual.
     const { error } = await context.supabase
       .from("client_records")
-      .insert(data.rows.map(recordColumns));
+      .insert(data.rows.map((r) => ({ ...recordColumns(r), folder_active: false })));
     if (error) throw new Error(error.message);
     return { imported: data.rows.length };
   });
@@ -1179,6 +1192,54 @@ export const createRecordFromAccount = createServerFn({ method: "POST" })
     return row;
   });
 
+/** Cria a conta de acesso para uma ficha e envia o email de autenticação. */
+async function sendAccessInvite(recordId: string, redirectTo: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: rec, error: re } = await supabaseAdmin
+    .from("client_records")
+    .select("id, user_id, name, nif, email")
+    .eq("id", recordId)
+    .maybeSingle();
+  if (re || !rec) throw new Error("Ficha não encontrada.");
+  if (rec.user_id) return { email: rec.email, invited: false };
+  const email = (rec.email ?? "").trim();
+  if (!email.includes("@")) throw new Error("Preencha e guarde o email do cliente primeiro.");
+  const { data: invited, error: ie } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+    redirectTo,
+  });
+  if (ie || !invited?.user) throw new Error(ie?.message ?? "Não foi possível enviar o convite.");
+  const uid = invited.user.id;
+  await supabaseAdmin
+    .from("profiles")
+    .upsert({ id: uid, full_name: rec.name, nif: rec.nif || "", email });
+  await supabaseAdmin.from("user_roles").insert({ user_id: uid, role: "cliente" });
+  const { error: ue } = await supabaseAdmin
+    .from("client_records")
+    .update({ user_id: uid, folder_active: true })
+    .eq("id", rec.id);
+  if (ue) throw new Error(ue.message);
+  return { email, invited: true };
+}
+
+/** Ativa/desativa o cliente; ao ativar pela primeira vez envia o email de autenticação. */
+export const setClientActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({ id: z.string().uuid(), active: z.boolean(), redirectTo: z.string().url() })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { error } = await context.supabase
+      .from("client_records")
+      .update({ folder_active: data.active })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    if (!data.active) return { invited: false, email: "" };
+    return sendAccessInvite(data.id, data.redirectTo);
+  });
+
 /** Cria o acesso à área de cliente a partir de uma ficha e envia o convite. */
 export const inviteFromRecord = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -1187,30 +1248,7 @@ export const inviteFromRecord = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
-    const { data: rec, error: re } = await context.supabase
-      .from("client_records")
-      .select("id, user_id, name, nif, email")
-      .eq("id", data.id)
-      .maybeSingle();
-    if (re || !rec) throw new Error("Ficha não encontrada.");
-    if (rec.user_id) throw new Error("Este cliente já tem acesso.");
-    const email = (rec.email ?? "").trim();
-    if (!email.includes("@")) throw new Error("Preencha e guarde o email do cliente primeiro.");
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: invited, error: ie } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: data.redirectTo,
-    });
-    if (ie || !invited?.user) throw new Error(ie?.message ?? "Não foi possível enviar o convite.");
-    const uid = invited.user.id;
-    await supabaseAdmin
-      .from("profiles")
-      .upsert({ id: uid, full_name: rec.name, nif: rec.nif || "", email });
-    await supabaseAdmin.from("user_roles").insert({ user_id: uid, role: "cliente" });
-    const { error: ue } = await supabaseAdmin
-      .from("client_records")
-      .update({ user_id: uid, folder_active: true })
-      .eq("id", rec.id);
-    if (ue) throw new Error(ue.message);
-    return { email };
+    const res = await sendAccessInvite(data.id, data.redirectTo);
+    if (!res.invited) throw new Error("Este cliente já tem acesso.");
+    return { email: res.email };
   });
