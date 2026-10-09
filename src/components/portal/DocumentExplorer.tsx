@@ -15,6 +15,7 @@ import {
   Upload,
   Camera,
   AlertTriangle,
+  X,
 } from "lucide-react";
 import { ScanDialog } from "@/components/portal/ScanDialog";
 import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
@@ -177,7 +178,8 @@ export function DocumentExplorer({
   const setCategory = (c: string | null) => updateNav({ pasta: c });
   const [showPast, setShowPast] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [supplier, setSupplier] = useState("");
+  const [staged, setStaged] = useState<File[]>([]);
+  const [progress, setProgress] = useState(0);
   const [docDate, setDocDate] = useState(todayInputValue());
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [docs, setDocs] = useState<Doc[]>([]);
@@ -599,32 +601,34 @@ export function DocumentExplorer({
     void loadDocs();
   }, [loadDocs]);
 
-  async function handleFiles(files: FileList | File[] | null) {
+  function handleFiles(files: FileList | File[] | null) {
     if (!files || month === null || category === null) return;
     setError(null);
-    if (!supplier.trim()) {
-      setError(`Indique ${partyField.label.toLocaleLowerCase("pt-PT")} antes de enviar.`);
-      return;
-    }
     const list = Array.from(files);
-    setPendingConfirm({ kind: "upload", files: list });
+    const bad = list.filter(
+      (f) => f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf"),
+    );
+    if (bad.length > 0) {
+      setError(`Apenas são aceites ficheiros PDF. Ignorado: ${bad.map((f) => f.name).join(", ")}.`);
+    }
+    const ok = list.filter((f) => !bad.includes(f));
+    if (ok.length > 0) setStaged((s) => [...s, ...ok]);
+    if (inputRef.current) inputRef.current.value = "";
   }
 
   async function doUpload(files: File[]) {
     if (month === null || category === null) return;
     setBusy(true);
+    setProgress(0);
+    const sent: File[] = [];
     try {
       for (const file of files) {
-        if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-          throw new Error(`"${file.name}" não é um PDF. Apenas são aceites ficheiros PDF.`);
-        }
         const reserved = (await reserve({
           data: {
             year,
             month,
             category,
-            originalName: file.name,
-            supplier: supplier.trim(),
+            originalName: file.name.toLowerCase().endsWith(".pdf") ? file.name : `${file.name}.pdf`,
             ...(clientId ? { clientId } : {}),
           },
         })) as { id: string; storage_path: string };
@@ -640,17 +644,18 @@ export function DocumentExplorer({
           throw new Error(uploadError.message);
         }
         await confirm({ data: { id: reserved.id, sizeBytes: file.size } });
+        sent.push(file);
+        setProgress(sent.length);
       }
-      setSupplier("");
-      setDocDate(todayInputValue());
-      await loadDocs();
-      await loadCounts();
       setPendingConfirm(null);
     } catch (e) {
       setError(friendlyErrorMessage(e, "Erro ao enviar o documento."));
+      setPendingConfirm(null);
     } finally {
+      setStaged((s) => s.filter((f) => !sent.includes(f)));
+      await loadDocs();
+      await loadCounts();
       setBusy(false);
-      if (inputRef.current) inputRef.current.value = "";
     }
   }
 
@@ -1063,58 +1068,33 @@ export function DocumentExplorer({
                   <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gold/15 text-gold">
                     <Upload className="h-4 w-4" />
                   </span>
-                  <h3 className="font-serif text-lg text-foreground">Enviar documento</h3>
+                  <h3 className="font-serif text-lg text-foreground">Enviar documentos</h3>
                   <p className="text-xs text-muted-foreground">
-                    Apenas PDF · número automático por documento
+                    Apenas PDF · pode escolher vários ficheiros · numeração automática ({String(month).padStart(2, "0")}-01, {String(month).padStart(2, "0")}-02…)
                   </p>
                 </div>
-                <label className="block w-full max-w-md">
-                  <span className="mb-1.5 block text-center text-xs font-medium uppercase tracking-[0.15em] text-foreground/70">
-                    {partyField.label}
-                  </span>
-                  <input
-                    type="text"
-                    value={supplier}
-                    onChange={(e) => setSupplier(e.target.value)}
-                    placeholder={partyField.placeholder}
-                    className="w-full rounded-full border border-gold/25 bg-background px-6 py-2.5 text-center text-sm text-foreground outline-none transition-colors focus:border-gold/60 focus:ring-2 focus:ring-gold/20"
-                  />
-                </label>
-                <p className="inline-flex items-center gap-2 rounded-full bg-gold/10 px-4 py-1.5 text-xs text-muted-foreground">
-                  <FileText className="h-3.5 w-3.5 text-gold" />
-                  <span className="text-foreground/80">
-                    {documentDisplayName(
-                      `${String(month).padStart(2, "0")}-NN`,
-                      supplier || partyField.label,
-                    )}
-                    .pdf
-                  </span>
-                </p>
                 <input
                   ref={inputRef}
                   type="file"
                   accept="application/pdf"
+                  multiple
                   className="hidden"
-                  onChange={(e) => void handleFiles(e.target.files)}
+                  onChange={(e) => handleFiles(e.target.files)}
                 />
 
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <button
                     type="button"
-                    disabled={busy || !supplier.trim()}
+                    disabled={busy}
                     onClick={() => inputRef.current?.click()}
-                    className="inline-flex items-center gap-2 rounded-full bg-gold px-5 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
+                    className="inline-flex items-center gap-2 rounded-full border border-gold px-5 py-2.5 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink disabled:opacity-60"
                   >
-                    {busy ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Upload className="h-4 w-4" />
-                    )}
-                    Enviar PDF
+                    <FileText className="h-4 w-4" />
+                    {staged.length > 0 ? "Adicionar mais PDFs" : "Carregar PDFs"}
                   </button>
                   <button
                     type="button"
-                    disabled={busy || !supplier.trim()}
+                    disabled={busy}
                     onClick={() => setShowScan(true)}
                     className="inline-flex items-center gap-2 rounded-full border border-gold px-5 py-2.5 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink disabled:opacity-60"
                   >
@@ -1122,9 +1102,52 @@ export function DocumentExplorer({
                     Digitalizar Documento
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  A digitalização usa a câmara do telemóvel e cria automaticamente um PDF.
-                </p>
+
+                {staged.length > 0 ? (
+                  <div className="w-full max-w-lg space-y-2">
+                    <p className="text-xs font-medium uppercase tracking-[0.15em] text-foreground/70">
+                      Prontos a enviar ({staged.length})
+                    </p>
+                    <ul className="space-y-1.5">
+                      {staged.map((f, i) => (
+                        <li
+                          key={`${f.name}-${i}`}
+                          className="flex items-center gap-3 rounded-full bg-gold/10 px-4 py-2 text-left text-sm"
+                        >
+                          <FileText className="h-4 w-4 shrink-0 text-gold" />
+                          <span className="min-w-0 flex-1 truncate text-foreground/85">{f.name}</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {(f.size / 1024 / 1024).toFixed(1).replace(".", ",")} MB
+                          </span>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            aria-label={`Remover ${f.name}`}
+                            onClick={() => setStaged((s) => s.filter((_, j) => j !== i))}
+                            className="shrink-0 rounded-full p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setPendingConfirm({ kind: "upload", files: staged })}
+                      className="mt-1 inline-flex items-center gap-2 rounded-full bg-gold px-6 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
+                    >
+                      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      {busy
+                        ? `A enviar ${progress}/${staged.length}…`
+                        : `Enviar ${staged.length} ${staged.length === 1 ? "documento" : "documentos"}`}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Escolha os ficheiros e reveja a lista antes de enviar. A digitalização usa a câmara do telemóvel.
+                  </p>
+                )}
                 <ScanDialog
                   open={showScan}
                   onClose={() => setShowScan(false)}
