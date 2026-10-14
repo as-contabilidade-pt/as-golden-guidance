@@ -533,7 +533,7 @@ export function DocumentExplorer({
                           setShowForm(false);
                           setRequestError(null);
                         }}
-                        className="rounded-full border border-ink/15 px-6 py-3 text-sm text-foreground transition-colors hover:border-gold hover:text-gold"
+                        className="rounded-full px-6 py-3 text-sm bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
                       >
                         Cancelar
                       </button>
@@ -781,7 +781,7 @@ export function DocumentExplorer({
                     setYearsOpen(false);
                     setShowMoreYears(false);
                   }}
-                  className="rounded-full border border-ink/15 px-4 py-2 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
+                  className="rounded-full px-4 py-2 text-xs font-medium bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
                 >
                   {y}
                 </button>
@@ -994,7 +994,7 @@ export function DocumentExplorer({
                           setShowSubmit(false);
                           setSubmitAccepted(false);
                         }}
-                        className="rounded-full border border-ink/15 px-6 py-3 text-sm text-foreground transition-colors hover:border-gold hover:text-gold"
+                        className="rounded-full px-6 py-3 text-sm bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
                       >
                         Cancelar
                       </button>
@@ -1218,7 +1218,7 @@ export function DocumentExplorer({
                       <button
                         type="button"
                         onClick={() => void handleDownload(d.id)}
-                        className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-4 py-2 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
+                        className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
                       >
                         <Download className="h-4 w-4" /> Descarregar
                       </button>

@@ -55,7 +55,7 @@ function AdminClientPage() {
       action={
         <Link
           to="/admin/clientes"
-          className="rounded-full border border-ink/15 px-5 py-2.5 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
+          className="rounded-full px-5 py-2.5 text-xs bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
         >
           ← Voltar aos clientes
         </Link>

@@ -224,7 +224,7 @@ function FichaPage() {
       action={
         <Link
           to="/admin/clientes"
-          className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
+          className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
         >
           <ArrowLeft className="h-4 w-4" /> Voltar aos clientes
         </Link>

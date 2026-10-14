@@ -138,7 +138,7 @@ export function UnlockRequests({ history = false }: { history?: boolean }) {
                   type="button"
                   disabled={busyId === r.id}
                   onClick={() => void act(r.id, "fechado")}
-                  className="rounded-full border border-ink/15 px-5 py-2.5 text-xs text-foreground transition-colors hover:border-gold hover:text-gold disabled:opacity-60"
+                  className="rounded-full px-5 py-2.5 text-xs bg-gold text-ink font-medium transition-colors hover:bg-gold-deep disabled:opacity-60"
                 >
                   Voltar a bloquear
                 </Button>

@@ -382,7 +382,7 @@ function StatementConverterPage() {
           <Button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-3.5 py-1.5 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
+            className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
           >
             <Upload className="h-3.5 w-3.5" />
             <span className="max-w-[220px] truncate">{uploadFiles.length > 1 ? `${uploadFiles.length} PDF selecionados` : file ? file.name : "Escolher PDF"}</span>
@@ -470,7 +470,7 @@ function StatementConverterPage() {
                         <Button
                           type="button"
                           onClick={() => openClientDoc(d.id)}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-4 py-2 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
+                          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
                         >
                           <Eye className="h-3.5 w-3.5" /> Ver PDF
                         </Button>
@@ -505,7 +505,7 @@ function StatementConverterPage() {
               <Button
                 type="button"
                 onClick={() => setRows((prev) => [...(prev ?? []), { ...emptyRow }])}
-                className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
+                className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-medium bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
               >
                 <Plus className="h-4 w-4" /> Adicionar linha
               </Button>
@@ -513,7 +513,7 @@ function StatementConverterPage() {
                 <Button
                   type="button"
                   onClick={onSaveEdits}
-                  className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
+                  className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-medium bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
                 >
                   <Save className="h-4 w-4" /> {saved ? "Alterações guardadas" : "Guardar alterações"}
                 </Button>
@@ -600,7 +600,7 @@ function StatementConverterPage() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button type="button" onClick={() => openHistory(h)} className="rounded-full border border-ink/15 px-4 py-2 text-xs text-foreground transition-colors hover:border-gold hover:text-gold">
+                  <Button type="button" onClick={() => openHistory(h)} className="rounded-full px-4 py-2 text-xs bg-gold text-ink font-medium transition-colors hover:bg-gold-deep">
                     Abrir
                   </Button>
                   <Button type="button" onClick={() => generateExcel(h.rows, h.client_name)} className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-gold-deep">
