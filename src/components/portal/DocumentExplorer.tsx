@@ -176,7 +176,6 @@ export function DocumentExplorer({
   const setYear = (y: number) => updateNav({ ano: y, mes: null, pasta: null });
   const setMonth = (m: number | null) => updateNav({ mes: m, pasta: null });
   const setCategory = (c: string | null) => updateNav({ pasta: c });
-  const [showPast, setShowPast] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [staged, setStaged] = useState<File[]>([]);
   const [progress, setProgress] = useState(0);
@@ -687,20 +686,12 @@ export function DocumentExplorer({
     }
   }
 
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
 
-  function monthStatus(m: number): "locked" | "submitted" | "current" | "future" | "default" {
-    if (year > currentYear || (year === currentYear && m > currentMonth)) return "future";
-    if (monthLocked(m)) {
-      // Submetido mas ainda dentro do prazo (antes do dia 10 do mês seguinte):
-      // bloqueado, mas a mostrar que o prazo ainda não terminou.
-      if (submissionFor(m) && !isMonthPastDeadline(year, m)) return "submitted";
-      return "locked";
-    }
-    if (year === currentYear && m === currentMonth) return "current";
-    return "default";
+  function monthStatus(m: number): "locked" | "grace" | "open" | "future" {
+    if (isFutureMonth(m)) return "future";
+    if (monthLocked(m)) return "locked";
+    // Aberta fora do prazo (janela de 72 h úteis após aprovação): vermelho.
+    return unlockCountdown(m) ? "grace" : "open";
   }
 
   useEffect(() => {
@@ -716,11 +707,6 @@ export function DocumentExplorer({
   }, [yearsOpen]);
 
   const allMonths = MONTHS.map((_, i) => i + 1);
-  const openMonths = allMonths.filter((m) => {
-    const s = monthStatus(m);
-    return s === "current" || s === "default";
-  });
-  const otherMonths = allMonths.filter((m) => !openMonths.includes(m));
 
   return (
     <div>
@@ -799,20 +785,6 @@ export function DocumentExplorer({
               ) : null}
             </div>
           ) : null}
-          {false ? (
-            <button
-              type="button"
-              onClick={() => setShowPast((v) => !v)}
-              aria-expanded={showPast}
-              className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
-            >
-              {showPast ? "Ocultar outros meses" : "Ver outros meses"}
-              <span className="text-muted-foreground">({otherMonths.length})</span>
-              <ChevronDown
-                className={`h-4 w-4 transition-transform ${showPast ? "rotate-180" : ""}`}
-              />
-            </button>
-          ) : null}
         </div>
       ) : null}
 
@@ -825,7 +797,7 @@ export function DocumentExplorer({
       <div className="mt-8">
         {month === null ? (
           (() => {
-            const renderCard = (m: number, size: "md" | "lg" | "md-lg" = "md") => {
+            const renderCard = (m: number) => {
               const name = MONTHS[m - 1]!;
               const submitted = submissionFor(m);
               const pendingRequest = pendingRequestFor(m);
@@ -844,45 +816,14 @@ export function DocumentExplorer({
                         )}`
                       : `${counts[`${m}`] ?? 0} documento(s)`
                   }
-                  status={openMonths.includes(m) ? "current" : monthStatus(m)}
-                  size={size}
+                  status={monthStatus(m)}
                   onClick={() => setMonth(m)}
                 />
               );
             };
-            if (year !== currentYear) {
-              return (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {allMonths.map((m) => renderCard(m))}
-                </div>
-              );
-            }
             return (
-              <div className="space-y-10">
-                {openMonths.length > 0 ? (
-                  <div
-                    className={`grid gap-5 ${
-                      openMonths.length === 1
-                        ? "mx-auto max-w-md grid-cols-1"
-                        : openMonths.length === 3
-                          ? "-mx-2 sm:-mx-5 grid-cols-1 sm:grid-cols-3"
-                          : openMonths.length >= 5
-                            ? "-mx-2 sm:-mx-5 grid-cols-1 sm:grid-cols-3"
-                            : "mx-auto max-w-3xl sm:grid-cols-2"
-                    }`}
-                  >
-                    {openMonths.map((m) =>
-                      renderCard(
-                        m,
-                        openMonths.length === 3 || openMonths.length >= 5 ? "md-lg" : "lg",
-                      ),
-                    )}
-                  </div>
-                ) : null}
-
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {allMonths.map((m) => renderCard(m))}
-                </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {allMonths.map((m) => renderCard(m))}
               </div>
             );
           })()
@@ -1325,25 +1266,28 @@ function FolderCard({
   title: string;
   meta: string;
   onClick: () => void;
-  status?: "locked" | "submitted" | "current" | "future" | "default";
+  status?: "locked" | "grace" | "open" | "future" | "default";
   size?: "md" | "lg" | "md-lg";
 }) {
   const styles = {
+    // Fechada / concluída: verde (OK).
     locked: {
+      card: "border-[oklch(0.55_0.14_150)/45%] bg-[oklch(0.985_0_0)] hover:border-[oklch(0.5_0.14_150)/65%]",
+      iconBg: "bg-[oklch(0.55_0.14_150/12%)]",
+      icon: "text-[oklch(0.5_0.14_150)]",
+      title: "text-foreground",
+      meta: "text-[oklch(0.5_0.14_150)]",
+    },
+    // Aberta fora do prazo (janela de 72 h úteis): vermelho.
+    grace: {
       card: "border-[oklch(0.55_0.18_25)/45%] bg-[oklch(0.985_0_0)] hover:border-[oklch(0.55_0.18_25)/65%]",
       iconBg: "bg-[oklch(0.55_0.18_25/12%)]",
       icon: "text-[oklch(0.55_0.18_25)]",
       title: "text-foreground",
       meta: "text-[oklch(0.55_0.18_25)]",
     },
-    submitted: {
-      card: "border-gold/50 bg-gold/[6%] hover:border-[oklch(0.55_0.18_25)/55%]",
-      iconBg: "bg-[oklch(0.62_0.15_55/18%)]",
-      icon: "text-[oklch(0.52_0.16_40)]",
-      title: "text-foreground",
-      meta: "text-[oklch(0.52_0.16_40)]",
-    },
-    current: {
+    // Aberta dentro do prazo: dourado.
+    open: {
       card: "border-gold/70 bg-gold/[8%] shadow-[0_4px_28px_-10px_color-mix(in_oklab,var(--gold)_28%,transparent)] hover:border-gold hover:-translate-y-0.5",
       iconBg: "bg-gold/25",
       icon: "text-gold-deep",
@@ -1375,14 +1319,14 @@ function FolderCard({
       onClick={onClick}
       className={`soft-card group flex items-center gap-5 text-left transition-transform ${
         large ? "p-7" : mediumLarge ? "p-5 sm:p-6" : "p-5"
-      } ${styles.card} ${status === "current" && (large || mediumLarge) ? "month-glow" : ""}`}
+      } ${styles.card} ${status === "open" && (large || mediumLarge) ? "month-glow" : ""}`}
     >
       <span
         className={`inline-flex items-center justify-center rounded-2xl ${
           large ? "h-16 w-16" : mediumLarge ? "h-12 w-12 sm:h-14 sm:w-14" : "h-12 w-12"
         } ${styles.iconBg} ${styles.icon}`}
       >
-        {status === "locked" || status === "submitted" ? (
+        {status === "locked" || status === "grace" || status === "open" ? (
           <Lock className={large ? "h-7 w-7" : mediumLarge ? "h-5 w-5 sm:h-6 sm:w-6" : "h-5 w-5"} />
         ) : (
           <Folder className={large ? "h-7 w-7" : mediumLarge ? "h-5 w-5 sm:h-6 sm:w-6" : "h-5 w-5"} />
@@ -1398,7 +1342,7 @@ function FolderCard({
         </span>
         <span className={`block ${large || mediumLarge ? "text-sm" : "text-xs"} ${styles.meta}`}>
           {meta}
-          {status === "locked" || status === "submitted" ? " · bloqueada" : ""}
+          {status === "locked" ? " · bloqueada" : ""}
         </span>
       </span>
     </button>
