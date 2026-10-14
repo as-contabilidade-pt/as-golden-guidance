@@ -11,10 +11,8 @@ export async function authenticateVercelCron(request: Request, secret: string | 
   return difference === 0 ? null : Response.json({ error: "Acesso não autorizado." }, { status: 401 });
 }
 
+/** Daily Hobby schedule: any run on day 10 (Lisbon) processes the monthly submissions. */
 export function isMonthlySubmissionTime(now: Date): boolean {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Lisbon", day: "numeric", hour: "numeric", hourCycle: "h23",
-  }).formatToParts(now);
-  return Number(parts.find((part) => part.type === "day")?.value) === 10 &&
-    Number(parts.find((part) => part.type === "hour")?.value) === 9;
+  const day = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Lisbon", day: "numeric" }).format(now);
+  return Number(day) === 10;
 }
