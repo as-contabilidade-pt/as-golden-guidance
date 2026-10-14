@@ -1,9 +1,10 @@
 # Tarefas
 
-- [ ] Preparar agendamentos seguros para a Vercel e instruções de ativação.
-- [ ] Reunir os filtros num único menu com opções selecionáveis em conjunto.
-- [ ] Tornar toda a barra de documentos clicável, com texto centrado e sem botão separado.
-- [ ] Verificar filtros e acesso aos documentos no portal.
+- [x] Preparar agendamentos seguros para a Vercel e instruções de ativação.
+- [ ] Ativar na Vercel: depende de plano Pro, CRON_SECRET, SITE_URL e republicação pelo titular (instruções em VERCEL.md).
+- [x] Reunir os filtros num único menu com opções selecionáveis em conjunto.
+- [x] Tornar toda a barra de documentos clicável, com texto centrado e sem botão separado.
+- [x] Verificar filtros e acesso aos documentos no portal.
 
 - [x] Simplificar a lista de clientes e destacar o acesso aos documentos.
 - [x] Reorganizar os detalhes em secções compactas, com guardar alterações e eliminação no final.
