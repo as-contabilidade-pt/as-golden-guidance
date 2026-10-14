@@ -1,5 +1,6 @@
-# Revisão de ecrãs pequenos
+# Tarefas
 
 - [x] Ajustar cabeçalhos, formulários, documentos e janelas para telemóvel e tablet.
 - [x] Verificar páginas públicas e menus em vários tamanhos (320–1280 px), sem deslocação horizontal e sem erros de execução.
-- [ ] Verificar a área reservada: aguarda início de sessão na pré-visualização; a conta do utilizador não tem sessão disponível para os testes.
+- [x] Verificar a área reservada na pré-visualização: portal aberto com sessão de cliente, grelha de meses, pasta, envio de PDF concluído sem pop-up de confirmação.
+- [x] Retirar o pop-up de confirmação ao clicar em "Enviar N documentos" (envio direto com barra de progresso).
