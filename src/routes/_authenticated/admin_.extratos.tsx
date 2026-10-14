@@ -151,6 +151,7 @@ function StatementConverterPage() {
       }
       setProgressPct(100);
       setBatchResults(results);
+      if (results.length) { try { await downloadZip(results); } catch { /* botão continua disponível */ } }
       if (failures.length) setError(failures.join(" · "));
       await loadHistory();
     } finally { setBusy(false); setProgressLabel(null); setProgressPct(null); }
