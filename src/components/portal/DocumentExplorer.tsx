@@ -203,7 +203,6 @@ export function DocumentExplorer({
   } | null>(null);
   const [responsibleName, setResponsibleName] = useState("");
   type PendingConfirm =
-    | { kind: "upload"; files: File[] }
     | { kind: "submit" }
     | { kind: "delete"; doc: Doc }
     | { kind: "lock"; action: "lock" | "unlock" }
@@ -1133,7 +1132,7 @@ export function DocumentExplorer({
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => setPendingConfirm({ kind: "upload", files: staged })}
+                        onClick={() => void doUpload(staged)}
                         className="mt-1 inline-flex items-center gap-2 rounded-full bg-gold px-6 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
                       >
                         <Upload className="h-4 w-4" />
@@ -1241,10 +1240,8 @@ export function DocumentExplorer({
             <Trash2 className="h-6 w-6" />
           ) : pendingConfirm?.kind === "submit" ? (
             <CheckCircle2 className="h-6 w-6" />
-          ) : pendingConfirm?.kind === "lock" ? (
-            <Lock className="h-6 w-6" />
           ) : (
-            <Upload className="h-6 w-6" />
+            <Lock className="h-6 w-6" />
           )
         }
         title={
@@ -1256,9 +1253,7 @@ export function DocumentExplorer({
                 ? pendingConfirm.action === "unlock"
                   ? "Desbloquear mês?"
                   : "Bloquear mês?"
-                : pendingConfirm && pendingConfirm.files.length === 1
-                  ? "Enviar documento?"
-                  : "Enviar documentos?"
+                : ""
         }
         message={
           pendingConfirm?.kind === "delete"
@@ -1269,20 +1264,7 @@ export function DocumentExplorer({
                 ? pendingConfirm.action === "unlock"
                   ? `Tem a certeza que pretende desbloquear ${month ? monthLabel(month) : ""} ${year} deste cliente? Se for antes do dia 10 do mês seguinte, fica desbloqueado até ao dia 10; se já tiver passado, o cliente tem 72 horas úteis para submeter. O cliente e a administração recebem um email.`
                   : `Tem a certeza que pretende bloquear ${month ? monthLabel(month) : ""} ${year} deste cliente? O cliente e a administração recebem um email.`
-                : pendingConfirm && pendingConfirm.files.length === 1
-                  ? "Tem a certeza que pretende enviar este documento?"
-                  : "Tem a certeza que pretende enviar estes documentos?"
-        }
-        details={
-          pendingConfirm?.kind === "upload" ? (
-            <div className="rounded-2xl border border-gold/20 bg-gold/5 px-5 py-4 text-xs text-muted-foreground">
-              {pendingConfirm.files.map((f) => (
-                <p key={f.name} className="truncate">
-                  {f.name}
-                </p>
-              ))}
-            </div>
-          ) : null
+                : ""
         }
         confirmLabel={
           pendingConfirm?.kind === "delete"
@@ -1293,13 +1275,12 @@ export function DocumentExplorer({
                 ? pendingConfirm.action === "unlock"
                   ? "Desbloquear"
                   : "Bloquear"
-                : "Enviar"
+                : "Confirmar"
         }
         onConfirm={() => {
           const pc = pendingConfirm;
           if (!pc) return;
-          if (pc.kind === "upload") void doUpload(pc.files);
-          else if (pc.kind === "submit") void doSubmitMonth();
+          if (pc.kind === "submit") void doSubmitMonth();
           else if (pc.kind === "lock") void doSetLock(pc.action);
           else void doDelete(pc.doc.id);
         }}
