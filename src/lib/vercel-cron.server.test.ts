@@ -25,13 +25,13 @@ describe("Vercel cron authentication", () => {
   });
 });
 
-describe("monthly submission uses Lisbon time", () => {
-  test("summer and winter both run on day 10 at 09:00", () => {
+describe("monthly submission uses Lisbon day", () => {
+  test("daily run on day 10 in summer and winter", () => {
     assert.equal(isMonthlySubmissionTime(new Date("2026-10-10T08:00:00Z")), true);
-    assert.equal(isMonthlySubmissionTime(new Date("2026-12-10T09:00:00Z")), true);
+    assert.equal(isMonthlySubmissionTime(new Date("2026-12-10T08:59:00Z")), true);
   });
-  test("skips the other UTC hour and every other day", () => {
-    for (const date of ["2026-10-10T09:00:00Z", "2026-12-10T08:00:00Z", "2026-10-09T08:00:00Z", "2026-10-11T08:00:00Z"]) {
+  test("skips every other day", () => {
+    for (const date of ["2026-10-09T08:00:00Z", "2026-10-11T08:00:00Z", "2026-10-09T23:30:00Z"]) {
       assert.equal(isMonthlySubmissionTime(new Date(date)), false);
     }
   });
