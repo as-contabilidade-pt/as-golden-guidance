@@ -176,7 +176,6 @@ export function DocumentExplorer({
   const setYear = (y: number) => updateNav({ ano: y, mes: null, pasta: null });
   const setMonth = (m: number | null) => updateNav({ mes: m, pasta: null });
   const setCategory = (c: string | null) => updateNav({ pasta: c });
-  const [showPast, setShowPast] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [staged, setStaged] = useState<File[]>([]);
   const [progress, setProgress] = useState(0);
