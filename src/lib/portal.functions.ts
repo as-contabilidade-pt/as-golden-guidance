@@ -578,6 +578,7 @@ export const decideUnlockRequest = createServerFn({ method: "POST" })
         reason: row.reason,
         decision: data.decision,
         decidedAt,
+        adminNote: data.note?.trim() || undefined,
         declarationText: row.declaration_text ?? "",
       });
     } catch (e) {

@@ -953,10 +953,11 @@ export function DocumentExplorer({
                     </div>
                     <label className="block">
                       <span className="mb-2 block text-xs font-medium text-foreground/80">
-                        Nome do responsável
+                        Nome do responsável (pessoa que está a submeter a documentação)
                       </span>
                       <input
                         value={responsibleName}
+                        placeholder="Escreva o seu nome"
                         onChange={(e) => setResponsibleName(e.target.value)}
                         className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50"
                       />
