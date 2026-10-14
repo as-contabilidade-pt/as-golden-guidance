@@ -1326,7 +1326,7 @@ function FolderCard({
           large ? "h-16 w-16" : mediumLarge ? "h-12 w-12 sm:h-14 sm:w-14" : "h-12 w-12"
         } ${styles.iconBg} ${styles.icon}`}
       >
-        {status === "locked" || status === "submitted" ? (
+        {status === "locked" || status === "grace" || status === "open" ? (
           <Lock className={large ? "h-7 w-7" : mediumLarge ? "h-5 w-5 sm:h-6 sm:w-6" : "h-5 w-5"} />
         ) : (
           <Folder className={large ? "h-7 w-7" : mediumLarge ? "h-5 w-5 sm:h-6 sm:w-6" : "h-5 w-5"} />
