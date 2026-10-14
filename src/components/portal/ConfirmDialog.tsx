@@ -60,7 +60,7 @@ export function ConfirmDialog({
               onClick={() => {
                 if (!busy) onCancel();
               }}
-              className="h-auto min-h-11 min-w-0 flex-1 whitespace-normal rounded-full border border-ink/15 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:border-gold hover:text-gold disabled:opacity-50"
+              className="h-auto min-h-11 min-w-0 flex-1 whitespace-normal rounded-full px-4 py-3 text-sm font-medium bg-gold text-ink font-medium transition-colors hover:bg-gold-deep disabled:opacity-50"
             >
               {cancelLabel}
             </Button>
