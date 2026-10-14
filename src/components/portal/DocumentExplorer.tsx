@@ -686,9 +686,6 @@ export function DocumentExplorer({
     }
   }
 
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
 
   function monthStatus(m: number): "locked" | "grace" | "open" | "future" {
     if (isFutureMonth(m)) return "future";
