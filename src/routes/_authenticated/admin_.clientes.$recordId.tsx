@@ -3,7 +3,9 @@ import { friendlyError } from "@/lib/friendly-error";
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, FolderOpen, Loader2, Mail, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, FolderOpen, Loader2, Save, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
 import { CategoryPicker } from "@/components/portal/CategoryPicker";
@@ -11,7 +13,8 @@ import {
   getClientRecord,
   updateClientRecord,
   deleteClientRecord,
-  inviteFromRecord,
+  setClientActive,
+  getClientDeleteInfo,
 } from "@/lib/portal.functions";
 
 export const Route = createFileRoute("/_authenticated/admin_/clientes/$recordId")({
@@ -84,7 +87,8 @@ function FichaPage() {
   const fetchRecord = useServerFn(getClientRecord);
   const save = useServerFn(updateClientRecord);
   const removeRecord = useServerFn(deleteClientRecord);
-  const invite = useServerFn(inviteFromRecord);
+  const toggleActive = useServerFn(setClientActive);
+  const fetchDeleteInfo = useServerFn(getClientDeleteInfo);
   const [userId, setUserId] = useState<string | null>(null);
 
   const [form, setForm] = useState<Form>(empty);
@@ -92,6 +96,12 @@ function FichaPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState(false);
+  const [deleteStage, setDeleteStage] = useState<"simple" | "warn" | "final">("simple");
+  const [deleteInfo, setDeleteInfo] = useState({ documents: 0, submissions: 0 });
+  const [pendingToggle, setPendingToggle] = useState(false);
+  const [emailInput, setEmailInput] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const needsEmail = !form.folderActive && !userId && !form.email.trim();
 
   useEffect(() => {
     void (async () => {
@@ -142,7 +152,7 @@ function FichaPage() {
     try {
       await save({ data: { id: recordId, ...form, nif } });
       setForm((f) => ({ ...f, nif }));
-      setNotice("Ficha guardada.");
+      setNotice("Alterações guardadas.");
     } catch (e) {
       setError(friendlyError(e, "Não foi possível guardar a ficha."));
     } finally {
@@ -150,34 +160,54 @@ function FichaPage() {
     }
   }
 
-  async function onInvite() {
+  async function doToggle() {
+    const email = needsEmail ? emailInput.trim() : form.email.trim();
+    if (needsEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailError("Introduza um email válido.");
+      return;
+    }
     setBusy(true);
     setError(null);
     setNotice(null);
     try {
-      await save({ data: { id: recordId, ...form } });
-      const res = (await invite({
-        data: { id: recordId, redirectTo: `${window.location.origin}/definir-password` },
-      })) as { email: string };
-      setNotice(`Acesso criado. Convite enviado para ${res.email}.`);
-      setForm((f) => ({ ...f, folderActive: true }));
-      const r = (await fetchRecord({ data: { id: recordId } })) as Record<string, unknown>;
+      const res = await toggleActive({ data: {
+        id: recordId,
+        active: !form.folderActive,
+        redirectTo: `${window.location.origin}/definir-password`,
+        ...(needsEmail ? { email } : {}),
+      } }) as { invited: boolean; email: string };
+      setNotice(res.invited ? `Cliente ativado. Email de autenticação enviado para ${res.email}.` : form.folderActive ? "Cliente desativado." : "Cliente ativado.");
+      const r = await fetchRecord({ data: { id: recordId } }) as Record<string, unknown>;
       setUserId((r["user_id"] as string | null) ?? null);
+      setForm((f) => ({ ...f, folderActive: Boolean(r["folder_active"]), email: String(r["email"] ?? f.email) }));
+      setPendingToggle(false);
     } catch (e) {
-      setError(friendlyError(e, "Não foi possível enviar o convite."));
+      setPendingToggle(false);
+      setError(friendlyError(e, "Não foi possível alterar o estado do cliente."));
     } finally {
       setBusy(false);
     }
   }
 
   async function onDelete() {
-    setPendingDelete(true);
+    setBusy(true);
+    setError(null);
+    try {
+      const info = await fetchDeleteInfo({ data: { id: recordId } }) as { documents: number; submissions: number };
+      setDeleteInfo(info);
+      setDeleteStage(info.documents > 0 || info.submissions > 0 ? "warn" : "simple");
+      setPendingDelete(true);
+    } catch (e) {
+      setError(friendlyError(e, "Não foi possível verificar o cliente."));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function doDelete() {
     setBusy(true);
     try {
-      await removeRecord({ data: { id: recordId } });
+      await removeRecord({ data: { id: recordId, force: deleteStage === "final" } });
       setPendingDelete(false);
       await navigate({ to: "/admin/clientes" });
     } catch (e) {
@@ -190,7 +220,7 @@ function FichaPage() {
   return (
     <PortalShell
       title={form.name || "Ficha de Cliente"}
-      subtitle="Dados completos do cliente e estado da pasta de submissão de documentos."
+      subtitle={`Nº interno ${form.clientNumber || "—"} · ${form.folderActive ? "Cliente ativo" : "Cliente inativo"}`}
       action={
         <Link
           to="/admin/clientes"
@@ -211,119 +241,101 @@ function FichaPage() {
         </p>
       ) : null}
 
-      <div className="soft-card grid gap-5 p-6 sm:grid-cols-2 sm:p-8">
-        <Field label="Nº de Cliente" value={form.clientNumber} onChange={(v) => set("clientNumber", v)} />
-        <Field label="Nome / Designação" value={form.name} onChange={(v) => set("name", v)} />
-        <Field label="NIF" value={form.nif} onChange={(v) => set("nif", v)} />
-        <Field label="Telefone" value={form.phone} onChange={(v) => set("phone", v)} />
-        <Field label="Morada" value={form.address} onChange={(v) => set("address", v)} />
-        <Field label="Código Postal" value={form.postalCode} onChange={(v) => set("postalCode", v)} />
-        <Field label="Localidade" value={form.locality} onChange={(v) => set("locality", v)} />
-        <Field label="Email" value={form.email} onChange={(v) => set("email", v)} type="email" />
-        <Field
-          label="Nome do Responsável"
-          value={form.responsibleName}
-          onChange={(v) => set("responsibleName", v)}
-        />
-        <label className="block sm:col-span-2">
-          <span className="mb-2 block text-xs font-medium text-foreground/80">Observações</span>
-          <textarea
-            rows={4}
-            value={form.notes}
-            onChange={(e) => set("notes", e.target.value)}
-            className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50"
-          />
-        </label>
-
-        <div className="sm:col-span-2">
-          <CategoryPicker
-            value={form.categories}
-            onChange={(v) => set("categories", v)}
-          />
-          {form.categories === null ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Este cliente tem acesso a todas as pastas. Desmarque as que não se aplicam.
-            </p>
-          ) : null}
+      <section aria-label="Documentos do cliente" className="mb-6 flex flex-col gap-4 border-b border-gold/20 pb-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gold/15 text-gold-deep"><FolderOpen className="size-6" /></span>
+          <div>
+            <h2 className="text-xl font-medium">Documentos</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{userId ? "Arquivo de documentos do cliente" : "Este cliente ainda não tem acesso ao portal"}</p>
+          </div>
         </div>
+        {userId ? (
+          <Button asChild className="h-12 rounded-full px-6 text-sm shadow-none">
+            <Link to="/admin/cliente/$clientId" params={{ clientId: userId }}>Abrir documentos <ArrowUpRight className="size-5" /></Link>
+          </Button>
+        ) : null}
+      </section>
 
-        <div className="sm:col-span-2 rounded-2xl border border-gold/25 bg-gold/5 px-5 py-4">
-          <label className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              checked={form.folderActive}
-              onChange={(e) => set("folderActive", e.target.checked)}
-              className="mt-1 h-4 w-4 accent-[color:var(--gold)]"
-            />
-            <span>
-              <span className="block text-sm font-medium text-foreground">
-                Cliente ativo
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                Se ativo, o cliente acede à área de cliente e recebe os emails automáticos. Se
-                inativo, a ficha mantém-se registada sem acesso nem emails. Para ativar pela primeira
-                vez e enviar o email de autenticação, use a lista de clientes ou o botão abaixo.
-              </span>
-            </span>
-          </label>
-        </div>
+      <form onSubmit={(event) => { event.preventDefault(); void onSave(); }}>
+        <Tabs defaultValue="dados">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <TabsList className="h-auto w-fit max-w-full rounded-full bg-secondary p-1">
+              <TabsTrigger value="dados" className="min-h-10 rounded-full px-4 text-sm">Dados do cliente</TabsTrigger>
+              <TabsTrigger value="acesso" className="min-h-10 rounded-full px-4 text-sm">Pastas e acesso</TabsTrigger>
+            </TabsList>
+            <Button type="submit" disabled={busy} className="h-11 rounded-full px-5 shadow-none">
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Guardar alterações
+            </Button>
+          </div>
+          <TabsContent value="dados" className="mt-0">
+            <div className="grid gap-x-5 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
+              <Field label="Número interno" value={form.clientNumber} onChange={(v) => set("clientNumber", v)} />
+              <Field label="Nome / Designação" value={form.name} onChange={(v) => set("name", v)} />
+              <Field label="NIF" value={form.nif} onChange={(v) => set("nif", v)} />
+              <Field label="Email" value={form.email} onChange={(v) => set("email", v)} type="email" />
+              <Field label="Telefone" value={form.phone} onChange={(v) => set("phone", v)} />
+              <Field label="Nome do responsável" value={form.responsibleName} onChange={(v) => set("responsibleName", v)} />
+              <Field label="Morada" value={form.address} onChange={(v) => set("address", v)} />
+              <Field label="Código postal" value={form.postalCode} onChange={(v) => set("postalCode", v)} />
+              <Field label="Localidade" value={form.locality} onChange={(v) => set("locality", v)} />
+              <label className="block md:col-span-2 lg:col-span-3">
+                <span className="mb-1.5 block text-xs font-medium text-foreground/80">Observações internas</span>
+                <textarea rows={2} value={form.notes} onChange={(e) => set("notes", e.target.value)} className="w-full rounded-2xl border border-gold/20 bg-card px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-gold/50" />
+              </label>
+            </div>
+          </TabsContent>
+          <TabsContent value="acesso" className="mt-0">
+            <div className="mb-5 flex flex-col gap-3 border-b border-border pb-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-base font-medium">{form.folderActive ? "Cliente ativo" : "Cliente inativo"}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{form.folderActive ? "Com acesso ao portal e emails automáticos." : "Registado, sem acesso ao portal nem emails automáticos."}</p>
+              </div>
+              <Button type="button" variant="outline" disabled={busy} onClick={() => { setEmailInput(""); setEmailError(null); setPendingToggle(true); }} className="h-11 rounded-full px-5">
+                {form.folderActive ? "Desativar cliente" : "Ativar cliente"}
+              </Button>
+            </div>
+            <CategoryPicker value={form.categories} onChange={(v) => set("categories", v)} />
+          </TabsContent>
+        </Tabs>
+      </form>
 
-        <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ink/10 px-5 py-4">
-          <span className="text-sm text-foreground">
-            {userId ? "Este cliente já tem acesso à área de cliente." : "Este cliente ainda não tem acesso à área de cliente."}
-          </span>
-          {userId ? (
-            <Link
-              to="/admin/cliente/$clientId"
-              params={{ clientId: userId }}
-              className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10"
-            >
-              <FolderOpen className="h-4 w-4" /> Ver documentos
-            </Link>
-          ) : (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void onInvite()}
-              className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-5 py-2.5 text-sm text-gold hover:bg-gold/10 disabled:opacity-60"
-            >
-              <Mail className="h-4 w-4" /> Criar acesso e enviar convite
-            </button>
-          )}
-        </div>
-
-        <div className="flex flex-wrap gap-3 sm:col-span-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void onSave()}
-            className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Guardar ficha
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void onDelete()}
-            className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-6 py-3 text-sm text-foreground transition-colors hover:border-destructive hover:text-destructive disabled:opacity-60"
-          >
-            <Trash2 className="h-4 w-4" /> Remover ficha
-          </button>
-        </div>
+      <div className="mt-6 flex justify-end border-t border-border pt-4">
+        <Button type="button" variant="ghost" disabled={busy} onClick={() => void onDelete()} className="rounded-full text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+          <Trash2 className="size-4" /> Apagar cliente
+        </Button>
       </div>
+      <ConfirmDialog
+        open={pendingToggle}
+        busy={busy}
+        destructive={form.folderActive}
+        title={form.folderActive ? "Desativar cliente?" : "Ativar cliente?"}
+        message={form.folderActive
+          ? `Tem a certeza que pretende desativar ${form.name}? Deixa de ter acesso à área de cliente.`
+          : needsEmail
+            ? "Introduza o email do cliente. Será enviado um email para autenticar e definir a palavra-passe."
+            : !userId
+              ? `Será enviado um email para ${form.email} para autenticar e definir a palavra-passe. Confirma a ativação?`
+              : `Tem a certeza que pretende ativar ${form.name}? Volta a ter acesso à área de cliente.`}
+        details={needsEmail ? <label className="block text-left text-sm">Email do cliente<input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} className="mt-2 w-full rounded-2xl border border-gold/30 bg-card px-4 py-3 outline-none focus:border-gold" />{emailError ? <span className="mt-2 block text-xs text-destructive">{emailError}</span> : null}</label> : null}
+        confirmLabel={form.folderActive ? "Desativar" : "Ativar cliente"}
+        onConfirm={() => void doToggle()}
+        onCancel={() => { if (!busy) setPendingToggle(false); }}
+      />
       <ConfirmDialog
         open={pendingDelete}
         busy={busy}
         destructive
-        icon={<Trash2 className="h-6 w-6" />}
-        title="Remover ficha de cliente?"
-        message="Tem a certeza que pretende remover esta ficha de cliente? Esta ação não pode ser revertida."
-        confirmLabel="Remover"
-        onConfirm={() => void doDelete()}
-        onCancel={() => {
-          if (!busy) setPendingDelete(false);
-        }}
+        icon={<Trash2 className="size-6" />}
+        title={deleteStage === "final" ? "Eliminação definitiva" : deleteStage === "warn" ? "Cliente com documentos" : "Apagar cliente?"}
+        message={deleteStage === "final"
+          ? `Vai apagar definitivamente ${form.name}, o acesso à área de cliente e todos os documentos e submissões. Esta ação não pode ser revertida. Confirma?`
+          : deleteStage === "warn"
+            ? `${form.name} tem ${deleteInfo.documents} documento(s) e ${deleteInfo.submissions} submissão(ões). Recomenda-se desativar o cliente para preservar o arquivo, em vez de o apagar.`
+            : `Tem a certeza que pretende apagar ${form.name}? A ficha e o eventual acesso ao portal serão eliminados definitivamente.`}
+        confirmLabel={deleteStage === "warn" ? "Apagar mesmo assim" : deleteStage === "final" ? "Apagar tudo" : "Apagar"}
+        cancelLabel={deleteStage === "warn" ? "Manter cliente" : "Cancelar"}
+        onConfirm={() => { if (deleteStage === "warn") setDeleteStage("final"); else void doDelete(); }}
+        onCancel={() => { if (!busy) setPendingDelete(false); }}
       />
     </PortalShell>
   );
@@ -342,12 +354,12 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-xs font-medium text-foreground/80">{label}</span>
+      <span className="mb-1.5 block text-xs font-medium text-foreground/80">{label}</span>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-gold/20 bg-background px-5 py-3 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
+        className="w-full rounded-2xl border border-gold/20 bg-card px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
       />
     </label>
   );
