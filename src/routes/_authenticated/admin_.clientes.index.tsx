@@ -3,7 +3,7 @@ import { friendlyError } from "@/lib/friendly-error";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronDown, Download, FolderOpen, Loader2, Plus, Search, Trash2, Upload } from "lucide-react";
+import { ArrowRight, ChevronDown, Download, FolderOpen, Loader2, Plus, Search, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,9 +17,6 @@ import {
   createClientRecord,
   importClientRecords,
   exportClientRecords,
-  setClientActive,
-  getClientDeleteInfo,
-  deleteClientRecord,
   createRecordFromAccount,
 } from "@/lib/portal.functions";
 
@@ -85,24 +82,6 @@ function ClientesPage() {
   const fetchAccounts = useServerFn(listClients);
   const importRows = useServerFn(importClientRecords);
   const exportRows = useServerFn(exportClientRecords);
-  const toggleFolder = useServerFn(setClientActive);
-  const fetchDeleteInfo = useServerFn(getClientDeleteInfo);
-  const removeRecord = useServerFn(deleteClientRecord);
-  const [pendingToggle, setPendingToggle] = useState<Row | null>(null);
-  const [emailInput, setEmailInput] = useState("");
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const needsEmail = Boolean(
-    pendingToggle && !pendingToggle.folder_active && !pendingToggle.user_id && !pendingToggle.email?.trim(),
-  );
-  useEffect(() => {
-    setEmailInput("");
-    setEmailError(null);
-  }, [pendingToggle]);
-  const [pendingDelete, setPendingDelete] = useState<Row | null>(null);
-  const [deleteStage, setDeleteStage] = useState<"simple" | "warn" | "final">("simple");
-  const [deleteInfo, setDeleteInfo] = useState({ documents: 0, submissions: 0 });
-  const [deleteBusy, setDeleteBusy] = useState(false);
-  const [toggleBusy, setToggleBusy] = useState(false);
   const fromAccount = useServerFn(createRecordFromAccount);
 
   const [rows, setRows] = useState<Row[]>([]);
@@ -168,73 +147,6 @@ function ClientesPage() {
   }, [rows, query, sort, asc, defaultView]);
 
   const activeCount = rows.filter((r) => r.folder_active).length;
-
-  function toggleSort(key: SortKey) {
-    setDefaultView(false);
-    if (key === sort) setAsc((v) => !v);
-    else {
-      setSort(key);
-      setAsc(true);
-    }
-  }
-
-  async function askDelete(r: Row) {
-    setError(null);
-    setNotice(null);
-    try {
-      const info = (await fetchDeleteInfo({ data: { id: r.id } })) as {
-        documents: number;
-        submissions: number;
-      };
-      setDeleteInfo(info);
-      setDeleteStage(info.documents > 0 || info.submissions > 0 ? "warn" : "simple");
-      setPendingDelete(r);
-    } catch (e) {
-      setError(friendlyError(e, "Não foi possível verificar o cliente."));
-    }
-  }
-
-  async function doDelete() {
-    if (!pendingDelete) return;
-    setDeleteBusy(true);
-    try {
-      await removeRecord({ data: { id: pendingDelete.id, force: deleteStage === "final" } });
-      setNotice(`Cliente ${pendingDelete.name} apagado.`);
-      setPendingDelete(null);
-      await load();
-    } catch (e) {
-      setError(friendlyError(e, "Não foi possível apagar o cliente."));
-      setPendingDelete(null);
-    } finally {
-      setDeleteBusy(false);
-    }
-  }
-
-  async function doToggle(r: Row, email?: string) {
-    setToggleBusy(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const res = (await toggleFolder({
-        data: {
-          id: r.id,
-          active: !r.folder_active,
-          redirectTo: `${window.location.origin}/definir-password`,
-          ...(email ? { email } : {}),
-        },
-      })) as { invited: boolean; email: string };
-      if (res.invited) setNotice(`Cliente ativado. Email de autenticação enviado para ${res.email}.`);
-      else setNotice(r.folder_active ? "Cliente desativado." : "Cliente ativado.");
-      setPendingToggle(null);
-      await load();
-    } catch (e) {
-      setError(friendlyError(e, "Não foi possível alterar o cliente."));
-      setPendingToggle(null);
-      await load();
-    } finally {
-      setToggleBusy(false);
-    }
-  }
 
   async function onImport(file: File) {
     setBusy(true);
@@ -467,102 +379,45 @@ function ClientesPage() {
         </div>
       </div>
 
-      <div className="soft-card overflow-x-auto p-0">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead>
-            <tr className="border-b border-ink/10 text-xs uppercase tracking-wide text-muted-foreground">
-              {(
-                [
-                  ["client_number", "Nº"],
-                  ["name", "Nome / Denominação"],
-                  ["nif", "NIF"],
-                  ["locality", "Localidade"],
-                  ["folder_active", "Cliente"],
-                ] as [SortKey, string][]
-              ).map(([key, label]) => (
-                <th key={key} className="px-5 py-4">
-                  <button type="button" onClick={() => toggleSort(key)} className="transition-colors hover:text-gold">
-                    {label}
-                    {sort === key ? (asc ? " ↑" : " ↓") : ""}
-                  </button>
-                </th>
-              ))}
-              <th className="px-5 py-4" />
-              <th className="px-3 py-4" />
-            </tr>
-          </thead>
-          <tbody>
-            {visible.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-5 py-10 text-center text-muted-foreground">
-                  Nenhum cliente encontrado.
-                </td>
-              </tr>
-            ) : (
-              visible.map((r) => {
-                const account = accountFor(r);
-                return (
-                  <tr
-                    key={r.id}
-                    onClick={() => navigate({ to: "/admin/clientes/$recordId", params: { recordId: r.id } })}
-                    className="cursor-pointer border-b border-ink/5 transition-colors last:border-0 hover:bg-gold/5"
-                  >
-                    <td className="px-5 py-3 text-muted-foreground">{r.client_number || "—"}</td>
-                    <td className="px-5 py-3 font-medium text-foreground">{r.name}</td>
-                    <td className="px-5 py-3 text-muted-foreground">{r.nif || "—"}</td>
-                    <td className="px-5 py-3 text-muted-foreground">{r.locality || "—"}</td>
-                    <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={r.folder_active}
-                        onClick={() => setPendingToggle(r)}
-                        className="inline-flex items-center gap-2 text-xs"
-                      >
-                        <span
-                          className={`relative h-5 w-9 rounded-full transition-colors ${
-                            r.folder_active ? "bg-gold" : "bg-secondary"
-                          }`}
-                        >
-                          <span
-                            className={`absolute top-0.5 h-4 w-4 rounded-full bg-background shadow transition-all ${
-                              r.folder_active ? "left-[18px]" : "left-0.5"
-                            }`}
-                          />
-                        </span>
-                        <span className={r.folder_active ? "text-gold" : "text-muted-foreground"}>
-                          {r.folder_active ? "Ativo" : "Inativo"}
-                        </span>
-                      </button>
-                    </td>
-                    <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      {account ? (
-                        <Link
-                          to="/admin/cliente/$clientId"
-                          params={{ clientId: account }}
-                          className="inline-flex items-center gap-1 text-xs text-gold hover:underline"
-                        >
-                          <FolderOpen className="h-3.5 w-3.5" /> Documentos
-                        </Link>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        aria-label={`Apagar ${r.name}`}
-                        onClick={() => void askDelete(r)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      <section aria-label="Lista de clientes" className="overflow-hidden rounded-3xl border border-gold/20 bg-card">
+        <div className="hidden grid-cols-[90px_minmax(0,1fr)_200px_110px] items-center gap-5 border-b border-border px-6 py-4 text-xs font-medium text-muted-foreground md:grid">
+          <span>Nº interno</span>
+          <span>Nome do cliente</span>
+          <span>Documentos</span>
+          <span className="text-right">Detalhes</span>
+        </div>
+        {visible.length === 0 ? (
+          <p className="px-5 py-10 text-center text-sm text-muted-foreground">Nenhum cliente encontrado.</p>
+        ) : visible.map((r) => {
+          const account = accountFor(r);
+          return (
+            <div key={r.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-4 border-b border-ink/5 px-5 py-5 transition-colors last:border-0 hover:bg-gold/5 md:grid-cols-[90px_minmax(0,1fr)_200px_110px] md:gap-5 md:px-6">
+              <span className="hidden text-sm tabular-nums text-muted-foreground md:block">{r.client_number || "—"}</span>
+              <div className="min-w-0">
+                <Link to="/admin/clientes/$recordId" params={{ recordId: r.id }} className="block break-words text-base font-medium text-foreground hover:text-gold-deep">{r.name}</Link>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  <span className="md:hidden">Nº interno {r.client_number || "—"} · </span>
+                  {r.folder_active ? "Ativo" : "Inativo"}
+                </p>
+              </div>
+              <div className="col-span-2 row-start-2 md:col-span-1 md:row-auto">
+                {account ? (
+                  <Button asChild className="h-12 w-full justify-start rounded-full bg-gold/15 px-5 text-base text-foreground shadow-none hover:bg-gold/25 md:w-auto">
+                    <Link to="/admin/cliente/$clientId" params={{ clientId: account }} aria-label={`Documentos de ${r.name}`}>
+                      <FolderOpen className="size-5 text-gold-deep" /> Documentos <ArrowRight className="ml-2 size-4 text-gold-deep" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <span className="inline-flex min-h-12 items-center gap-2 text-sm text-muted-foreground"><FolderOpen className="size-5 opacity-50" /> Sem documentos</span>
+                )}
+              </div>
+              <Button asChild variant="ghost" className="col-start-2 row-start-1 h-10 rounded-full px-0 text-xs text-muted-foreground hover:bg-transparent hover:text-gold-deep md:col-auto md:row-auto md:justify-end">
+                <Link to="/admin/clientes/$recordId" params={{ recordId: r.id }} aria-label={`Ver tudo de ${r.name}`}>Ver tudo <ArrowRight className="size-4" /></Link>
+              </Button>
+            </div>
+          );
+        })}
+      </section>
 
       {orphanAccounts.length > 0 ? (
         <div className="soft-card mt-8 p-6">
@@ -593,84 +448,6 @@ function ClientesPage() {
         busy={busy}
         onCancel={() => setConfirmExport(false)}
         onConfirm={() => { setConfirmExport(false); void onExport(); }}
-      />
-      <ConfirmDialog
-        open={pendingToggle !== null}
-        busy={toggleBusy}
-        destructive={Boolean(pendingToggle?.folder_active)}
-        title={pendingToggle?.folder_active ? "Desativar cliente?" : "Ativar cliente?"}
-        message={
-          pendingToggle?.folder_active
-            ? `Tem a certeza que pretende desativar ${pendingToggle?.name}? Deixa de ter acesso à pasta de documentos na área de cliente.`
-            : pendingToggle && !pendingToggle.user_id && needsEmail
-              ? `${pendingToggle.name} não tem email registado. Introduza o email para ativar o cliente e enviar o acesso ao portal.`
-              : pendingToggle && !pendingToggle.user_id
-                ? `Tem a certeza que pretende ativar ${pendingToggle.name}? Será enviado um email para ${pendingToggle.email} para autenticar e definir a palavra-passe.`
-                : `Tem a certeza que pretende ativar ${pendingToggle?.name}? Volta a ter acesso à área de cliente.`
-        }
-        details={
-          needsEmail ? (
-            <div className="text-left">
-              <input
-                type="email"
-                autoFocus
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                placeholder="email@exemplo.pt"
-                className="w-full rounded-2xl border border-gold/30 bg-background px-5 py-3 text-sm text-foreground outline-none focus:border-gold"
-              />
-              {emailError ? <p className="mt-2 text-xs text-destructive">{emailError}</p> : null}
-            </div>
-          ) : null
-        }
-        confirmLabel={
-          pendingToggle?.folder_active ? "Desativar" : needsEmail ? "Guardar e enviar convite" : "Ativar"
-        }
-        onConfirm={() => {
-          if (!pendingToggle) return;
-          if (needsEmail) {
-            const v = emailInput.trim();
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
-              setEmailError("Introduza um email válido.");
-              return;
-            }
-            void doToggle(pendingToggle, v);
-          } else void doToggle(pendingToggle);
-        }}
-        onCancel={() => {
-          if (!toggleBusy) setPendingToggle(null);
-        }}
-      />
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        busy={deleteBusy}
-        destructive
-        icon={<Trash2 className="h-6 w-6" />}
-        title={
-          deleteStage === "final"
-            ? "Eliminação definitiva"
-            : deleteStage === "warn"
-              ? "Cliente com documentos"
-              : "Apagar cliente?"
-        }
-        message={
-          deleteStage === "final"
-            ? `Vai apagar definitivamente ${pendingDelete?.name}, o acesso à área de cliente e todos os documentos e submissões. Esta ação não pode ser revertida. Confirma?`
-            : deleteStage === "warn"
-              ? `${pendingDelete?.name} já tem ${deleteInfo.documents} documento(s) e ${deleteInfo.submissions} submissão(ões) no portal. Recomenda-se desativar o cliente em vez de apagar, para preservar o arquivo legal.`
-              : `Tem a certeza que pretende apagar ${pendingDelete?.name}? A ficha será eliminada definitivamente.`
-        }
-        confirmLabel={
-          deleteStage === "warn" ? "Apagar mesmo assim" : deleteStage === "final" ? "Apagar tudo" : "Apagar"
-        }
-        cancelLabel={deleteStage === "warn" ? "Manter cliente" : "Cancelar"}
-        onConfirm={() => {
-          if (deleteStage === "warn") setDeleteStage("final");
-          else void doDelete();
-        }}
-        onCancel={() => {
-          if (!deleteBusy) setPendingDelete(null);
-        }}
       />
     </PortalShell>
   );
