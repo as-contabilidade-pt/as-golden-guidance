@@ -483,7 +483,6 @@ function StatementConverterPage() {
                         <Button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); openClientDoc(d.id); }}
-                          onClick={() => openClientDoc(d.id)}
                           className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
                         >
                           <Eye className="h-3.5 w-3.5" /> Ver PDF
