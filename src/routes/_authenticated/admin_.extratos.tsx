@@ -145,8 +145,8 @@ function StatementConverterPage() {
         setProgressPct(Math.round((index / docs.length) * 100));
         try {
           const result = await extract({ data: { filename: d.original_name, mimeType: "application/pdf", documentId: d.id, clientName: d.client_name } });
-          if (!result.historyId || !result.rows.length) throw new Error("Sem movimentos ou histórico não guardado.");
-          results.push({ id: result.historyId, client_name: d.client_name, filename: d.original_name, rows: result.rows, row_count: result.rows.length, created_at: new Date().toISOString() });
+          if (!result.rows.length) throw new Error("Não foram encontrados movimentos.");
+          results.push({ id: result.historyId ?? crypto.randomUUID(), client_name: d.client_name, filename: d.original_name, rows: result.rows, row_count: result.rows.length, created_at: new Date().toISOString() });
         } catch (e) { failures.push(`${d.client_name} — ${d.original_name}: ${friendlyError(e, "Não foi possível converter.")}`); }
       }
       setProgressPct(100);
@@ -246,8 +246,8 @@ function StatementConverterPage() {
           setProgressPct(Math.round((index / uploadFiles.length) * 100));
           try {
             const result = await extract({ data: { filename: upload.name, mimeType: "application/pdf", fileData: await fileToBase64(upload), clientName } });
-            if (!result.historyId || !result.rows.length) throw new Error("Não foram encontrados movimentos.");
-            results.push({ id: result.historyId, filename: upload.name, client_name: clientName, rows: result.rows, row_count: result.rows.length, created_at: new Date().toISOString() });
+            if (!result.rows.length) throw new Error("Não foram encontrados movimentos.");
+            results.push({ id: result.historyId ?? crypto.randomUUID(), filename: upload.name, client_name: clientName, rows: result.rows, row_count: result.rows.length, created_at: new Date().toISOString() });
           } catch (e) { failures.push(`${upload.name}: ${friendlyError(e, "Não foi possível converter.")}`); }
         }
         setProgressPct(100);
@@ -515,7 +515,7 @@ function StatementConverterPage() {
               <Button
                 type="button"
                 onClick={exportCurrent}
-                disabled={rows.length === 0 || busy || !historyId}
+                disabled={rows.length === 0 || busy}
                 className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-2.5 text-xs font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
               >
                 <FileSpreadsheet className="h-4 w-4" /> Gerar Excel
