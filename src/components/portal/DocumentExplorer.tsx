@@ -1319,7 +1319,7 @@ function FolderCard({
       onClick={onClick}
       className={`soft-card group flex items-center gap-5 text-left transition-transform ${
         large ? "p-7" : mediumLarge ? "p-5 sm:p-6" : "p-5"
-      } ${styles.card} ${status === "current" && (large || mediumLarge) ? "month-glow" : ""}`}
+      } ${styles.card} ${status === "open" && (large || mediumLarge) ? "month-glow" : ""}`}
     >
       <span
         className={`inline-flex items-center justify-center rounded-2xl ${
