@@ -190,13 +190,20 @@ export const listStatementHistory = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
-    await context.supabase.from("statement_conversions").delete().lt("created_at", since);
+    try {
+      await context.supabase.from("statement_conversions").delete().lt("created_at", since);
+    } catch {
+      // histórico indisponível: ignorar limpeza
+    }
     const { data, error } = await context.supabase
       .from("statement_conversions")
       .select("id, client_name, filename, row_count, created_at, rows")
       .gte("created_at", since)
       .order("created_at", { ascending: false });
-    if (error) throw new Error("Não foi possível carregar o histórico.");
+    if (error) {
+      console.error("statement history unavailable", error.message);
+      return [] as HistoryItem[];
+    }
     return (data ?? []) as unknown as HistoryItem[];
   });
 
