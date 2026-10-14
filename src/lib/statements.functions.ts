@@ -159,7 +159,7 @@ export const extractBankStatement = createServerFn({ method: "POST" })
         } satisfies StatementRow;
       });
 
-    const { data: saved } = await context.supabase
+    const { data: saved, error: historyError } = await context.supabase
       .from("statement_conversions")
       .insert({
         created_by: context.userId,
@@ -172,6 +172,7 @@ export const extractBankStatement = createServerFn({ method: "POST" })
       .select("id")
       .maybeSingle();
 
+    if (historyError || !saved) throw new Error("Os movimentos foram processados, mas não foi possível guardar o histórico. Tente novamente antes de exportar.");
     return { rows: mapped, historyId: (saved?.id as string | undefined) ?? null };
   });
 

@@ -1,5 +1,9 @@
 # Tarefas
 
+- [x] Compactar o conversor, seleção múltipla, Excel separados em ZIP e lista de dez em dez; seleção e apresentação verificadas com administração autenticada.
+- [x] Exigir gravação da conversão e guardar alterações antes de gerar Excel no histórico de 30 dias.
+- [ ] Verificar conversão real até ZIP e releitura do histórico: serviço de processamento não configurado nesta pré-visualização.
+
 - [x] Preparar agendamentos seguros para a Vercel e instruções de ativação.
 - [ ] Ativar na Vercel: depende de plano Pro, CRON_SECRET, SITE_URL e republicação pelo titular (instruções em VERCEL.md).
 - [x] Reunir os filtros num único menu com opções selecionáveis em conjunto.
