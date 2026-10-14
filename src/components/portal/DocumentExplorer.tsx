@@ -1266,25 +1266,28 @@ function FolderCard({
   title: string;
   meta: string;
   onClick: () => void;
-  status?: "locked" | "submitted" | "current" | "future" | "default";
+  status?: "locked" | "grace" | "open" | "future" | "default";
   size?: "md" | "lg" | "md-lg";
 }) {
   const styles = {
+    // Fechada / concluída: verde (OK).
     locked: {
+      card: "border-[oklch(0.55_0.14_150)/45%] bg-[oklch(0.985_0_0)] hover:border-[oklch(0.5_0.14_150)/65%]",
+      iconBg: "bg-[oklch(0.55_0.14_150/12%)]",
+      icon: "text-[oklch(0.5_0.14_150)]",
+      title: "text-foreground",
+      meta: "text-[oklch(0.5_0.14_150)]",
+    },
+    // Aberta fora do prazo (janela de 72 h úteis): vermelho.
+    grace: {
       card: "border-[oklch(0.55_0.18_25)/45%] bg-[oklch(0.985_0_0)] hover:border-[oklch(0.55_0.18_25)/65%]",
       iconBg: "bg-[oklch(0.55_0.18_25/12%)]",
       icon: "text-[oklch(0.55_0.18_25)]",
       title: "text-foreground",
       meta: "text-[oklch(0.55_0.18_25)]",
     },
-    submitted: {
-      card: "border-gold/50 bg-gold/[6%] hover:border-[oklch(0.55_0.18_25)/55%]",
-      iconBg: "bg-[oklch(0.62_0.15_55/18%)]",
-      icon: "text-[oklch(0.52_0.16_40)]",
-      title: "text-foreground",
-      meta: "text-[oklch(0.52_0.16_40)]",
-    },
-    current: {
+    // Aberta dentro do prazo: dourado.
+    open: {
       card: "border-gold/70 bg-gold/[8%] shadow-[0_4px_28px_-10px_color-mix(in_oklab,var(--gold)_28%,transparent)] hover:border-gold hover:-translate-y-0.5",
       iconBg: "bg-gold/25",
       icon: "text-gold-deep",
