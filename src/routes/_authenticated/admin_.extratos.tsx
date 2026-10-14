@@ -19,6 +19,9 @@ import {
   type StatementRow,
 } from "@/lib/statements.functions";
 import { formatDateTimePt } from "@/lib/portal";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { zipSync } from "fflate";
 
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
@@ -63,6 +66,7 @@ function StatementConverterPage() {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [clientName, setClientName] = useState("");
   const [rows, setRows] = useState<StatementRow[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -73,6 +77,11 @@ function StatementConverterPage() {
   const [docFilter, setDocFilter] = useState("");
   const [busyDoc, setBusyDoc] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [batchProgress, setBatchProgress] = useState("");
+  const [batchResults, setBatchResults] = useState<HistoryItem[]>([]);
+  const [currentFilename, setCurrentFilename] = useState("Extrato.pdf");
   const fetchHistory = useServerFn(listStatementHistory);
   const fetchClientDocs = useServerFn(listClientStatements);
   const saveHistory = useServerFn(updateStatementHistory);
@@ -82,27 +91,79 @@ function StatementConverterPage() {
   async function loadHistory() {
     try {
       setHistory(await fetchHistory());
-    } catch {
-      /* ignore */
+    } catch (e) {
+      setError(friendlyError(e, "Não foi possível carregar o histórico."));
     }
   }
   useEffect(() => {
     void loadHistory();
-    fetchClientDocs().then(setClientDocs).catch(() => {});
+    fetchClientDocs().then(setClientDocs).catch((e) => setError(friendlyError(e, "Não foi possível carregar os extratos.")));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const groupedDocs = useMemo(() => {
+  const filteredDocs = useMemo(() => {
     const q = docFilter.trim().toLowerCase();
+    return clientDocs.filter((d) => !q || `${d.client_name} ${d.nif}`.toLowerCase().includes(q))
+      .sort((a, b) => a.client_name.localeCompare(b.client_name, "pt") || b.created_at.localeCompare(a.created_at));
+  }, [clientDocs, docFilter]);
+  const groupedDocs = useMemo(() => {
     const groups = new Map<string, { name: string; nif: string; docs: ClientStatement[] }>();
-    for (const d of clientDocs) {
-      if (q && !`${d.client_name} ${d.nif}`.toLowerCase().includes(q)) continue;
+    for (const d of filteredDocs.slice(0, visibleCount)) {
       const g = groups.get(d.user_id) ?? { name: d.client_name, nif: d.nif, docs: [] };
       g.docs.push(d);
       groups.set(d.user_id, g);
     }
     return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name, "pt"));
-  }, [clientDocs, docFilter]);
+  }, [filteredDocs, visibleCount]);
+
+  function downloadZip(items: HistoryItem[]) {
+    const files: Record<string, Uint8Array> = {};
+    const safe = (name: string) => name.replace(/[^\wÀ-ÿ.-]+/g, "_") || "Cliente";
+    for (const item of items) {
+      const doc = clientDocs.find((d) => d.original_name === item.filename && d.client_name === item.client_name);
+      const period = doc ? `${doc.year}/${String(doc.month).padStart(2, "0")}/` : "";
+      const bytes = generateExcel(item.rows, item.client_name, true);
+      if (bytes) files[`${safe(item.client_name)}/${period}${safe(item.filename.replace(/\.pdf$/i, ""))}_${item.id}.xlsx`] = bytes;
+    }
+    if (!Object.keys(files).length) return;
+    const archive = zipSync(files);
+    const url = URL.createObjectURL(new Blob([new Uint8Array(archive)], { type: "application/zip" }));
+    const link = document.createElement("a");
+    link.href = url; link.download = "Extratos_Excel.zip"; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function processSelected() {
+    const docs = clientDocs.filter((d) => selected.includes(d.id));
+    setBusy(true); setError(null); setBatchResults([]);
+    const results: HistoryItem[] = [];
+    const failures: string[] = [];
+    try {
+      for (const [index, d] of docs.entries()) {
+        setBatchProgress(`${index + 1} de ${docs.length} · ${d.client_name}`);
+        try {
+          const result = await extract({ data: { filename: d.original_name, mimeType: "application/pdf", documentId: d.id, clientName: d.client_name } });
+          if (!result.historyId || !result.rows.length) throw new Error("Sem movimentos ou histórico não guardado.");
+          results.push({ id: result.historyId, client_name: d.client_name, filename: d.original_name, rows: result.rows, row_count: result.rows.length, created_at: new Date().toISOString() });
+        } catch (e) { failures.push(`${d.client_name} — ${d.original_name}: ${friendlyError(e, "Não foi possível converter.")}`); }
+      }
+      setBatchResults(results);
+      if (failures.length) setError(failures.join(" · "));
+      await loadHistory();
+    } finally { setBusy(false); setBatchProgress(""); }
+  }
+
+  async function exportCurrent() {
+    if (!rows?.length || !historyId) return;
+    setBusy(true); setError(null);
+    try {
+      await saveHistory({ data: { id: historyId, clientName, rows } });
+      setSaved(true);
+      generateExcel(rows, clientName);
+      await loadHistory();
+    } catch (e) { setError(friendlyError(e, "Não foi possível guardar o Excel no histórico.")); }
+    finally { setBusy(false); }
+  }
 
   async function openClientDoc(id: string) {
     try {
@@ -120,6 +181,7 @@ function StatementConverterPage() {
     setRows(null);
     setSaved(false);
     const name = d.client_name;
+    setCurrentFilename(d.original_name);
     setClientName(name);
     try {
       const result = await extract({
@@ -139,6 +201,7 @@ function StatementConverterPage() {
   }
 
   function openHistory(h: HistoryItem) {
+    setCurrentFilename(h.filename);
     setRows(h.rows);
     setClientName(h.client_name);
     setHistoryId(h.id);
@@ -166,6 +229,26 @@ function StatementConverterPage() {
 
   async function onProcess() {
     if (!file) return;
+    if (uploadFiles.length > 1) {
+      setBusy(true); setError(null); setBatchResults([]);
+      const results: HistoryItem[] = [];
+      const failures: string[] = [];
+      try {
+        for (const [index, upload] of uploadFiles.entries()) {
+          setBatchProgress(`${index + 1} de ${uploadFiles.length} · ${upload.name}`);
+          try {
+            const result = await extract({ data: { filename: upload.name, mimeType: "application/pdf", fileData: await fileToBase64(upload), clientName } });
+            if (!result.historyId || !result.rows.length) throw new Error("Não foram encontrados movimentos.");
+            results.push({ id: result.historyId, filename: upload.name, client_name: clientName, rows: result.rows, row_count: result.rows.length, created_at: new Date().toISOString() });
+          } catch (e) { failures.push(`${upload.name}: ${friendlyError(e, "Não foi possível converter.")}`); }
+        }
+        setBatchResults(results);
+        if (failures.length) setError(failures.join(" · "));
+        await loadHistory();
+      } finally { setBusy(false); setBatchProgress(""); }
+      return;
+    }
+    setCurrentFilename(file.name);
     setBusy(true);
     setError(null);
     setRows(null);
@@ -211,7 +294,7 @@ function StatementConverterPage() {
     return Number.isFinite(n) ? n : null;
   }
 
-  function generateExcel(source?: StatementRow[], nameOverride?: string) {
+  function generateExcel(source?: StatementRow[], nameOverride?: string, asBytes = false): Uint8Array | undefined {
     const rows = source ?? rowsState();
     const clientName = nameOverride ?? clientNameState();
     if (!rows || rows.length === 0) return;
@@ -244,15 +327,18 @@ function StatementConverterPage() {
     const slug = clientName.trim().replace(/\s+/g, "_").replace(/[^\w\-À-ÿ]/g, "") || "Cliente";
     const now = new Date();
     const stamp = `${String(now.getDate()).padStart(2, "0")}-${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`;
-    XLSX.writeFile(book, `Extrato_${slug}_${stamp}.xlsx`);
+    if (asBytes) return new Uint8Array(XLSX.write(book, { type: "array", bookType: "xlsx" }));
+    const filename = currentFilename.replace(/\.pdf$/i, "").replace(/[^\wÀ-ÿ.-]+/g, "_");
+    XLSX.writeFile(book, `Extrato_${slug}_${filename}_${stamp}.xlsx`);
+    return undefined;
   }
 
   return (
     <PortalShell
       title="Conversor de Extratos"
-      subtitle="Ferramenta interna: converter extratos bancários em PDF para folha de cálculo."
+      subtitle="Extratos bancários"
     >
-      <div className="soft-card grid gap-5 p-6 sm:grid-cols-2">
+      <div className="grid gap-3 border-b border-border pb-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
         <div>
           <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-muted-foreground">
             Extrato bancário (PDF)
@@ -261,17 +347,18 @@ function StatementConverterPage() {
             ref={inputRef}
             type="file"
             accept="application/pdf"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            multiple
+            onChange={(e) => { const files = Array.from(e.target.files ?? []); setUploadFiles(files); setFile(files[0] ?? null); }}
             className="hidden"
           />
-          <button
+          <Button
             type="button"
             onClick={() => inputRef.current?.click()}
             className="inline-flex w-full items-center gap-2 rounded-full border border-ink/15 px-5 py-3 text-sm text-foreground transition-colors hover:border-gold hover:text-gold"
           >
             <Upload className="h-4 w-4" />
-            <span className="truncate">{file ? file.name : "Escolher ficheiro PDF"}</span>
-          </button>
+            <span className="truncate">{uploadFiles.length > 1 ? `${uploadFiles.length} PDF selecionados` : file ? file.name : "Escolher PDF"}</span>
+          </Button>
         </div>
 
         <div>
@@ -286,21 +373,18 @@ function StatementConverterPage() {
           />
         </div>
 
-        <div className="sm:col-span-2 flex flex-wrap items-center gap-4">
-          <button
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
             type="button"
             onClick={onProcess}
             disabled={!file || busy}
             className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {busy ? "A processar extrato…" : "Processar extrato"}
-          </button>
-          <span className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-4 py-2 text-xs text-foreground">
-            <Sparkles className="h-3.5 w-3.5 text-gold" /> Processamento por IA (com custo por
-            utilização)
-          </span>
+            {busy ? "A processar…" : uploadFiles.length > 1 ? "Processar PDF" : "Processar extrato"}
+          </Button>
         </div>
+        <p className="text-xs text-muted-foreground sm:col-span-3">Processamento por IA · com custo por extrato</p>
       </div>
 
       {error ? (
@@ -313,40 +397,40 @@ function StatementConverterPage() {
         <section className="mt-10">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-serif text-2xl text-foreground">
-              Revisão dos movimentos{" "}
+              {currentFilename}{" "}
               <span className="text-sm text-muted-foreground">({rows.length})</span>
             </h2>
             <div className="flex flex-wrap gap-3">
-              <button
+              <Button
                 type="button"
                 onClick={() => setRows((prev) => [...(prev ?? []), { ...emptyRow }])}
                 className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
               >
                 <Plus className="h-4 w-4" /> Adicionar linha
-              </button>
+              </Button>
               {historyId ? (
-                <button
+                <Button
                   type="button"
                   onClick={onSaveEdits}
                   className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-xs font-medium text-foreground transition-colors hover:border-gold hover:text-gold"
                 >
                   <Save className="h-4 w-4" /> {saved ? "Alterações guardadas" : "Guardar alterações"}
-                </button>
+                </Button>
               ) : null}
-              <button
+              <Button
                 type="button"
-                onClick={() => generateExcel()}
-                disabled={rows.length === 0}
+                onClick={exportCurrent}
+                disabled={rows.length === 0 || busy || !historyId}
                 className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-2.5 text-xs font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
               >
                 <FileSpreadsheet className="h-4 w-4" /> Gerar Excel
-              </button>
+              </Button>
             </div>
           </div>
 
           <p className="mb-4 text-sm text-muted-foreground">
             Confirme e corrija os dados antes de exportar. Apague linhas que não sejam movimentos
-            reais. Datas em DD/MM/AAAA e valores em formato decimal com ponto.
+            reais. Datas em DD/MM/AAAA e valores com vírgula decimal no Excel.
           </p>
 
           <div className="soft-card overflow-x-auto p-2">
@@ -374,7 +458,7 @@ function StatementConverterPage() {
                     <Cell value={row.credito} onChange={(v) => updateCell(index, "credito", v)} width="w-28" />
                     <Cell value={row.saldo} onChange={(v) => updateCell(index, "saldo", v)} width="w-28" />
                     <td className="px-3 py-2">
-                      <button
+                      <Button
                         type="button"
                         aria-label="Apagar linha"
                         onClick={() =>
@@ -383,7 +467,7 @@ function StatementConverterPage() {
                         className="rounded-full border border-ink/15 p-2 text-muted-foreground transition-colors hover:border-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -393,16 +477,28 @@ function StatementConverterPage() {
         </section>
       ) : null}
 
-      <section className="mt-12">
+      <section className="mt-7">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-serif text-2xl text-foreground">Extratos enviados pelos clientes</h2>
           <input
             value={docFilter}
-            onChange={(e) => setDocFilter(e.target.value)}
+            onChange={(e) => { setDocFilter(e.target.value); setVisibleCount(10); }}
             placeholder="Procurar cliente ou NIF"
             className="w-full max-w-xs rounded-full border border-ink/15 bg-transparent px-5 py-2.5 text-sm text-foreground outline-none focus:border-gold"
           />
         </div>
+        {filteredDocs.length > 0 && <div className="mb-3 flex flex-wrap items-center gap-3">
+          <Checkbox id="select-statements" disabled={busy} checked={filteredDocs.slice(0, visibleCount).every((d) => selected.includes(d.id))} onCheckedChange={(checked) => setSelected((prev) => checked ? [...new Set([...prev, ...filteredDocs.slice(0, visibleCount).map((d) => d.id)])] : prev.filter((id) => !filteredDocs.slice(0, visibleCount).some((d) => d.id === id)))} />
+          <label htmlFor="select-statements" className="text-sm text-muted-foreground">Selecionar visíveis</label>
+          <span className="text-xs text-muted-foreground">{selected.length} selecionados</span>
+          <Button className="rounded-full" disabled={busy || !selected.length} onClick={processSelected}><Sparkles />Converter selecionados</Button>
+          {selected.length > 0 && <Button variant="ghost" disabled={busy} onClick={() => setSelected([])}>Limpar</Button>}
+        </div>}
+        {batchProgress && <p role="status" className="mb-3 text-sm text-muted-foreground">A converter {batchProgress}</p>}
+        {batchResults.length > 0 && <div className="mb-4 flex flex-wrap items-center gap-3 border-y border-border py-3">
+          <span className="text-sm">{batchResults.length} extratos convertidos</span>
+          <Button className="rounded-full" onClick={() => downloadZip(batchResults)}><FileSpreadsheet />Descarregar ZIP</Button>
+        </div>}
         {groupedDocs.length === 0 ? (
           <p className="soft-card p-6 text-sm text-muted-foreground">
             Ainda não existem extratos bancários enviados pelos clientes.
@@ -410,7 +506,7 @@ function StatementConverterPage() {
         ) : (
           <div className="space-y-4">
             {groupedDocs.map((g) => (
-              <details key={g.name + g.nif} className="soft-card group p-5" open={groupedDocs.length <= 3}>
+              <details key={g.name + g.nif} className="group border-b border-border py-3" open>
                 <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2">
                   <span className="font-medium text-foreground">
                     {g.name} {g.nif ? <span className="text-sm text-muted-foreground">· NIF {g.nif}</span> : null}
@@ -421,22 +517,23 @@ function StatementConverterPage() {
                 </summary>
                 <ul className="mt-4 divide-y divide-ink/10">
                   {g.docs.map((d) => (
-                    <li key={d.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <li key={d.id} className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+                      <Checkbox aria-label={`Selecionar ${d.original_name}`} disabled={busy} checked={selected.includes(d.id)} onCheckedChange={(checked) => setSelected((prev) => checked ? [...prev, d.id] : prev.filter((id) => id !== d.id))} />
                       <div className="min-w-0">
-                        <p className="text-sm text-foreground">
+                        <p className="break-words text-sm text-foreground">
                           <span className="font-medium">{MONTHS[d.month - 1]} {d.year}</span> · {d.original_name}
                         </p>
                         <p className="text-xs text-muted-foreground">Enviado em {formatDateTimePt(d.created_at)}</p>
                       </div>
-                      <div className="flex gap-2">
-                        <button
+                      <div className="col-start-2 flex gap-2 sm:col-start-auto">
+                        <Button
                           type="button"
                           onClick={() => openClientDoc(d.id)}
                           className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-4 py-2 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
                         >
                           <Eye className="h-3.5 w-3.5" /> Ver PDF
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           type="button"
                           disabled={busy}
                           onClick={() => processClientDoc(d)}
@@ -444,7 +541,7 @@ function StatementConverterPage() {
                         >
                           {busyDoc === d.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                           Converter
-                        </button>
+                        </Button>
                       </div>
                     </li>
                   ))}
@@ -453,6 +550,7 @@ function StatementConverterPage() {
             ))}
           </div>
         )}
+        {visibleCount < filteredDocs.length && <div className="mt-4 text-center"><Button variant="outline" className="rounded-full" onClick={() => setVisibleCount((count) => count + 10)}>Ver mais {Math.min(10, filteredDocs.length - visibleCount)}</Button></div>}
       </section>
 
       <section className="mt-12">
@@ -477,15 +575,15 @@ function StatementConverterPage() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => openHistory(h)} className="rounded-full border border-ink/15 px-4 py-2 text-xs text-foreground transition-colors hover:border-gold hover:text-gold">
+                  <Button type="button" onClick={() => openHistory(h)} className="rounded-full border border-ink/15 px-4 py-2 text-xs text-foreground transition-colors hover:border-gold hover:text-gold">
                     Abrir
-                  </button>
-                  <button type="button" onClick={() => generateExcel(h.rows, h.client_name)} className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-gold-deep">
+                  </Button>
+                  <Button type="button" onClick={() => generateExcel(h.rows, h.client_name)} className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-gold-deep">
                     <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
-                  </button>
-                  <button type="button" aria-label="Apagar do histórico" onClick={() => onDeleteHistory(h.id)} className="rounded-full border border-ink/15 p-2 text-muted-foreground transition-colors hover:border-destructive hover:text-destructive">
+                  </Button>
+                  <Button type="button" aria-label="Apagar do histórico" onClick={() => onDeleteHistory(h.id)} className="rounded-full border border-ink/15 p-2 text-muted-foreground transition-colors hover:border-destructive hover:text-destructive">
                     <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 </div>
               </li>
             ))}
