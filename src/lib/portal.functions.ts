@@ -201,9 +201,9 @@ export const reserveDocument = createServerFn({ method: "POST" })
       throw new Error("Esta categoria não está disponível para este cliente.");
     }
 
-    const lateEntry =
-      isMonthPastDeadline(data.year, data.month) ||
-      (await monthIsSubmitted(context, target, data.year, data.month));
+    // Só é "fora de prazo" depois do dia 10 do mês seguinte; uma reabertura
+    // aprovada dentro do prazo não torna o documento atrasado.
+    const lateEntry = isMonthPastDeadline(data.year, data.month);
     const lateAt = lateEntry ? new Date().toISOString() : null;
 
     for (let attempt = 0; attempt < 8; attempt++) {

@@ -1011,6 +1011,9 @@ export function DocumentExplorer({
                           ? "Depois de submeter, a pasta fica em modo de visualização."
                           : "É necessário anexar pelo menos um documento antes de submeter."}
                       </p>
+                      <p className="mt-2 text-xs font-medium text-foreground">
+                        Carregue neste botão apenas quando toda a documentação do mês estiver entregue.
+                      </p>
                       <p className="mt-2 rounded-xl bg-gold/10 px-3 py-2 text-xs text-foreground/80">
                         Se não carregar em «Submeter Documentação do Mês», a documentação anexada é
                         submetida automaticamente no dia 9 do mês seguinte às 23:59:59. Nesse caso, no

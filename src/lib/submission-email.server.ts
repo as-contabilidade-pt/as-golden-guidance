@@ -1,3 +1,4 @@
+import { getRequest } from "@tanstack/react-start/server";
 import {
   monthLabel,
   formatDateTimePt,
@@ -5,6 +6,20 @@ import {
   REMINDER_BODY,
   unlockExpiry,
 } from "@/lib/portal";
+
+/** Endereço do portal nos emails: SITE_URL, ou o próprio site de onde veio o pedido (ex.: Vercel). */
+function siteBaseUrl(): string {
+  const env = process.env["SITE_URL"];
+  if (env) return env;
+  try {
+    const req = getRequest();
+    const origin = req?.headers.get("origin") || (req ? new URL(req.url).origin : "");
+    if (origin && !/localhost|127\.0\.0\.1/.test(origin)) return origin;
+  } catch {
+    /* sem pedido (ex.: tarefa agendada) */
+  }
+  return "https://as-golden-guidance.lovable.app";
+}
 
 type SubmissionInfo = {
   fullName: string;
@@ -89,7 +104,7 @@ function brandHtml(title: string, body: string, admin = false) {
     ${mainHtml}
     ${declHtml}
     <p style="margin:24px 0;">
-      <a href="${esc((process.env["SITE_URL"] || "https://as-golden-guidance.lovable.app").replace(/\/$/, "") + "/" + (admin ? "admin" : "login"))}" style="background-color:#c9a227;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;display:inline-block;">${admin ? "Ver no Painel de Administração" : "Aceder ao Portal"}</a>
+      <a href="${esc(siteBaseUrl().replace(/\/$/, "") + "/" + (admin ? "admin" : "login"))}" style="background-color:#c9a227;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:4px;font-weight:bold;display:inline-block;">${admin ? "Ver no Painel de Administração" : "Aceder ao Portal"}</a>
     </p>
     ${admin ? '<p style="color:#888;font-size:12px;font-style:italic;">Notificação automática do Portal AS Contabilidade</p>' : "<p>Com os melhores cumprimentos,<br><strong>Equipa AS Contabilidade</strong></p>"}
   </div>
