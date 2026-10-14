@@ -7,6 +7,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Eye, FileSpreadsheet, History, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
 import {
   deleteStatementHistory,
   extractBankStatement,
@@ -83,6 +84,9 @@ function StatementConverterPage() {
   const [progressPct, setProgressPct] = useState<number | null>(null);
   const [batchResults, setBatchResults] = useState<HistoryItem[]>([]);
   const [currentFilename, setCurrentFilename] = useState("Extrato.pdf");
+  const [confirmAction, setConfirmAction] = useState<
+    { kind: "batch" } | { kind: "upload" } | { kind: "doc"; doc: ClientStatement } | null
+  >(null);
   const fetchHistory = useServerFn(listStatementHistory);
   const fetchClientDocs = useServerFn(listClientStatements);
   const saveHistory = useServerFn(updateStatementHistory);
@@ -391,7 +395,7 @@ function StatementConverterPage() {
           />
           <Button
             type="button"
-            onClick={onProcess}
+            onClick={() => setConfirmAction({ kind: "upload" })}
             disabled={!file || busy}
             className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
           >
@@ -411,7 +415,7 @@ function StatementConverterPage() {
             <Checkbox id="select-statements" disabled={busy} checked={filteredDocs.slice(0, visibleCount).every((d) => selected.includes(d.id))} onCheckedChange={(checked) => setSelected((prev) => checked ? [...new Set([...prev, ...filteredDocs.slice(0, visibleCount).map((d) => d.id)])] : prev.filter((id) => !filteredDocs.slice(0, visibleCount).some((d) => d.id === id)))} />
             <label htmlFor="select-statements" className="text-sm text-muted-foreground">Selecionar visíveis</label>
             <span className="text-xs text-muted-foreground">{selected.length} selecionados</span>
-            <Button className="rounded-full" disabled={busy || !selected.length} onClick={processSelected}><Sparkles />Converter selecionados</Button>
+            <Button className="rounded-full" disabled={busy || !selected.length} onClick={() => setConfirmAction({ kind: "batch" })}><Sparkles />Converter selecionados</Button>
             {selected.length > 0 && <Button variant="ghost" disabled={busy} onClick={() => setSelected([])}>Limpar</Button>}
           </div>
         )}
@@ -473,7 +477,7 @@ function StatementConverterPage() {
                         <Button
                           type="button"
                           disabled={busy}
-                          onClick={() => processClientDoc(d)}
+                          onClick={() => setConfirmAction({ kind: "doc", doc: d })}
                           className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
                         >
                           <Sparkles className="h-3.5 w-3.5" />
@@ -611,6 +615,28 @@ function StatementConverterPage() {
           </ul>
         )}
       </section>
+      <ConfirmDialog
+        open={confirmAction !== null}
+        icon={<Sparkles className="h-6 w-6" />}
+        title="Tem a certeza que quer converter?"
+        message={
+          confirmAction?.kind === "batch"
+            ? `Vão ser convertidos ${selected.length} extrato(s). Cada conversão consome créditos de processamento.`
+            : confirmAction?.kind === "doc"
+              ? `Vai ser convertido o extrato «${confirmAction.doc.original_name}». A conversão consome créditos de processamento.`
+              : `Vai ser convertido ${uploadFiles.length > 1 ? `${uploadFiles.length} ficheiros` : "o ficheiro escolhido"}. A conversão consome créditos de processamento.`
+        }
+        confirmLabel="Converter"
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={() => {
+          const action = confirmAction;
+          setConfirmAction(null);
+          if (!action) return;
+          if (action.kind === "batch") void processSelected();
+          else if (action.kind === "doc") void processClientDoc(action.doc);
+          else void onProcess();
+        }}
+      />
     </PortalShell>
   );
 }
