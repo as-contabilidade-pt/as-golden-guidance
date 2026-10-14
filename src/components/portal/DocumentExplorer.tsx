@@ -698,6 +698,20 @@ export function DocumentExplorer({
     return unlockCountdown(m) ? "grace" : "open";
   }
 
+  useEffect(() => {
+    if (!yearsOpen) return;
+    function onPointerDown(e: MouseEvent) {
+      if (yearsRef.current && !yearsRef.current.contains(e.target as Node)) {
+        setYearsOpen(false);
+        setShowMoreYears(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [yearsOpen]);
+
+  const allMonths = MONTHS.map((_, i) => i + 1);
+
   return (
     <div>
       {/* Breadcrumb */}
