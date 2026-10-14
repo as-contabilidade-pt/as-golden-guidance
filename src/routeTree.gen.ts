@@ -26,6 +26,7 @@ import { Route as AuthenticatedAdminClienteClientIdRouteImport } from './routes/
 import { Route as AuthenticatedAdminClientesIndexRouteImport } from './routes/_authenticated/admin_.clientes.index'
 import { Route as AuthenticatedAdminClientesRecordIdRouteImport } from './routes/_authenticated/admin_.clientes.$recordId'
 import { Route as AuthenticatedAdminDefinicoesCategoriasRouteImport } from './routes/_authenticated/admin_.definicoes.categorias'
+import { Route as ApiPublicJobsFechoReaberturasRouteImport } from './routes/api/public/jobs/fecho-reaberturas'
 import { Route as ApiPublicJobsSubmissaoAutomaticaRouteImport } from './routes/api/public/jobs/submissao-automatica'
 
 const IndexRoute = IndexRouteImport.update({
@@ -121,6 +122,12 @@ const AuthenticatedAdminDefinicoesCategoriasRoute =
     path: '/admin/definicoes/categorias',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicJobsFechoReaberturasRoute =
+  ApiPublicJobsFechoReaberturasRouteImport.update({
+    id: '/api/public/jobs/fecho-reaberturas',
+    path: '/api/public/jobs/fecho-reaberturas',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicJobsSubmissaoAutomaticaRoute =
   ApiPublicJobsSubmissaoAutomaticaRouteImport.update({
     id: '/api/public/jobs/submissao-automatica',
@@ -144,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/admin/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
   '/admin/clientes/$recordId': typeof AuthenticatedAdminClientesRecordIdRoute
   '/admin/definicoes/categorias': typeof AuthenticatedAdminDefinicoesCategoriasRoute
+  '/api/public/jobs/fecho-reaberturas': typeof ApiPublicJobsFechoReaberturasRoute
   '/api/public/jobs/submissao-automatica': typeof ApiPublicJobsSubmissaoAutomaticaRoute
   '/admin/clientes/': typeof AuthenticatedAdminClientesIndexRoute
 }
@@ -163,6 +171,7 @@ export interface FileRoutesByTo {
   '/admin/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
   '/admin/clientes/$recordId': typeof AuthenticatedAdminClientesRecordIdRoute
   '/admin/definicoes/categorias': typeof AuthenticatedAdminDefinicoesCategoriasRoute
+  '/api/public/jobs/fecho-reaberturas': typeof ApiPublicJobsFechoReaberturasRoute
   '/api/public/jobs/submissao-automatica': typeof ApiPublicJobsSubmissaoAutomaticaRoute
   '/admin/clientes': typeof AuthenticatedAdminClientesIndexRoute
 }
@@ -184,6 +193,7 @@ export interface FileRoutesById {
   '/_authenticated/admin_/cliente/$clientId': typeof AuthenticatedAdminClienteClientIdRoute
   '/_authenticated/admin_/clientes/$recordId': typeof AuthenticatedAdminClientesRecordIdRoute
   '/_authenticated/admin_/definicoes/categorias': typeof AuthenticatedAdminDefinicoesCategoriasRoute
+  '/api/public/jobs/fecho-reaberturas': typeof ApiPublicJobsFechoReaberturasRoute
   '/api/public/jobs/submissao-automatica': typeof ApiPublicJobsSubmissaoAutomaticaRoute
   '/_authenticated/admin_/clientes/': typeof AuthenticatedAdminClientesIndexRoute
 }
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/admin/cliente/$clientId'
     | '/admin/clientes/$recordId'
     | '/admin/definicoes/categorias'
+    | '/api/public/jobs/fecho-reaberturas'
     | '/api/public/jobs/submissao-automatica'
     | '/admin/clientes/'
   fileRoutesByTo: FileRoutesByTo
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/admin/cliente/$clientId'
     | '/admin/clientes/$recordId'
     | '/admin/definicoes/categorias'
+    | '/api/public/jobs/fecho-reaberturas'
     | '/api/public/jobs/submissao-automatica'
     | '/admin/clientes'
   id:
@@ -244,6 +256,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin_/cliente/$clientId'
     | '/_authenticated/admin_/clientes/$recordId'
     | '/_authenticated/admin_/definicoes/categorias'
+    | '/api/public/jobs/fecho-reaberturas'
     | '/api/public/jobs/submissao-automatica'
     | '/_authenticated/admin_/clientes/'
   fileRoutesById: FileRoutesById
@@ -256,6 +269,7 @@ export interface RootRouteChildren {
   PrivacidadeRoute: typeof PrivacidadeRoute
   TermosRoute: typeof TermosRoute
   ApiPublicLembreteDocumentacaoRoute: typeof ApiPublicLembreteDocumentacaoRoute
+  ApiPublicJobsFechoReaberturasRoute: typeof ApiPublicJobsFechoReaberturasRoute
   ApiPublicJobsSubmissaoAutomaticaRoute: typeof ApiPublicJobsSubmissaoAutomaticaRoute
 }
 
@@ -380,6 +394,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminDefinicoesCategoriasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/jobs/fecho-reaberturas': {
+      id: '/api/public/jobs/fecho-reaberturas'
+      path: '/api/public/jobs/fecho-reaberturas'
+      fullPath: '/api/public/jobs/fecho-reaberturas'
+      preLoaderRoute: typeof ApiPublicJobsFechoReaberturasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/jobs/submissao-automatica': {
       id: '/api/public/jobs/submissao-automatica'
       path: '/api/public/jobs/submissao-automatica'
@@ -430,6 +451,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacidadeRoute: PrivacidadeRoute,
   TermosRoute: TermosRoute,
   ApiPublicLembreteDocumentacaoRoute: ApiPublicLembreteDocumentacaoRoute,
+  ApiPublicJobsFechoReaberturasRoute: ApiPublicJobsFechoReaberturasRoute,
   ApiPublicJobsSubmissaoAutomaticaRoute: ApiPublicJobsSubmissaoAutomaticaRoute,
 }
 export const routeTree = rootRouteImport
