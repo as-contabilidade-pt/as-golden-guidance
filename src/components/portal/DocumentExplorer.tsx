@@ -620,6 +620,7 @@ export function DocumentExplorer({
     if (month === null || category === null) return;
     setBusy(true);
     setProgress(0);
+    setPendingConfirm(null);
     const sent: File[] = [];
     try {
       for (const file of files) {
