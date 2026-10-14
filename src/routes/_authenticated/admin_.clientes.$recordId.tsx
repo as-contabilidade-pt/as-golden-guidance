@@ -220,7 +220,7 @@ function FichaPage() {
   return (
     <PortalShell
       title={form.name || "Ficha de Cliente"}
-      subtitle={`Nº interno ${form.clientNumber || "—"} · ${form.folderActive ? "Cliente ativo" : "Cliente inativo"}`}
+      subtitle={`${form.clientNumber ? `Nº interno ${form.clientNumber} · ` : ""}${form.folderActive ? "Cliente ativo" : "Cliente inativo"}`}
       action={
         <Link
           to="/admin/clientes"
@@ -241,69 +241,75 @@ function FichaPage() {
         </p>
       ) : null}
 
-      <section aria-label="Documentos do cliente" className="mb-6 flex flex-col gap-4 border-b border-gold/20 pb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gold/15 text-gold-deep"><FolderOpen className="size-6" /></span>
-          <div>
-            <h2 className="text-xl font-medium">Documentos</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{userId ? "Arquivo de documentos do cliente" : "Este cliente ainda não tem acesso ao portal"}</p>
+      <section aria-label="Documentos do cliente" className="mb-6 flex flex-col gap-4 rounded-3xl bg-ink p-5 text-background sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex min-w-0 items-center gap-4">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-gold/20 text-gold"><FolderOpen className="size-5" /></span>
+          <div className="min-w-0">
+            <h2 className="text-lg font-medium">Documentos do cliente</h2>
+            <p className="mt-0.5 text-sm text-background/60">{userId ? "Consultar e descarregar todo o arquivo." : "Disponível depois de ativar o cliente."}</p>
           </div>
         </div>
         {userId ? (
-          <Button asChild className="h-12 rounded-full px-6 text-sm shadow-none">
-            <Link to="/admin/cliente/$clientId" params={{ clientId: userId }}>Abrir documentos <ArrowUpRight className="size-5" /></Link>
+          <Button asChild className="h-11 rounded-full px-6 text-sm shadow-none">
+            <Link to="/admin/cliente/$clientId" params={{ clientId: userId }}>Abrir documentos <ArrowUpRight className="size-4" /></Link>
           </Button>
         ) : null}
       </section>
 
-      <form onSubmit={(event) => { event.preventDefault(); void onSave(); }}>
+      <form onSubmit={(event) => { event.preventDefault(); void onSave(); }} className="rounded-3xl border border-gold/15 bg-card shadow-sm">
         <Tabs defaultValue="dados">
-          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <TabsList className="h-auto w-fit max-w-full rounded-full bg-secondary p-1">
-              <TabsTrigger value="dados" className="min-h-10 rounded-full px-4 text-sm">Dados do cliente</TabsTrigger>
-              <TabsTrigger value="acesso" className="min-h-10 rounded-full px-4 text-sm">Pastas e acesso</TabsTrigger>
+          <div className="border-b border-gold/10 px-5 pt-5 sm:px-7">
+            <TabsList className="h-auto w-fit max-w-full gap-6 rounded-none bg-transparent p-0">
+              <TabsTrigger value="dados" className="rounded-none border-b-2 border-transparent px-0 pb-3 text-sm text-muted-foreground shadow-none data-[state=active]:border-gold data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">Dados do cliente</TabsTrigger>
+              <TabsTrigger value="acesso" className="rounded-none border-b-2 border-transparent px-0 pb-3 text-sm text-muted-foreground shadow-none data-[state=active]:border-gold data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">Acesso e pastas</TabsTrigger>
             </TabsList>
-            <Button type="submit" disabled={busy} className="h-11 rounded-full px-5 shadow-none">
-              {busy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Guardar alterações
-            </Button>
           </div>
-          <TabsContent value="dados" className="mt-0">
-            <div className="grid gap-x-5 gap-y-4 md:grid-cols-2 lg:grid-cols-3">
+          <TabsContent value="dados" className="mt-0 space-y-6 px-5 py-6 sm:px-7">
+            <Group title="Identificação">
               <Field label="Número interno" value={form.clientNumber} onChange={(v) => set("clientNumber", v)} />
               <Field label="Nome / Designação" value={form.name} onChange={(v) => set("name", v)} />
               <Field label="NIF" value={form.nif} onChange={(v) => set("nif", v)} />
+            </Group>
+            <Group title="Contacto">
               <Field label="Email" value={form.email} onChange={(v) => set("email", v)} type="email" />
               <Field label="Telefone" value={form.phone} onChange={(v) => set("phone", v)} />
-              <Field label="Nome do responsável" value={form.responsibleName} onChange={(v) => set("responsibleName", v)} />
+              <Field label="Responsável" value={form.responsibleName} onChange={(v) => set("responsibleName", v)} />
+            </Group>
+            <Group title="Morada">
               <Field label="Morada" value={form.address} onChange={(v) => set("address", v)} />
               <Field label="Código postal" value={form.postalCode} onChange={(v) => set("postalCode", v)} />
               <Field label="Localidade" value={form.locality} onChange={(v) => set("locality", v)} />
-              <label className="block md:col-span-2 lg:col-span-3">
-                <span className="mb-1.5 block text-xs font-medium text-foreground/80">Observações internas</span>
-                <textarea rows={2} value={form.notes} onChange={(e) => set("notes", e.target.value)} className="w-full rounded-2xl border border-gold/20 bg-card px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-gold/50" />
-              </label>
-            </div>
+            </Group>
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.14em] text-gold-deep">Observações internas</span>
+              <textarea rows={2} value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Visível apenas para a administração" className="w-full rounded-2xl border border-gold/15 bg-background px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-gold/50" />
+            </label>
           </TabsContent>
-          <TabsContent value="acesso" className="mt-0">
-            <div className="mb-5 flex flex-col gap-3 border-b border-border pb-5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-base font-medium">{form.folderActive ? "Cliente ativo" : "Cliente inativo"}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{form.folderActive ? "Com acesso ao portal e emails automáticos." : "Registado, sem acesso ao portal nem emails automáticos."}</p>
+          <TabsContent value="acesso" className="mt-0 space-y-6 px-5 py-6 sm:px-7">
+            <div className="flex flex-col gap-3 rounded-2xl bg-background p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <span className={`size-2.5 shrink-0 rounded-full ${form.folderActive ? "bg-gold" : "bg-muted-foreground/40"}`} />
+                <div>
+                  <h3 className="text-sm font-medium">{form.folderActive ? "Cliente ativo" : "Cliente inativo"}</h3>
+                  <p className="text-xs text-muted-foreground">{form.folderActive ? "Com acesso ao portal e emails automáticos." : "Registado, sem acesso ao portal nem emails automáticos."}</p>
+                </div>
               </div>
-              <Button type="button" variant="outline" disabled={busy} onClick={() => { setEmailInput(""); setEmailError(null); setPendingToggle(true); }} className="h-11 rounded-full px-5">
-                {form.folderActive ? "Desativar cliente" : "Ativar cliente"}
+              <Button type="button" variant="outline" disabled={busy} onClick={() => { setEmailInput(""); setEmailError(null); setPendingToggle(true); }} className="h-10 rounded-full px-5 text-sm">
+                {form.folderActive ? "Desativar" : "Ativar cliente"}
               </Button>
             </div>
             <CategoryPicker value={form.categories} onChange={(v) => set("categories", v)} />
           </TabsContent>
         </Tabs>
+        <div className="flex flex-col-reverse gap-3 border-t border-gold/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => void onDelete()} className="rounded-full text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+            <Trash2 className="size-4" /> Apagar cliente
+          </Button>
+          <Button type="submit" disabled={busy} className="h-11 rounded-full px-6 shadow-none">
+            {busy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Guardar alterações
+          </Button>
+        </div>
       </form>
-
-      <div className="mt-6 flex justify-end border-t border-border pt-4">
-        <Button type="button" variant="ghost" disabled={busy} onClick={() => void onDelete()} className="rounded-full text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
-          <Trash2 className="size-4" /> Apagar cliente
-        </Button>
-      </div>
       <ConfirmDialog
         open={pendingToggle}
         busy={busy}
@@ -353,14 +359,23 @@ function Field({
   type?: string;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-xs font-medium text-foreground/80">{label}</span>
+    <label className="block min-w-0">
+      <span className="mb-1.5 block text-xs text-muted-foreground">{label}</span>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-gold/20 bg-card px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
+        className="w-full rounded-2xl border border-gold/15 bg-background px-4 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-gold/50 focus:ring-1 focus:ring-gold/30"
       />
     </label>
+  );
+}
+
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <fieldset>
+      <legend className="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-gold-deep">{title}</legend>
+      <div className="grid gap-x-5 gap-y-4 md:grid-cols-3">{children}</div>
+    </fieldset>
   );
 }
