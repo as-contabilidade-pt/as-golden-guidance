@@ -3,6 +3,7 @@ import { friendlyError } from "@/lib/friendly-error";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import {
+  ArrowLeft,
   ChevronRight,
   ChevronDown,
   Download,
@@ -712,6 +713,17 @@ export function DocumentExplorer({
     <div>
       {/* Breadcrumb */}
       <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        {month !== null ? (
+          <button
+            type="button"
+            onClick={() => (category !== null ? setCategory(null) : setMonth(null))}
+            aria-label="Voltar atrás"
+            className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-4 py-1.5 text-xs font-medium text-gold-deep transition-colors hover:bg-gold hover:text-ink"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Voltar
+          </button>
+        ) : null}
         {month !== null ? (
           <button
             type="button"
