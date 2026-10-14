@@ -800,7 +800,7 @@ export function DocumentExplorer({
       <div className="mt-8">
         {month === null ? (
           (() => {
-            const renderCard = (m: number, size: "md" | "lg" | "md-lg" = "md") => {
+            const renderCard = (m: number) => {
               const name = MONTHS[m - 1]!;
               const submitted = submissionFor(m);
               const pendingRequest = pendingRequestFor(m);
@@ -819,45 +819,14 @@ export function DocumentExplorer({
                         )}`
                       : `${counts[`${m}`] ?? 0} documento(s)`
                   }
-                  status={openMonths.includes(m) ? "current" : monthStatus(m)}
-                  size={size}
+                  status={monthStatus(m)}
                   onClick={() => setMonth(m)}
                 />
               );
             };
-            if (year !== currentYear) {
-              return (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {allMonths.map((m) => renderCard(m))}
-                </div>
-              );
-            }
             return (
-              <div className="space-y-10">
-                {openMonths.length > 0 ? (
-                  <div
-                    className={`grid gap-5 ${
-                      openMonths.length === 1
-                        ? "mx-auto max-w-md grid-cols-1"
-                        : openMonths.length === 3
-                          ? "-mx-2 sm:-mx-5 grid-cols-1 sm:grid-cols-3"
-                          : openMonths.length >= 5
-                            ? "-mx-2 sm:-mx-5 grid-cols-1 sm:grid-cols-3"
-                            : "mx-auto max-w-3xl sm:grid-cols-2"
-                    }`}
-                  >
-                    {openMonths.map((m) =>
-                      renderCard(
-                        m,
-                        openMonths.length === 3 || openMonths.length >= 5 ? "md-lg" : "lg",
-                      ),
-                    )}
-                  </div>
-                ) : null}
-
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {allMonths.map((m) => renderCard(m))}
-                </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {allMonths.map((m) => renderCard(m))}
               </div>
             );
           })()
