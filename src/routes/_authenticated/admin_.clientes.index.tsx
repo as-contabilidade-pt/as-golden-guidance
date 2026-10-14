@@ -3,10 +3,9 @@ import { friendlyError } from "@/lib/friendly-error";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, ChevronDown, Download, FolderOpen, Loader2, Plus, Search, Upload } from "lucide-react";
+import { ArrowRight, ChevronDown, Download, FolderOpen, ListFilter, Loader2, Plus, Search, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { CategoryPicker } from "@/components/portal/CategoryPicker";
 import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
@@ -336,38 +335,35 @@ function ClientesPage() {
               className="w-full rounded-full border border-gold/20 bg-background py-3 pl-11 pr-5 text-sm text-foreground outline-none transition-colors focus:border-gold/50"
             />
           </label>
-          <Select
-            value={`${sort}:${asc ? "asc" : "desc"}`}
-            onValueChange={(value) => {
-              const [key, direction] = value.split(":");
-              setSort(key as SortKey);
-              setAsc(direction === "asc");
-            }}
-          >
-            <SelectTrigger aria-label="Ordenar clientes" className="h-11 w-full min-w-0 shrink-0 rounded-full border-gold/20 bg-background px-5 shadow-none sm:w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="name:asc">Nome: A–Z</SelectItem>
-              <SelectItem value="name:desc">Nome: Z–A</SelectItem>
-              <SelectItem value="client_number:asc">Número interno: crescente</SelectItem>
-              <SelectItem value="client_number:desc">Número interno: decrescente</SelectItem>
-              <SelectItem value="nif:asc">NIF: crescente</SelectItem>
-              <SelectItem value="nif:desc">NIF: decrescente</SelectItem>
-              <SelectItem value="locality:asc">Localidade: A–Z</SelectItem>
-              <SelectItem value="locality:desc">Localidade: Z–A</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={stateOrder} onValueChange={(v) => setStateOrder(v as typeof stateOrder)}>
-            <SelectTrigger aria-label="Filtrar por estado" className="h-11 w-full min-w-0 shrink-0 rounded-full border-gold/20 bg-background px-5 shadow-none sm:w-52">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Ativos primeiro</SelectItem>
-              <SelectItem value="inactive">Inativos primeiro</SelectItem>
-              <SelectItem value="none">Sem filtro de estado</SelectItem>
-            </SelectContent>
-          </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" aria-label="Filtros e ordenação" className="h-11 w-full shrink-0 rounded-full border-gold/20 bg-background px-5 shadow-none sm:w-auto">
+                <ListFilter className="size-4 text-gold-deep" /> Filtros
+                <span className="flex size-5 items-center justify-center rounded-full bg-gold/15 text-xs text-gold-deep">{stateOrder === "none" ? 1 : 2}</span>
+                <ChevronDown className="size-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72 max-w-[calc(100vw-2rem)] rounded-2xl border-gold/20 p-2">
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Estado</DropdownMenuLabel>
+              {([{ value: "active", label: "Ativos primeiro" }, { value: "inactive", label: "Inativos primeiro" }] as const).map((option) => (
+                <DropdownMenuCheckboxItem key={option.value} checked={stateOrder === option.value} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setStateOrder(checked ? option.value : "none")} className="cursor-pointer rounded-lg py-2.5 [&_svg]:text-gold-deep">
+                  {option.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+              <DropdownMenuSeparator className="bg-gold/15" />
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Ordenar por</DropdownMenuLabel>
+              {([{ key: "client_number", label: "Número interno" }, { key: "name", label: "Nome" }, { key: "nif", label: "NIF" }, { key: "locality", label: "Localidade" }] as const).map((option) => (
+                <DropdownMenuCheckboxItem key={option.key} checked={sort === option.key} onSelect={(event) => event.preventDefault()} onCheckedChange={() => setSort(option.key)} className="cursor-pointer rounded-lg py-2.5 [&_svg]:text-gold-deep">
+                  {option.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+              <DropdownMenuSeparator className="bg-gold/15" />
+              <DropdownMenuCheckboxItem checked={asc} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setAsc(checked === true)} className="cursor-pointer rounded-lg py-2.5 [&_svg]:text-gold-deep">Ordem crescente</DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={!asc} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setAsc(checked !== true)} className="cursor-pointer rounded-lg py-2.5 [&_svg]:text-gold-deep">Ordem decrescente</DropdownMenuCheckboxItem>
+              <DropdownMenuSeparator className="bg-gold/15" />
+              <DropdownMenuItem onSelect={(event) => { event.preventDefault(); setSort("client_number"); setAsc(true); setStateOrder("active"); }} className="cursor-pointer justify-center rounded-lg py-2 text-xs text-gold-deep">Repor predefinições</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <input
