@@ -276,3 +276,105 @@ export async function sendMonthlyReminders() {
 
   return { sent: recipients.length };
 }
+
+/**
+ * Submissão automática (corre dia 10 às 09:00, Lisboa): meses anteriores com
+ * documentos anexados mas não submetidos ficam submetidos com data do dia 9
+ * às 23:59:59, e cliente + administração recebem os emails habituais.
+ */
+export async function autoSubmitPendingMonths(now: Date = new Date()) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { buildSubmissionDeclaration } = await import("@/lib/portal");
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Lisbon",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      hour12: false,
+    })
+      .formatToParts(now)
+      .map((p) => [p.type, p.value]),
+  );
+  const lisYear = Number(parts.year);
+  const lisMonth = Number(parts.month);
+  const lisHour = Number(parts.hour) % 24;
+  const offsetH = (lisHour - now.getUTCHours() + 24) % 24;
+  const month = lisMonth === 1 ? 12 : lisMonth - 1;
+  const year = lisMonth === 1 ? lisYear - 1 : lisYear;
+  const submittedAt = new Date(
+    Date.UTC(lisYear, lisMonth - 1, 9, 23 - offsetH, 59, 59),
+  ).toISOString();
+
+  const { data: clients, error } = await supabaseAdmin
+    .from("client_records")
+    .select("user_id, name, nif, email, responsible_name")
+    .eq("folder_active", true)
+    .not("user_id", "is", null);
+  if (error) throw new Error(error.message);
+
+  let submitted = 0;
+  for (const c of clients ?? []) {
+    const userId = c.user_id as string;
+    const { data: existing } = await supabaseAdmin
+      .from("month_submissions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("year", year)
+      .eq("month", month)
+      .limit(1);
+    if (existing && existing.length > 0) continue;
+    const { count } = await supabaseAdmin
+      .from("documents")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("year", year)
+      .eq("month", month);
+    if (!count) continue;
+
+    const responsibleName = c.responsible_name || c.name;
+    const declarationText = buildSubmissionDeclaration({
+      nif: c.nif,
+      companyName: c.name,
+      responsibleName,
+      year,
+      month,
+      at: submittedAt,
+    }) + "\n\n(Submissão automática no fim do prazo)";
+    const { error: insErr } = await supabaseAdmin.from("month_submissions").insert({
+      user_id: userId,
+      nif: c.nif,
+      company_name: c.name,
+      responsible_name: responsibleName,
+      declaration_text: declarationText,
+      year,
+      month,
+      declaration_accepted: true,
+      document_count: count,
+      submitted_at: submittedAt,
+    });
+    if (insErr) {
+      console.error("[autoSubmit] falha", userId, insErr.message);
+      continue;
+    }
+    const info = {
+      fullName: c.name,
+      nif: c.nif,
+      ...(c.email ? { email: c.email } : {}),
+      year,
+      month,
+      submittedAt,
+      documentCount: count,
+      declarationText,
+    };
+    try {
+      await notifyAdminOfSubmission(info);
+      await notifyClientOfSubmission(info);
+    } catch (e) {
+      console.error("[autoSubmit] emails", e);
+    }
+    submitted++;
+  }
+  return { year, month, submitted };
+}

@@ -1045,7 +1045,7 @@ export function DocumentExplorer({
                   </span>
                   <h3 className="font-serif text-lg text-foreground">Enviar documentos</h3>
                   <p className="text-xs text-muted-foreground">
-                    Apenas PDF · pode escolher vários ficheiros · numeração automática ({String(month).padStart(2, "0")}-01, {String(month).padStart(2, "0")}-02…)
+                    Apenas PDF · pode escolher vários ficheiros · numeração automática por pasta e mês
                   </p>
                 </div>
                 <input
