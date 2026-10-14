@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Check } from "lucide-react";
 import { listCategories } from "@/lib/portal.functions";
+import { CATEGORIES } from "@/lib/portal";
 
 type Category = { id: string; slug: string; label: string };
 
@@ -15,12 +16,14 @@ export function CategoryPicker({
   onChange: (next: string[]) => void;
 }) {
   const fetchList = useServerFn(listCategories);
-  const [items, setItems] = useState<Category[]>([]);
+  const fallback: Category[] = CATEGORIES.map((c) => ({ id: c.slug, slug: c.slug, label: c.label }));
+  const [items, setItems] = useState<Category[]>(fallback);
 
   useEffect(() => {
     void (async () => {
       try {
-        setItems((await fetchList({ data: { all: true } })) as unknown as Category[]);
+        const list = (await fetchList({ data: { all: true } })) as unknown as Category[];
+        if (list?.length) setItems(list);
       } catch {
         /* ignore */
       }
