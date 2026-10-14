@@ -1010,6 +1010,12 @@ export function DocumentExplorer({
                           ? "Depois de submeter, a pasta fica em modo de visualização."
                           : "É necessário anexar pelo menos um documento antes de submeter."}
                       </p>
+                      <p className="mt-2 rounded-xl bg-gold/10 px-3 py-2 text-xs text-foreground/80">
+                        Se não carregar em «Submeter Documentação do Mês», a documentação anexada é
+                        submetida automaticamente no dia 9 do mês seguinte às 23:59:59. Nesse caso, no
+                        dia 10 às 09:00 o cliente e a contabilista recebem os mesmos emails de
+                        confirmação de uma submissão manual.
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -1380,7 +1386,15 @@ function FolderCard({
         </span>
         <span className={`block ${large || mediumLarge ? "text-sm" : "text-xs"} ${styles.meta}`}>
           {meta}
-          {status === "locked" ? " · bloqueada" : ""}
+          {status === "locked"
+            ? " · fechado / concluído"
+            : status === "open"
+            ? " · aberto dentro do prazo"
+            : status === "grace"
+            ? " · aberto fora do prazo"
+            : status === "future"
+            ? " · ainda não começou"
+            : ""}
         </span>
       </span>
     </button>
