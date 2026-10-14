@@ -138,6 +138,11 @@ function StatementConverterPage() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+  function toggleDoc(id: string) {
+    if (busy) return;
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
   async function processSelected() {
     const docs = clientDocs.filter((d) => selected.includes(d.id));
     setBusy(true); setError(null); setBatchResults([]);
@@ -458,8 +463,16 @@ function StatementConverterPage() {
                 </summary>
                 <ul className="mt-4 divide-y divide-ink/10">
                   {g.docs.map((d) => (
-                    <li key={d.id} className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
-                      <Checkbox aria-label={`Selecionar ${d.original_name}`} disabled={busy} checked={selected.includes(d.id)} onCheckedChange={(checked) => setSelected((prev) => checked ? [...prev, d.id] : prev.filter((id) => id !== d.id))} />
+                    <li
+                      key={d.id}
+                      role="checkbox"
+                      aria-checked={selected.includes(d.id)}
+                      tabIndex={busy ? -1 : 0}
+                      onClick={() => toggleDoc(d.id)}
+                      onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggleDoc(d.id); } }}
+                      className={`grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl px-3 py-3 transition-colors sm:grid-cols-[auto_minmax(0,1fr)_auto] ${selected.includes(d.id) ? "bg-gold/10" : "hover:bg-gold/5"}`}
+                    >
+                      <Checkbox aria-label={`Selecionar ${d.original_name}`} disabled={busy} checked={selected.includes(d.id)} className="pointer-events-none" />
                       <div className="min-w-0">
                         <p className="break-words text-sm text-foreground">
                           <span className="font-medium">{MONTHS[d.month - 1]} {d.year}</span> · {d.original_name}
@@ -469,6 +482,7 @@ function StatementConverterPage() {
                       <div className="col-start-2 flex gap-2 sm:col-start-auto">
                         <Button
                           type="button"
+                          onClick={(e) => { e.stopPropagation(); openClientDoc(d.id); }}
                           onClick={() => openClientDoc(d.id)}
                           className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
                         >
@@ -477,7 +491,7 @@ function StatementConverterPage() {
                         <Button
                           type="button"
                           disabled={busy}
-                          onClick={() => setConfirmAction({ kind: "doc", doc: d })}
+                          onClick={(e) => { e.stopPropagation(); setConfirmAction({ kind: "doc", doc: d }); }}
                           className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
                         >
                           <Sparkles className="h-3.5 w-3.5" />
