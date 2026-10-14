@@ -297,9 +297,9 @@ export async function autoSubmitPendingMonths(now: Date = new Date()) {
       .formatToParts(now)
       .map((p) => [p.type, p.value]),
   );
-  const lisYear = Number(parts.year);
-  const lisMonth = Number(parts.month);
-  const lisHour = Number(parts.hour) % 24;
+  const lisYear = Number(parts['year']);
+  const lisMonth = Number(parts['month']);
+  const lisHour = Number(parts['hour']) % 24;
   const offsetH = (lisHour - now.getUTCHours() + 24) % 24;
   const month = lisMonth === 1 ? 12 : lisMonth - 1;
   const year = lisMonth === 1 ? lisYear - 1 : lisYear;
