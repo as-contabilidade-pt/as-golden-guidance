@@ -691,36 +691,12 @@ export function DocumentExplorer({
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  function monthStatus(m: number): "locked" | "submitted" | "current" | "future" | "default" {
-    if (year > currentYear || (year === currentYear && m > currentMonth)) return "future";
-    if (monthLocked(m)) {
-      // Submetido mas ainda dentro do prazo (antes do dia 10 do mês seguinte):
-      // bloqueado, mas a mostrar que o prazo ainda não terminou.
-      if (submissionFor(m) && !isMonthPastDeadline(year, m)) return "submitted";
-      return "locked";
-    }
-    if (year === currentYear && m === currentMonth) return "current";
-    return "default";
+  function monthStatus(m: number): "locked" | "grace" | "open" | "future" {
+    if (isFutureMonth(m)) return "future";
+    if (monthLocked(m)) return "locked";
+    // Aberta fora do prazo (janela de 72 h úteis após aprovação): vermelho.
+    return unlockCountdown(m) ? "grace" : "open";
   }
-
-  useEffect(() => {
-    if (!yearsOpen) return;
-    function onPointerDown(e: MouseEvent) {
-      if (yearsRef.current && !yearsRef.current.contains(e.target as Node)) {
-        setYearsOpen(false);
-        setShowMoreYears(false);
-      }
-    }
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [yearsOpen]);
-
-  const allMonths = MONTHS.map((_, i) => i + 1);
-  const openMonths = allMonths.filter((m) => {
-    const s = monthStatus(m);
-    return s === "current" || s === "default";
-  });
-  const otherMonths = allMonths.filter((m) => !openMonths.includes(m));
 
   return (
     <div>
