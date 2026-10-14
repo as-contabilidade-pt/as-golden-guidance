@@ -217,7 +217,19 @@ export const reserveDocument = createServerFn({ method: "POST" })
       if (countError) throw new Error(countError.message);
 
       const seq = (count ?? 0) + 1 + attempt;
-      const label = `${String(data.month).padStart(2, "0")}-${String(seq).padStart(2, "0")}`;
+      const prefixes: Record<string, string> = {
+        documentos_salarios: "SAL",
+        faturas_despesas: "DESP",
+        faturas_vendas: "VEND",
+        faturas_compras: "COMP",
+        mapas_caixa: "CAIXA",
+        extratos_bancarios: "EXT",
+        outros_documentos: "OUT",
+      };
+      const prefix =
+        prefixes[data.category] ??
+        (data.category.replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase() || "DOC");
+      const label = `${prefix}-${String(data.month).padStart(2, "0")}-${String(seq).padStart(2, "0")}`;
       const storagePath = `${target}/${data.year}/${String(data.month).padStart(2, "0")}/${data.category}/${label}.pdf`;
 
       const { data: inserted, error } = await context.supabase
