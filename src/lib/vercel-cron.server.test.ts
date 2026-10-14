@@ -31,7 +31,7 @@ describe("monthly submission uses Lisbon day", () => {
     assert.equal(isMonthlySubmissionTime(new Date("2026-12-10T08:59:00Z")), true);
   });
   test("skips every other day", () => {
-    for (const date of ["2026-10-09T08:00:00Z", "2026-10-11T08:00:00Z", "2026-10-09T23:30:00Z"]) {
+    for (const date of ["2026-10-09T08:00:00Z", "2026-10-11T08:00:00Z", "2026-10-10T23:30:00Z"]) {
       assert.equal(isMonthlySubmissionTime(new Date(date)), false);
     }
   });
