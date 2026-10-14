@@ -28,6 +28,7 @@ import { Route as AuthenticatedAdminClientesRecordIdRouteImport } from './routes
 import { Route as AuthenticatedAdminDefinicoesCategoriasRouteImport } from './routes/_authenticated/admin_.definicoes.categorias'
 import { Route as ApiPublicJobsFechoReaberturasRouteImport } from './routes/api/public/jobs/fecho-reaberturas'
 import { Route as ApiPublicJobsSubmissaoAutomaticaRouteImport } from './routes/api/public/jobs/submissao-automatica'
+import { Route as ApiPublicJobsVercelRouteImport } from './routes/api/public/jobs/vercel'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -134,6 +135,11 @@ const ApiPublicJobsSubmissaoAutomaticaRoute =
     path: '/api/public/jobs/submissao-automatica',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicJobsVercelRoute = ApiPublicJobsVercelRouteImport.update({
+  id: '/api/public/jobs/vercel',
+  path: '/api/public/jobs/vercel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/admin/definicoes/categorias': typeof AuthenticatedAdminDefinicoesCategoriasRoute
   '/api/public/jobs/fecho-reaberturas': typeof ApiPublicJobsFechoReaberturasRoute
   '/api/public/jobs/submissao-automatica': typeof ApiPublicJobsSubmissaoAutomaticaRoute
+  '/api/public/jobs/vercel': typeof ApiPublicJobsVercelRoute
   '/admin/clientes/': typeof AuthenticatedAdminClientesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/admin/definicoes/categorias': typeof AuthenticatedAdminDefinicoesCategoriasRoute
   '/api/public/jobs/fecho-reaberturas': typeof ApiPublicJobsFechoReaberturasRoute
   '/api/public/jobs/submissao-automatica': typeof ApiPublicJobsSubmissaoAutomaticaRoute
+  '/api/public/jobs/vercel': typeof ApiPublicJobsVercelRoute
   '/admin/clientes': typeof AuthenticatedAdminClientesIndexRoute
 }
 export interface FileRoutesById {
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/_authenticated/admin_/definicoes/categorias': typeof AuthenticatedAdminDefinicoesCategoriasRoute
   '/api/public/jobs/fecho-reaberturas': typeof ApiPublicJobsFechoReaberturasRoute
   '/api/public/jobs/submissao-automatica': typeof ApiPublicJobsSubmissaoAutomaticaRoute
+  '/api/public/jobs/vercel': typeof ApiPublicJobsVercelRoute
   '/_authenticated/admin_/clientes/': typeof AuthenticatedAdminClientesIndexRoute
 }
 export interface FileRouteTypes {
@@ -217,6 +226,7 @@ export interface FileRouteTypes {
     | '/admin/definicoes/categorias'
     | '/api/public/jobs/fecho-reaberturas'
     | '/api/public/jobs/submissao-automatica'
+    | '/api/public/jobs/vercel'
     | '/admin/clientes/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/admin/definicoes/categorias'
     | '/api/public/jobs/fecho-reaberturas'
     | '/api/public/jobs/submissao-automatica'
+    | '/api/public/jobs/vercel'
     | '/admin/clientes'
   id:
     | '__root__'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin_/definicoes/categorias'
     | '/api/public/jobs/fecho-reaberturas'
     | '/api/public/jobs/submissao-automatica'
+    | '/api/public/jobs/vercel'
     | '/_authenticated/admin_/clientes/'
   fileRoutesById: FileRoutesById
 }
@@ -271,6 +283,7 @@ export interface RootRouteChildren {
   ApiPublicLembreteDocumentacaoRoute: typeof ApiPublicLembreteDocumentacaoRoute
   ApiPublicJobsFechoReaberturasRoute: typeof ApiPublicJobsFechoReaberturasRoute
   ApiPublicJobsSubmissaoAutomaticaRoute: typeof ApiPublicJobsSubmissaoAutomaticaRoute
+  ApiPublicJobsVercelRoute: typeof ApiPublicJobsVercelRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -408,6 +421,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicJobsSubmissaoAutomaticaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/vercel': {
+      id: '/api/public/jobs/vercel'
+      path: '/api/public/jobs/vercel'
+      fullPath: '/api/public/jobs/vercel'
+      preLoaderRoute: typeof ApiPublicJobsVercelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -453,6 +473,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicLembreteDocumentacaoRoute: ApiPublicLembreteDocumentacaoRoute,
   ApiPublicJobsFechoReaberturasRoute: ApiPublicJobsFechoReaberturasRoute,
   ApiPublicJobsSubmissaoAutomaticaRoute: ApiPublicJobsSubmissaoAutomaticaRoute,
+  ApiPublicJobsVercelRoute: ApiPublicJobsVercelRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

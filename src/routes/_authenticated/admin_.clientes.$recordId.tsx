@@ -241,20 +241,23 @@ function FichaPage() {
         </p>
       ) : null}
 
-      <section aria-label="Documentos do cliente" className="mb-6 flex flex-col gap-4 rounded-3xl bg-ink p-5 text-background sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <div className="flex min-w-0 items-center gap-4">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-gold/20 text-gold"><FolderOpen className="size-5" /></span>
-          <div className="min-w-0">
-            <h2 className="text-lg font-medium">Documentos do cliente</h2>
-            <p className="mt-0.5 text-sm text-background/60">{userId ? "Consultar e descarregar todo o arquivo." : "Disponível depois de ativar o cliente."}</p>
-          </div>
-        </div>
-        {userId ? (
-          <Button asChild className="h-11 rounded-full px-6 text-sm shadow-none">
-            <Link to="/admin/cliente/$clientId" params={{ clientId: userId }}>Abrir documentos <ArrowUpRight className="size-4" /></Link>
-          </Button>
-        ) : null}
-      </section>
+      {userId ? (
+        <Button asChild variant="ghost" className="group mb-6 grid h-auto min-h-28 w-full grid-cols-[24px_minmax(0,1fr)_24px] gap-3 whitespace-normal rounded-3xl bg-ink px-5 py-6 text-background transition-colors hover:bg-ink/90 hover:text-background focus-visible:ring-2 focus-visible:ring-gold sm:grid-cols-[48px_minmax(0,1fr)_48px] sm:px-7">
+          <Link to="/admin/cliente/$clientId" params={{ clientId: userId }} aria-label={`Abrir documentos de ${form.name}`}>
+            <FolderOpen className="size-5 justify-self-center text-gold" />
+            <span className="min-w-0 text-center">
+              <span className="block text-lg font-medium">Documentos do cliente</span>
+              <span className="mt-1 block text-sm font-normal text-background/65">Consultar e descarregar o arquivo</span>
+            </span>
+            <ArrowUpRight className="size-5 justify-self-center text-gold transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transform-none" />
+          </Link>
+        </Button>
+      ) : (
+        <section aria-label="Documentos do cliente" className="mb-6 rounded-3xl bg-ink px-5 py-6 text-center text-background">
+          <h2 className="text-lg font-medium">Documentos do cliente</h2>
+          <p className="mt-1 text-sm text-background/65">Disponível depois de ativar o cliente.</p>
+        </section>
+      )}
 
       <form onSubmit={(event) => { event.preventDefault(); void onSave(); }} className="rounded-3xl border border-gold/15 bg-card shadow-sm">
         <Tabs defaultValue="dados">
