@@ -172,7 +172,7 @@ export const extractBankStatement = createServerFn({ method: "POST" })
       .select("id")
       .maybeSingle();
 
-    if (historyError || !saved) throw new Error("Os movimentos foram processados, mas não foi possível guardar o histórico. Tente novamente antes de exportar.");
+    if (historyError) console.error("statement history save failed", historyError.message);
     return { rows: mapped, historyId: (saved?.id as string | undefined) ?? null };
   });
 
