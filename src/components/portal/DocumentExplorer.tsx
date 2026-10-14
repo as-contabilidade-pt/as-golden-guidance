@@ -1342,7 +1342,7 @@ function FolderCard({
         </span>
         <span className={`block ${large || mediumLarge ? "text-sm" : "text-xs"} ${styles.meta}`}>
           {meta}
-          {status === "locked" || status === "submitted" ? " · bloqueada" : ""}
+          {status === "locked" ? " · bloqueada" : ""}
         </span>
       </span>
     </button>
