@@ -834,8 +834,24 @@ export function DocumentExplorer({
               );
             };
             return (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {allMonths.map((m) => renderCard(m))}
+              <div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {allMonths.map((m) => renderCard(m))}
+                </div>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Lock className="h-3 w-3 text-[oklch(0.5_0.14_150)]" /> Fechado / concluído
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Lock className="h-3 w-3 text-gold-deep" /> Aberto dentro do prazo
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Lock className="h-3 w-3 text-[oklch(0.55_0.18_25)]" /> Aberto fora de prazo
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Folder className="h-3 w-3 text-muted-foreground" /> Ainda não começou
+                  </span>
+                </div>
               </div>
             );
           })()
@@ -1084,17 +1100,45 @@ export function DocumentExplorer({
                         </li>
                       ))}
                     </ul>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => setPendingConfirm({ kind: "upload", files: staged })}
-                      className="mt-1 inline-flex items-center gap-2 rounded-full bg-gold px-6 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
-                    >
-                      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                      {busy
-                        ? `A enviar ${progress}/${staged.length}…`
-                        : `Enviar ${staged.length} ${staged.length === 1 ? "documento" : "documentos"}`}
-                    </button>
+                    {busy ? (
+                      <div className="mt-1 w-full space-y-2">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>
+                            A enviar {Math.min(progress + 1, staged.length)} de {staged.length}…
+                          </span>
+                          <span className="font-medium tabular-nums text-gold-deep">
+                            {Math.round((progress / staged.length) * 100)}%
+                          </span>
+                        </div>
+                        <div
+                          role="progressbar"
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={Math.round((progress / staged.length) * 100)}
+                          className="h-2.5 w-full overflow-hidden rounded-full bg-ink/10"
+                        >
+                          <div
+                            className="h-full rounded-full bg-gold transition-[width] duration-500 ease-out"
+                            style={{
+                              width: `${Math.max(4, Math.round((progress / staged.length) * 100))}%`,
+                            }}
+                          />
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                            Não feche esta página enquanto o envio estiver em curso.
+                        </p>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => setPendingConfirm({ kind: "upload", files: staged })}
+                        className="mt-1 inline-flex items-center gap-2 rounded-full bg-gold px-6 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
+                      >
+                        <Upload className="h-4 w-4" />
+                        {`Enviar ${staged.length} ${staged.length === 1 ? "documento" : "documentos"}`}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">
