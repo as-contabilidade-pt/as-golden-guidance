@@ -395,3 +395,104 @@ export async function autoSubmitPendingMonths(now: Date = new Date()) {
   }
   return { year, month, submitted };
 }
+
+/**
+ * Fim de reaberturas aprovadas (incl. 72 h úteis): se o prazo terminou e o
+ * cliente não carregou em «Submeter», o mês é submetido automaticamente com a
+ * data do fim do prazo, a reabertura fecha e cliente + administração recebem os emails.
+ */
+export async function autoSubmitExpiredUnlocks(now: Date = new Date()) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { buildSubmissionDeclaration } = await import("@/lib/portal");
+  const { data: reqs, error } = await supabaseAdmin
+    .from("unlock_requests")
+    .select("id, user_id, year, month, decided_at")
+    .eq("status", "aprovado");
+  if (error) throw new Error(error.message);
+
+  let submitted = 0;
+  for (const r of reqs ?? []) {
+    if (!r.decided_at) continue;
+    const expiry = unlockExpiry(r.year, r.month, r.decided_at);
+    if (expiry.getTime() > now.getTime()) continue;
+    const submittedAt = expiry.toISOString();
+
+    await supabaseAdmin.from("unlock_requests").update({ status: "fechado" }).eq("id", r.id);
+
+    const { count } = await supabaseAdmin
+      .from("documents")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", r.user_id)
+      .eq("year", r.year)
+      .eq("month", r.month);
+    if (!count) continue;
+
+    const { data: c } = await supabaseAdmin
+      .from("client_records")
+      .select("name, nif, email, responsible_name")
+      .eq("user_id", r.user_id)
+      .maybeSingle();
+    const { data: p } = await supabaseAdmin
+      .from("profiles")
+      .select("full_name, nif, email")
+      .eq("id", r.user_id)
+      .maybeSingle();
+    const name = c?.name || p?.full_name || "";
+    const nif = c?.nif || p?.nif || "";
+    const email = c?.email || p?.email || "";
+    const responsibleName = c?.responsible_name || name;
+    const declarationText =
+      buildSubmissionDeclaration({
+        nif,
+        companyName: name,
+        responsibleName,
+        year: r.year,
+        month: r.month,
+        at: submittedAt,
+      }) + "\n\n(Submissão automática no fim do prazo de reabertura)";
+    const payload = {
+      user_id: r.user_id,
+      nif,
+      company_name: name,
+      responsible_name: responsibleName,
+      declaration_text: declarationText,
+      year: r.year,
+      month: r.month,
+      declaration_accepted: true,
+      document_count: count,
+      submitted_at: submittedAt,
+    };
+    const { data: existing } = await supabaseAdmin
+      .from("month_submissions")
+      .select("id")
+      .eq("user_id", r.user_id)
+      .eq("year", r.year)
+      .eq("month", r.month)
+      .limit(1);
+    const { error: wErr } = existing?.[0]
+      ? await supabaseAdmin.from("month_submissions").update(payload).eq("id", existing[0].id)
+      : await supabaseAdmin.from("month_submissions").insert(payload);
+    if (wErr) {
+      console.error("[autoSubmitUnlock] falha", r.id, wErr.message);
+      continue;
+    }
+    const info = {
+      fullName: name,
+      nif,
+      ...(email ? { email } : {}),
+      year: r.year,
+      month: r.month,
+      submittedAt,
+      documentCount: count,
+      declarationText,
+    };
+    try {
+      await notifyAdminOfSubmission(info);
+      await notifyClientOfSubmission(info);
+    } catch (e) {
+      console.error("[autoSubmitUnlock] emails", e);
+    }
+    submitted++;
+  }
+  return { submitted };
+}
