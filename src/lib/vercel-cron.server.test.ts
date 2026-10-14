@@ -6,7 +6,12 @@ describe("Vercel cron authentication", () => {
   // These are isolated test fixtures, not deployment credentials.
   const fixture = "test-only-cron-fixture";
   test("fails closed when configuration is absent", async () => {
-    assert.equal((await authenticateVercelCron(new Request("https://example.test"), undefined))?.status, 503);
+    for (const authorization of ["", `Bearer ${fixture}`]) {
+      const request = new Request("https://example.test", { headers: { authorization } });
+      const response = await authenticateVercelCron(request, undefined);
+      assert.equal(response?.status, 401);
+      assert.equal(response?.headers.get("Cache-Control"), "no-store");
+    }
   });
   test("rejects missing, malformed and incorrect authorization", async () => {
     for (const authorization of ["", "Basic test", "Bearer incorrect", "Bearer test token"]) {

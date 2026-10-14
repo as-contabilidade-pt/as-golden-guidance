@@ -1,8 +1,8 @@
 /** Separate credential: never changes authentication of managed POST callbacks. */
 export async function authenticateVercelCron(request: Request, secret: string | undefined): Promise<Response | null> {
-  if (!secret) return Response.json({ error: "Agendamento não configurado." }, { status: 503 });
   const match = /^Bearer ([^\s,]+)$/.exec(request.headers.get("authorization") ?? "");
-  if (!match?.[1]) return Response.json({ error: "Acesso não autorizado." }, { status: 401 });
+  // An unconfigured deployment must deny access, not report an application outage.
+  if (!secret || !match?.[1]) return Response.json({ error: "Acesso não autorizado." }, { status: 401, headers: { "Cache-Control": "no-store" } });
   const encoder = new TextEncoder();
   const hash = async (value: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(value)));
   const [provided, expected] = await Promise.all([hash(match[1]), hash(secret)]);
