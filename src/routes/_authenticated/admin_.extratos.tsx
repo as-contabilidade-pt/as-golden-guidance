@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Eye, FileSpreadsheet, History, Loader2, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
+import { Eye, FileSpreadsheet, History, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import { PortalShell } from "@/components/portal/PortalShell";
 import {
@@ -79,7 +79,8 @@ function StatementConverterPage() {
   const [saved, setSaved] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(10);
-  const [batchProgress, setBatchProgress] = useState("");
+  const [progressLabel, setProgressLabel] = useState<string | null>(null);
+  const [progressPct, setProgressPct] = useState<number | null>(null);
   const [batchResults, setBatchResults] = useState<HistoryItem[]>([]);
   const [currentFilename, setCurrentFilename] = useState("Extrato.pdf");
   const fetchHistory = useServerFn(listStatementHistory);
@@ -140,17 +141,19 @@ function StatementConverterPage() {
     const failures: string[] = [];
     try {
       for (const [index, d] of docs.entries()) {
-        setBatchProgress(`${index + 1} de ${docs.length} · ${d.client_name}`);
+        setProgressLabel(`A converter ${index + 1} de ${docs.length} · ${d.client_name}`);
+        setProgressPct(Math.round((index / docs.length) * 100));
         try {
           const result = await extract({ data: { filename: d.original_name, mimeType: "application/pdf", documentId: d.id, clientName: d.client_name } });
           if (!result.historyId || !result.rows.length) throw new Error("Sem movimentos ou histórico não guardado.");
           results.push({ id: result.historyId, client_name: d.client_name, filename: d.original_name, rows: result.rows, row_count: result.rows.length, created_at: new Date().toISOString() });
         } catch (e) { failures.push(`${d.client_name} — ${d.original_name}: ${friendlyError(e, "Não foi possível converter.")}`); }
       }
+      setProgressPct(100);
       setBatchResults(results);
       if (failures.length) setError(failures.join(" · "));
       await loadHistory();
-    } finally { setBusy(false); setBatchProgress(""); }
+    } finally { setBusy(false); setProgressLabel(null); setProgressPct(null); }
   }
 
   async function exportCurrent() {
@@ -180,6 +183,8 @@ function StatementConverterPage() {
     setError(null);
     setRows(null);
     setSaved(false);
+    setProgressLabel(`A converter ${d.original_name}`);
+    setProgressPct(null);
     const name = d.client_name;
     setCurrentFilename(d.original_name);
     setClientName(name);
@@ -190,13 +195,15 @@ function StatementConverterPage() {
       setRows(result.rows);
       setHistoryId(result.historyId);
       void loadHistory();
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      document.getElementById("revisao")?.scrollIntoView({ behavior: "smooth" });
       if (result.rows.length === 0) setError("Não foram encontrados movimentos neste extrato.");
     } catch (e) {
       setError(friendlyError(e, "Erro ao processar o extrato."));
     } finally {
       setBusy(false);
       setBusyDoc(null);
+      setProgressLabel(null);
+      setProgressPct(null);
     }
   }
 
@@ -207,7 +214,7 @@ function StatementConverterPage() {
     setHistoryId(h.id);
     setError(null);
     setSaved(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.getElementById("revisao")?.scrollIntoView({ behavior: "smooth" });
   }
 
   async function onSaveEdits() {
@@ -235,17 +242,19 @@ function StatementConverterPage() {
       const failures: string[] = [];
       try {
         for (const [index, upload] of uploadFiles.entries()) {
-          setBatchProgress(`${index + 1} de ${uploadFiles.length} · ${upload.name}`);
+          setProgressLabel(`A processar ${index + 1} de ${uploadFiles.length} · ${upload.name}`);
+          setProgressPct(Math.round((index / uploadFiles.length) * 100));
           try {
             const result = await extract({ data: { filename: upload.name, mimeType: "application/pdf", fileData: await fileToBase64(upload), clientName } });
             if (!result.historyId || !result.rows.length) throw new Error("Não foram encontrados movimentos.");
             results.push({ id: result.historyId, filename: upload.name, client_name: clientName, rows: result.rows, row_count: result.rows.length, created_at: new Date().toISOString() });
           } catch (e) { failures.push(`${upload.name}: ${friendlyError(e, "Não foi possível converter.")}`); }
         }
+        setProgressPct(100);
         setBatchResults(results);
         if (failures.length) setError(failures.join(" · "));
         await loadHistory();
-      } finally { setBusy(false); setBatchProgress(""); }
+      } finally { setBusy(false); setProgressLabel(null); setProgressPct(null); }
       return;
     }
     setCurrentFilename(file.name);
@@ -253,6 +262,8 @@ function StatementConverterPage() {
     setError(null);
     setRows(null);
     setSaved(false);
+    setProgressLabel(`A processar ${file.name}`);
+    setProgressPct(null);
     try {
       const fileData = await fileToBase64(file);
       const result = await extract({
@@ -261,6 +272,7 @@ function StatementConverterPage() {
       setRows(result.rows);
       setHistoryId(result.historyId);
       void loadHistory();
+      document.getElementById("revisao")?.scrollIntoView({ behavior: "smooth" });
       if (result.rows.length === 0) {
         setError("Não foram encontrados movimentos neste extrato. Verifique o ficheiro.");
       }
@@ -268,6 +280,8 @@ function StatementConverterPage() {
       setError(friendlyError(e, "Erro ao processar o extrato."));
     } finally {
       setBusy(false);
+      setProgressLabel(null);
+      setProgressPct(null);
     }
   }
 
@@ -338,11 +352,19 @@ function StatementConverterPage() {
       title="Conversor de Extratos"
       subtitle="Extratos bancários"
     >
-      <div className="grid gap-3 border-b border-border pb-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
-        <div>
-          <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-muted-foreground">
-            Extrato bancário (PDF)
-          </label>
+      <section>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-serif text-2xl text-foreground">Extratos enviados pelos clientes</h2>
+          <input
+            value={docFilter}
+            onChange={(e) => { setDocFilter(e.target.value); setVisibleCount(10); }}
+            placeholder="Procurar cliente ou NIF"
+            className="w-full max-w-xs rounded-full border border-ink/15 bg-transparent px-5 py-2.5 text-sm text-foreground outline-none focus:border-gold"
+          />
+        </div>
+
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-ink/10 bg-white/60 px-4 py-2.5">
+          <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Converter ficheiro descarregado</span>
           <input
             ref={inputRef}
             type="file"
@@ -354,47 +376,120 @@ function StatementConverterPage() {
           <Button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="inline-flex w-full items-center gap-2 rounded-full border border-ink/15 px-5 py-3 text-sm text-foreground transition-colors hover:border-gold hover:text-gold"
+            className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-3.5 py-1.5 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
           >
-            <Upload className="h-4 w-4" />
-            <span className="truncate">{uploadFiles.length > 1 ? `${uploadFiles.length} PDF selecionados` : file ? file.name : "Escolher PDF"}</span>
+            <Upload className="h-3.5 w-3.5" />
+            <span className="max-w-[220px] truncate">{uploadFiles.length > 1 ? `${uploadFiles.length} PDF selecionados` : file ? file.name : "Escolher PDF"}</span>
           </Button>
-        </div>
-
-        <div>
-          <label className="mb-2 block text-xs uppercase tracking-[0.16em] text-muted-foreground">
-            Nome do cliente (opcional)
-          </label>
           <input
             value={clientName}
             onChange={(e) => setClientName(e.target.value)}
-            placeholder="Ex.: Maria Silva"
-            className="w-full rounded-full border border-ink/15 bg-transparent px-5 py-3 text-sm text-foreground outline-none focus:border-gold"
+            placeholder="Cliente (opcional)"
+            className="w-44 rounded-full border border-ink/15 bg-transparent px-3.5 py-1.5 text-xs text-foreground outline-none focus:border-gold"
           />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             onClick={onProcess}
             disabled={!file || busy}
-            className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
           >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {busy ? "A processar…" : uploadFiles.length > 1 ? "Processar PDF" : "Processar extrato"}
+            <Sparkles className="h-3.5 w-3.5" /> Processar
           </Button>
+          <span className="text-[11px] text-muted-foreground">Processamento por IA · com custo por extrato</span>
         </div>
-        <p className="text-xs text-muted-foreground sm:col-span-3">Processamento por IA · com custo por extrato</p>
-      </div>
 
-      {error ? (
-        <p className="mt-6 rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-3 text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
+        {error ? (
+          <p className="mb-4 rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-3 text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+
+        {filteredDocs.length > 0 && (
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <Checkbox id="select-statements" disabled={busy} checked={filteredDocs.slice(0, visibleCount).every((d) => selected.includes(d.id))} onCheckedChange={(checked) => setSelected((prev) => checked ? [...new Set([...prev, ...filteredDocs.slice(0, visibleCount).map((d) => d.id)])] : prev.filter((id) => !filteredDocs.slice(0, visibleCount).some((d) => d.id === id)))} />
+            <label htmlFor="select-statements" className="text-sm text-muted-foreground">Selecionar visíveis</label>
+            <span className="text-xs text-muted-foreground">{selected.length} selecionados</span>
+            <Button className="rounded-full" disabled={busy || !selected.length} onClick={processSelected}><Sparkles />Converter selecionados</Button>
+            {selected.length > 0 && <Button variant="ghost" disabled={busy} onClick={() => setSelected([])}>Limpar</Button>}
+          </div>
+        )}
+
+        {progressLabel ? (
+          <div role="status" className="mb-4 max-w-xl">
+            <p className="mb-1.5 text-sm text-muted-foreground">{progressLabel}</p>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-ink/10">
+              {progressPct === null ? (
+                <div className="progress-slide h-full w-1/3 rounded-full bg-gold" />
+              ) : (
+                <div className="h-full rounded-full bg-gold transition-all duration-300" style={{ width: `${progressPct}%` }} />
+              )}
+            </div>
+          </div>
+        ) : null}
+
+        {batchResults.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-3 border-y border-border py-3">
+            <span className="text-sm">{batchResults.length} extratos convertidos</span>
+            <Button className="rounded-full" onClick={() => downloadZip(batchResults)}><FileSpreadsheet />Descarregar ZIP</Button>
+          </div>
+        )}
+
+        {groupedDocs.length === 0 ? (
+          <p className="soft-card p-6 text-sm text-muted-foreground">
+            Ainda não existem extratos bancários enviados pelos clientes.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {groupedDocs.map((g) => (
+              <details key={g.name + g.nif} className="group border-b border-border py-3" open>
+                <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2">
+                  <span className="font-medium text-foreground">
+                    {g.name} {g.nif ? <span className="text-sm text-muted-foreground">· NIF {g.nif}</span> : null}
+                  </span>
+                  <span className="rounded-full bg-gold/10 px-3 py-1 text-xs text-foreground">
+                    {g.docs.length} {g.docs.length === 1 ? "extrato" : "extratos"}
+                  </span>
+                </summary>
+                <ul className="mt-4 divide-y divide-ink/10">
+                  {g.docs.map((d) => (
+                    <li key={d.id} className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+                      <Checkbox aria-label={`Selecionar ${d.original_name}`} disabled={busy} checked={selected.includes(d.id)} onCheckedChange={(checked) => setSelected((prev) => checked ? [...prev, d.id] : prev.filter((id) => id !== d.id))} />
+                      <div className="min-w-0">
+                        <p className="break-words text-sm text-foreground">
+                          <span className="font-medium">{MONTHS[d.month - 1]} {d.year}</span> · {d.original_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Enviado em {formatDateTimePt(d.created_at)}</p>
+                      </div>
+                      <div className="col-start-2 flex gap-2 sm:col-start-auto">
+                        <Button
+                          type="button"
+                          onClick={() => openClientDoc(d.id)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-4 py-2 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
+                        >
+                          <Eye className="h-3.5 w-3.5" /> Ver PDF
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => processClientDoc(d)}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                          {busyDoc === d.id ? "A converter…" : "Converter"}
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ))}
+          </div>
+        )}
+        {visibleCount < filteredDocs.length && <div className="mt-4 text-center"><Button variant="outline" className="rounded-full" onClick={() => setVisibleCount((count) => count + 10)}>Ver mais {Math.min(10, filteredDocs.length - visibleCount)}</Button></div>}
+      </section>
 
       {rows ? (
-        <section className="mt-10">
+        <section id="revisao" className="mt-10 scroll-mt-24">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-serif text-2xl text-foreground">
               {currentFilename}{" "}
@@ -476,82 +571,6 @@ function StatementConverterPage() {
           </div>
         </section>
       ) : null}
-
-      <section className="mt-7">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-serif text-2xl text-foreground">Extratos enviados pelos clientes</h2>
-          <input
-            value={docFilter}
-            onChange={(e) => { setDocFilter(e.target.value); setVisibleCount(10); }}
-            placeholder="Procurar cliente ou NIF"
-            className="w-full max-w-xs rounded-full border border-ink/15 bg-transparent px-5 py-2.5 text-sm text-foreground outline-none focus:border-gold"
-          />
-        </div>
-        {filteredDocs.length > 0 && <div className="mb-3 flex flex-wrap items-center gap-3">
-          <Checkbox id="select-statements" disabled={busy} checked={filteredDocs.slice(0, visibleCount).every((d) => selected.includes(d.id))} onCheckedChange={(checked) => setSelected((prev) => checked ? [...new Set([...prev, ...filteredDocs.slice(0, visibleCount).map((d) => d.id)])] : prev.filter((id) => !filteredDocs.slice(0, visibleCount).some((d) => d.id === id)))} />
-          <label htmlFor="select-statements" className="text-sm text-muted-foreground">Selecionar visíveis</label>
-          <span className="text-xs text-muted-foreground">{selected.length} selecionados</span>
-          <Button className="rounded-full" disabled={busy || !selected.length} onClick={processSelected}><Sparkles />Converter selecionados</Button>
-          {selected.length > 0 && <Button variant="ghost" disabled={busy} onClick={() => setSelected([])}>Limpar</Button>}
-        </div>}
-        {batchProgress && <p role="status" className="mb-3 text-sm text-muted-foreground">A converter {batchProgress}</p>}
-        {batchResults.length > 0 && <div className="mb-4 flex flex-wrap items-center gap-3 border-y border-border py-3">
-          <span className="text-sm">{batchResults.length} extratos convertidos</span>
-          <Button className="rounded-full" onClick={() => downloadZip(batchResults)}><FileSpreadsheet />Descarregar ZIP</Button>
-        </div>}
-        {groupedDocs.length === 0 ? (
-          <p className="soft-card p-6 text-sm text-muted-foreground">
-            Ainda não existem extratos bancários enviados pelos clientes.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {groupedDocs.map((g) => (
-              <details key={g.name + g.nif} className="group border-b border-border py-3" open>
-                <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2">
-                  <span className="font-medium text-foreground">
-                    {g.name} {g.nif ? <span className="text-sm text-muted-foreground">· NIF {g.nif}</span> : null}
-                  </span>
-                  <span className="rounded-full bg-gold/10 px-3 py-1 text-xs text-foreground">
-                    {g.docs.length} {g.docs.length === 1 ? "extrato" : "extratos"}
-                  </span>
-                </summary>
-                <ul className="mt-4 divide-y divide-ink/10">
-                  {g.docs.map((d) => (
-                    <li key={d.id} className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
-                      <Checkbox aria-label={`Selecionar ${d.original_name}`} disabled={busy} checked={selected.includes(d.id)} onCheckedChange={(checked) => setSelected((prev) => checked ? [...prev, d.id] : prev.filter((id) => id !== d.id))} />
-                      <div className="min-w-0">
-                        <p className="break-words text-sm text-foreground">
-                          <span className="font-medium">{MONTHS[d.month - 1]} {d.year}</span> · {d.original_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Enviado em {formatDateTimePt(d.created_at)}</p>
-                      </div>
-                      <div className="col-start-2 flex gap-2 sm:col-start-auto">
-                        <Button
-                          type="button"
-                          onClick={() => openClientDoc(d.id)}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-4 py-2 text-xs text-foreground transition-colors hover:border-gold hover:text-gold"
-                        >
-                          <Eye className="h-3.5 w-3.5" /> Ver PDF
-                        </Button>
-                        <Button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => processClientDoc(d)}
-                          className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
-                        >
-                          {busyDoc === d.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                          Converter
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            ))}
-          </div>
-        )}
-        {visibleCount < filteredDocs.length && <div className="mt-4 text-center"><Button variant="outline" className="rounded-full" onClick={() => setVisibleCount((count) => count + 10)}>Ver mais {Math.min(10, filteredDocs.length - visibleCount)}</Button></div>}
-      </section>
 
       <section className="mt-12">
         <h2 className="mb-1 flex items-center gap-2 font-serif text-2xl text-foreground">
