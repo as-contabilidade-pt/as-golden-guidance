@@ -89,8 +89,8 @@ function ClientesPage() {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("client_number");
   const [asc, setAsc] = useState(true);
-  /** Por defeito, a lista mostra primeiro os clientes ativos e depois os inativos. */
-  const [defaultView, setDefaultView] = useState(true);
+  /** Filtro de estado combinável com a ordenação (por defeito: ativos primeiro). */
+  const [stateOrder, setStateOrder] = useState<"active" | "inactive" | "none">("active");
   const [busy, setBusy] = useState(false);
   const [confirmExport, setConfirmExport] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,17 +134,17 @@ function ClientesPage() {
     );
     const byNumber = (a: Row, b: Row) =>
       String(a.client_number).localeCompare(String(b.client_number), "pt", { numeric: true });
+    const dir = asc ? 1 : -1;
     const sorted = [...list].sort((a, b) => {
-      if (defaultView) {
-        const state = Number(b.folder_active) - Number(a.folder_active);
-        return state !== 0 ? state : byNumber(a, b);
+      if (stateOrder !== "none") {
+        const st = Number(b.folder_active) - Number(a.folder_active);
+        if (st !== 0) return stateOrder === "active" ? st : -st;
       }
-      if (sort === "folder_active") return Number(a.folder_active) - Number(b.folder_active);
-      if (sort === "client_number") return byNumber(a, b);
-      return String(a[sort] ?? "").localeCompare(String(b[sort] ?? ""), "pt");
+      if (sort === "client_number") return dir * byNumber(a, b);
+      return dir * String(a[sort] ?? "").localeCompare(String(b[sort] ?? ""), "pt");
     });
-    return defaultView || asc ? sorted : sorted.reverse();
-  }, [rows, query, sort, asc, defaultView]);
+    return sorted;
+  }, [rows, query, sort, asc, stateOrder]);
 
   const activeCount = rows.filter((r) => r.folder_active).length;
 
@@ -340,7 +340,6 @@ function ClientesPage() {
             value={`${sort}:${asc ? "asc" : "desc"}`}
             onValueChange={(value) => {
               const [key, direction] = value.split(":");
-              setDefaultView(false);
               setSort(key as SortKey);
               setAsc(direction === "asc");
             }}
@@ -357,8 +356,16 @@ function ClientesPage() {
               <SelectItem value="nif:desc">NIF: decrescente</SelectItem>
               <SelectItem value="locality:asc">Localidade: A–Z</SelectItem>
               <SelectItem value="locality:desc">Localidade: Z–A</SelectItem>
-              <SelectItem value="folder_active:asc">Estado: inativos primeiro</SelectItem>
-              <SelectItem value="folder_active:desc">Estado: ativos primeiro</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={stateOrder} onValueChange={(v) => setStateOrder(v as typeof stateOrder)}>
+            <SelectTrigger aria-label="Filtrar por estado" className="h-11 w-full min-w-0 shrink-0 rounded-full border-gold/20 bg-background px-5 shadow-none sm:w-52">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Ativos primeiro</SelectItem>
+              <SelectItem value="inactive">Inativos primeiro</SelectItem>
+              <SelectItem value="none">Sem filtro de estado</SelectItem>
             </SelectContent>
           </Select>
         </div>
