@@ -157,11 +157,12 @@ function StatementConverterPage() {
   }
 
   async function exportCurrent() {
-    if (!rows?.length || !historyId) return;
+    if (!rows?.length) return;
     setBusy(true); setError(null);
     try {
-      await saveHistory({ data: { id: historyId, clientName, rows } });
-      setSaved(true);
+      if (historyId) {
+        try { await saveHistory({ data: { id: historyId, clientName, rows } }); setSaved(true); } catch { /* histórico indisponível */ }
+      }
       generateExcel(rows, clientName);
       await loadHistory();
     } catch (e) { setError(friendlyError(e, "Não foi possível guardar o Excel no histórico.")); }
