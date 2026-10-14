@@ -159,7 +159,8 @@ export const extractBankStatement = createServerFn({ method: "POST" })
         } satisfies StatementRow;
       });
 
-    const { data: saved, error: historyError } = await context.supabase
+    const { supabaseAdmin: historyDb } = await import("@/integrations/supabase/client.server");
+    const { data: saved, error: historyError } = await historyDb
       .from("statement_conversions")
       .insert({
         created_by: context.userId,
@@ -190,12 +191,13 @@ export const listStatementHistory = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
     try {
-      await context.supabase.from("statement_conversions").delete().lt("created_at", since);
+      await db.from("statement_conversions").delete().lt("created_at", since);
     } catch {
       // histórico indisponível: ignorar limpeza
     }
-    const { data, error } = await context.supabase
+    const { data, error } = await db
       .from("statement_conversions")
       .select("id, client_name, filename, row_count, created_at, rows")
       .gte("created_at", since)
@@ -228,7 +230,8 @@ export const updateStatementHistory = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { error } = await context.supabase
+    const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+    const { error } = await db
       .from("statement_conversions")
       .update({ rows: data.rows, row_count: data.rows.length, client_name: data.clientName })
       .eq("id", data.id);
@@ -241,7 +244,8 @@ export const deleteStatementHistory = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    await context.supabase.from("statement_conversions").delete().eq("id", data.id);
+    const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+    await db.from("statement_conversions").delete().eq("id", data.id);
     return { ok: true };
   });
 

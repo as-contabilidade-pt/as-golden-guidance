@@ -7,6 +7,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Eye, FileSpreadsheet, History, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
 import {
   deleteStatementHistory,
   extractBankStatement,
@@ -83,6 +84,9 @@ function StatementConverterPage() {
   const [progressPct, setProgressPct] = useState<number | null>(null);
   const [batchResults, setBatchResults] = useState<HistoryItem[]>([]);
   const [currentFilename, setCurrentFilename] = useState("Extrato.pdf");
+  const [confirmAction, setConfirmAction] = useState<
+    { kind: "batch" } | { kind: "upload" } | { kind: "doc"; doc: ClientStatement } | null
+  >(null);
   const fetchHistory = useServerFn(listStatementHistory);
   const fetchClientDocs = useServerFn(listClientStatements);
   const saveHistory = useServerFn(updateStatementHistory);
@@ -391,7 +395,7 @@ function StatementConverterPage() {
           />
           <Button
             type="button"
-            onClick={onProcess}
+            onClick={() => setConfirmAction({ kind: "upload" })}
             disabled={!file || busy}
             className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
           >
