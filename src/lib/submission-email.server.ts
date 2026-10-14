@@ -20,6 +20,7 @@ type SubmissionInfo = {
 type UnlockDecisionInfo = {
   fullName: string;
   nif: string;
+  adminNote?: string;
   email?: string;
   year: number;
   month: number;
@@ -192,6 +193,7 @@ export async function notifyUnlockDecision(info: UnlockDecisionInfo) {
     "",
     `Resultado: ${resultado}`,
     `Data/hora da decisão: ${formatDateTimePt(info.decidedAt)}`,
+    ...(info.adminNote ? [`Nota da AS Contabilidade: ${info.adminNote}`] : []),
     ...(info.decision === "aprovado"
       ? [`Prazo para submeter: até ${formatDateTimePt(unlockExpiry(info.year, info.month, info.decidedAt))}`]
       : []),
