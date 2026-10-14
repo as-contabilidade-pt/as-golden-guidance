@@ -20,6 +20,7 @@ type SubmissionInfo = {
 type UnlockDecisionInfo = {
   fullName: string;
   nif: string;
+  adminNote?: string;
   email?: string;
   year: number;
   month: number;
