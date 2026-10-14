@@ -12,3 +12,4 @@
 - Keep administration activity in shared portal components with separate submissions and unlock-history routes; the main panel shows only pending unlock requests to prioritize decisions.
 - Constrain shared dialogs to the dynamic viewport and use shrinkable grid tracks for mixed text/action rows so phone and tablet layouts remain usable without page-level horizontal scrolling.
 - Keep client-list rows focused on identification and document access; place editing, access management and confirmed deletion in the client detail page with compact tabbed sections.
+- Keep Vercel cron work in a separately authenticated GET callback using CRON_SECRET and a consolidated hourly schedule; preserve managed POST callbacks so existing schedules retain their credentials and behavior.
