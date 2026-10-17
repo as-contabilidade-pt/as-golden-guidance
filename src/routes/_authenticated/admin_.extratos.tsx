@@ -192,7 +192,6 @@ function StatementConverterPage() {
     setBusy(true);
     setError(null);
     setRows(null);
-    setSaved(false);
     setProgressLabel(`A converter ${d.original_name}`);
     setProgressPct(null);
     const name = d.client_name;
@@ -223,7 +222,6 @@ function StatementConverterPage() {
     setClientName(h.client_name);
     setHistoryId(h.id);
     setError(null);
-    setSaved(false);
     document.getElementById("revisao")?.scrollIntoView({ behavior: "smooth" });
   }
 
@@ -260,7 +258,6 @@ function StatementConverterPage() {
     setBusy(true);
     setError(null);
     setRows(null);
-    setSaved(false);
     setProgressLabel(`A processar ${file.name}`);
     setProgressPct(null);
     try {
