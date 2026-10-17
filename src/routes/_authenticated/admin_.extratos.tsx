@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Eye, FileSpreadsheet, History, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
+import { Eye, FileSpreadsheet, History, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
@@ -77,7 +77,6 @@ function StatementConverterPage() {
   const [clientDocs, setClientDocs] = useState<ClientStatement[]>([]);
   const [docFilter, setDocFilter] = useState("");
   const [busyDoc, setBusyDoc] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(10);
   const [progressLabel, setProgressLabel] = useState<string | null>(null);
@@ -171,7 +170,7 @@ function StatementConverterPage() {
     setBusy(true); setError(null);
     try {
       if (historyId) {
-        try { await saveHistory({ data: { id: historyId, clientName, rows } }); setSaved(true); } catch { /* histórico indisponível */ }
+        try { await saveHistory({ data: { id: historyId, clientName, rows } }); } catch { /* histórico indisponível */ }
       }
       generateExcel(rows, clientName);
       await loadHistory();
