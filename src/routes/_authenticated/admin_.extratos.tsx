@@ -375,7 +375,7 @@ function StatementConverterPage() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-ink/10 bg-white/60 px-4 py-2.5">
-          <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Converter ficheiro descarregado</span>
+          <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Ou converter um ficheiro descarregado</span>
           <input
             ref={inputRef}
             type="file"
@@ -406,7 +406,6 @@ function StatementConverterPage() {
           >
             <Sparkles className="h-3.5 w-3.5" /> Processar
           </Button>
-          <span className="text-[11px] text-muted-foreground">Processamento por IA · com custo por extrato</span>
         </div>
 
         {error ? (
@@ -419,9 +418,13 @@ function StatementConverterPage() {
           <div className="mb-3 flex flex-wrap items-center gap-3">
             <Checkbox id="select-statements" disabled={busy} checked={filteredDocs.slice(0, visibleCount).every((d) => selected.includes(d.id))} onCheckedChange={(checked) => setSelected((prev) => checked ? [...new Set([...prev, ...filteredDocs.slice(0, visibleCount).map((d) => d.id)])] : prev.filter((id) => !filteredDocs.slice(0, visibleCount).some((d) => d.id === id)))} />
             <label htmlFor="select-statements" className="text-sm text-muted-foreground">Selecionar visíveis</label>
-            <span className="text-xs text-muted-foreground">{selected.length} selecionados</span>
-            <Button className="rounded-full" disabled={busy || !selected.length} onClick={() => setConfirmAction({ kind: "batch" })}><Sparkles />Converter selecionados</Button>
-            {selected.length > 0 && <Button variant="ghost" disabled={busy} onClick={() => setSelected([])}>Limpar</Button>}
+            {selected.length > 0 && (
+              <>
+                <span className="text-xs text-muted-foreground">{selected.length} selecionados</span>
+                <Button className="rounded-full" disabled={busy} onClick={() => setConfirmAction({ kind: "batch" })}><Sparkles />Converter selecionados</Button>
+                <button type="button" disabled={busy} onClick={() => setSelected([])} className="text-xs text-muted-foreground underline-offset-2 hover:underline">Limpar</button>
+              </>
+            )}
           </div>
         )}
 
@@ -439,9 +442,9 @@ function StatementConverterPage() {
         ) : null}
 
         {batchResults.length > 0 && (
-          <div className="mb-4 flex flex-wrap items-center gap-3 border-y border-border py-3">
-            <span className="text-sm">{batchResults.length} extratos convertidos</span>
-            <Button className="rounded-full" onClick={() => downloadZip(batchResults)}><FileSpreadsheet />Descarregar ZIP</Button>
+          <div className="mb-4 flex flex-wrap items-center gap-2 border-y border-border py-3 text-sm">
+            <span>{batchResults.length} extratos convertidos — o ZIP foi descarregado.</span>
+            <button type="button" onClick={() => downloadZip(batchResults)} className="text-xs text-gold underline-offset-2 hover:underline">Descarregar novamente</button>
           </div>
         )}
 
