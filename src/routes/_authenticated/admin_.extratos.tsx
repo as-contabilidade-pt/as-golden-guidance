@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Eye, FileSpreadsheet, History, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
+import { Eye, FileSpreadsheet, History, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
@@ -77,7 +77,6 @@ function StatementConverterPage() {
   const [clientDocs, setClientDocs] = useState<ClientStatement[]>([]);
   const [docFilter, setDocFilter] = useState("");
   const [busyDoc, setBusyDoc] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(10);
   const [progressLabel, setProgressLabel] = useState<string | null>(null);
@@ -171,7 +170,7 @@ function StatementConverterPage() {
     setBusy(true); setError(null);
     try {
       if (historyId) {
-        try { await saveHistory({ data: { id: historyId, clientName, rows } }); setSaved(true); } catch { /* histórico indisponível */ }
+        try { await saveHistory({ data: { id: historyId, clientName, rows } }); } catch { /* histórico indisponível */ }
       }
       generateExcel(rows, clientName);
       await loadHistory();
@@ -193,7 +192,6 @@ function StatementConverterPage() {
     setBusy(true);
     setError(null);
     setRows(null);
-    setSaved(false);
     setProgressLabel(`A converter ${d.original_name}`);
     setProgressPct(null);
     const name = d.client_name;
@@ -224,19 +222,7 @@ function StatementConverterPage() {
     setClientName(h.client_name);
     setHistoryId(h.id);
     setError(null);
-    setSaved(false);
     document.getElementById("revisao")?.scrollIntoView({ behavior: "smooth" });
-  }
-
-  async function onSaveEdits() {
-    if (!historyId || !rows) return;
-    try {
-      await saveHistory({ data: { id: historyId, clientName, rows } });
-      setSaved(true);
-      void loadHistory();
-    } catch (e) {
-      setError(friendlyError(e, "Não foi possível guardar."));
-    }
   }
 
   async function onDeleteHistory(id: string) {
@@ -272,7 +258,6 @@ function StatementConverterPage() {
     setBusy(true);
     setError(null);
     setRows(null);
-    setSaved(false);
     setProgressLabel(`A processar ${file.name}`);
     setProgressPct(null);
     try {
@@ -375,7 +360,7 @@ function StatementConverterPage() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-ink/10 bg-white/60 px-4 py-2.5">
-          <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Converter ficheiro descarregado</span>
+          <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Ou converter um ficheiro descarregado</span>
           <input
             ref={inputRef}
             type="file"
@@ -406,7 +391,6 @@ function StatementConverterPage() {
           >
             <Sparkles className="h-3.5 w-3.5" /> Processar
           </Button>
-          <span className="text-[11px] text-muted-foreground">Processamento por IA · com custo por extrato</span>
         </div>
 
         {error ? (
@@ -419,9 +403,13 @@ function StatementConverterPage() {
           <div className="mb-3 flex flex-wrap items-center gap-3">
             <Checkbox id="select-statements" disabled={busy} checked={filteredDocs.slice(0, visibleCount).every((d) => selected.includes(d.id))} onCheckedChange={(checked) => setSelected((prev) => checked ? [...new Set([...prev, ...filteredDocs.slice(0, visibleCount).map((d) => d.id)])] : prev.filter((id) => !filteredDocs.slice(0, visibleCount).some((d) => d.id === id)))} />
             <label htmlFor="select-statements" className="text-sm text-muted-foreground">Selecionar visíveis</label>
-            <span className="text-xs text-muted-foreground">{selected.length} selecionados</span>
-            <Button className="rounded-full" disabled={busy || !selected.length} onClick={() => setConfirmAction({ kind: "batch" })}><Sparkles />Converter selecionados</Button>
-            {selected.length > 0 && <Button variant="ghost" disabled={busy} onClick={() => setSelected([])}>Limpar</Button>}
+            {selected.length > 0 && (
+              <>
+                <span className="text-xs text-muted-foreground">{selected.length} selecionados</span>
+                <Button className="rounded-full" disabled={busy} onClick={() => setConfirmAction({ kind: "batch" })}><Sparkles />Converter selecionados</Button>
+                <button type="button" disabled={busy} onClick={() => setSelected([])} className="text-xs text-muted-foreground underline-offset-2 hover:underline">Limpar</button>
+              </>
+            )}
           </div>
         )}
 
@@ -439,9 +427,9 @@ function StatementConverterPage() {
         ) : null}
 
         {batchResults.length > 0 && (
-          <div className="mb-4 flex flex-wrap items-center gap-3 border-y border-border py-3">
-            <span className="text-sm">{batchResults.length} extratos convertidos</span>
-            <Button className="rounded-full" onClick={() => downloadZip(batchResults)}><FileSpreadsheet />Descarregar ZIP</Button>
+          <div className="mb-4 flex flex-wrap items-center gap-2 border-y border-border py-3 text-sm">
+            <span>{batchResults.length} extratos convertidos — o ZIP foi descarregado.</span>
+            <button type="button" onClick={() => downloadZip(batchResults)} className="text-xs text-gold underline-offset-2 hover:underline">Descarregar novamente</button>
           </div>
         )}
 
@@ -479,14 +467,16 @@ function StatementConverterPage() {
                         </p>
                         <p className="text-xs text-muted-foreground">Enviado em {formatDateTimePt(d.created_at)}</p>
                       </div>
-                      <div className="col-start-2 flex gap-2 sm:col-start-auto">
-                        <Button
+                      <div className="col-start-2 flex items-center gap-2 sm:col-start-auto">
+                        <button
                           type="button"
+                          aria-label={`Ver PDF ${d.original_name}`}
+                          title="Ver PDF"
                           onClick={(e) => { e.stopPropagation(); openClientDoc(d.id); }}
-                          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
+                          className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-gold/10 hover:text-gold"
                         >
-                          <Eye className="h-3.5 w-3.5" /> Ver PDF
-                        </Button>
+                          <Eye className="h-4 w-4" />
+                        </button>
                         <Button
                           type="button"
                           disabled={busy}
@@ -522,15 +512,6 @@ function StatementConverterPage() {
               >
                 <Plus className="h-4 w-4" /> Adicionar linha
               </Button>
-              {historyId ? (
-                <Button
-                  type="button"
-                  onClick={onSaveEdits}
-                  className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-medium bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
-                >
-                  <Save className="h-4 w-4" /> {saved ? "Alterações guardadas" : "Guardar alterações"}
-                </Button>
-              ) : null}
               <Button
                 type="button"
                 onClick={exportCurrent}
@@ -543,8 +524,8 @@ function StatementConverterPage() {
           </div>
 
           <p className="mb-4 text-sm text-muted-foreground">
-            Confirme e corrija os dados antes de exportar. Apague linhas que não sejam movimentos
-            reais. Datas em DD/MM/AAAA e valores com vírgula decimal no Excel.
+            Confirme e corrija os dados antes de exportar — as correções ficam guardadas ao gerar o Excel.
+            Datas em DD/MM/AAAA e valores com vírgula decimal no Excel.
           </p>
 
           <div className="soft-card overflow-x-auto p-2">
@@ -603,7 +584,14 @@ function StatementConverterPage() {
         ) : (
           <ul className="soft-card divide-y divide-ink/10 p-2">
             {history.map((h) => (
-              <li key={h.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3">
+              <li
+                key={h.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openHistory(h)}
+                onKeyDown={(e) => { if (e.key === "Enter") openHistory(h); }}
+                className="flex cursor-pointer flex-wrap items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-gold/5"
+              >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">
                     {h.client_name || "Sem cliente"} · <span className="font-normal">{h.filename}</span>
@@ -612,16 +600,13 @@ function StatementConverterPage() {
                     {formatDateTimePt(h.created_at)} · {h.row_count} movimentos
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  <Button type="button" onClick={() => openHistory(h)} className="rounded-full px-4 py-2 text-xs bg-gold text-ink font-medium transition-colors hover:bg-gold-deep">
-                    Abrir
-                  </Button>
-                  <Button type="button" onClick={() => generateExcel(h.rows, h.client_name)} className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-gold-deep">
-                    <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
-                  </Button>
-                  <Button type="button" aria-label="Apagar do histórico" onClick={() => onDeleteHistory(h.id)} className="rounded-full border border-ink/15 p-2 text-muted-foreground transition-colors hover:border-destructive hover:text-destructive">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                <div className="flex items-center gap-1">
+                  <button type="button" aria-label="Descarregar Excel" title="Descarregar Excel" onClick={(e) => { e.stopPropagation(); generateExcel(h.rows, h.client_name); }} className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-gold/10 hover:text-gold">
+                    <FileSpreadsheet className="h-4 w-4" />
+                  </button>
+                  <button type="button" aria-label="Apagar do histórico" title="Apagar" onClick={(e) => { e.stopPropagation(); void onDeleteHistory(h.id); }} className="rounded-full p-2 text-muted-foreground transition-colors hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               </li>
             ))}
