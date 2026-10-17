@@ -482,14 +482,16 @@ function StatementConverterPage() {
                         </p>
                         <p className="text-xs text-muted-foreground">Enviado em {formatDateTimePt(d.created_at)}</p>
                       </div>
-                      <div className="col-start-2 flex gap-2 sm:col-start-auto">
-                        <Button
+                      <div className="col-start-2 flex items-center gap-2 sm:col-start-auto">
+                        <button
                           type="button"
+                          aria-label={`Ver PDF ${d.original_name}`}
+                          title="Ver PDF"
                           onClick={(e) => { e.stopPropagation(); openClientDoc(d.id); }}
-                          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
+                          className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-gold/10 hover:text-gold"
                         >
-                          <Eye className="h-3.5 w-3.5" /> Ver PDF
-                        </Button>
+                          <Eye className="h-4 w-4" />
+                        </button>
                         <Button
                           type="button"
                           disabled={busy}
@@ -525,15 +527,6 @@ function StatementConverterPage() {
               >
                 <Plus className="h-4 w-4" /> Adicionar linha
               </Button>
-              {historyId ? (
-                <Button
-                  type="button"
-                  onClick={onSaveEdits}
-                  className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-medium bg-gold text-ink font-medium transition-colors hover:bg-gold-deep"
-                >
-                  <Save className="h-4 w-4" /> {saved ? "Alterações guardadas" : "Guardar alterações"}
-                </Button>
-              ) : null}
               <Button
                 type="button"
                 onClick={exportCurrent}
@@ -546,8 +539,8 @@ function StatementConverterPage() {
           </div>
 
           <p className="mb-4 text-sm text-muted-foreground">
-            Confirme e corrija os dados antes de exportar. Apague linhas que não sejam movimentos
-            reais. Datas em DD/MM/AAAA e valores com vírgula decimal no Excel.
+            Confirme e corrija os dados antes de exportar — as correções ficam guardadas ao gerar o Excel.
+            Datas em DD/MM/AAAA e valores com vírgula decimal no Excel.
           </p>
 
           <div className="soft-card overflow-x-auto p-2">
