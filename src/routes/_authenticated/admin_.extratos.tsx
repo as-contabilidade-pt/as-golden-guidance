@@ -228,17 +228,6 @@ function StatementConverterPage() {
     document.getElementById("revisao")?.scrollIntoView({ behavior: "smooth" });
   }
 
-  async function onSaveEdits() {
-    if (!historyId || !rows) return;
-    try {
-      await saveHistory({ data: { id: historyId, clientName, rows } });
-      setSaved(true);
-      void loadHistory();
-    } catch (e) {
-      setError(friendlyError(e, "Não foi possível guardar."));
-    }
-  }
-
   async function onDeleteHistory(id: string) {
     await removeHistory({ data: { id } });
     if (id === historyId) setHistoryId(null);
@@ -599,7 +588,14 @@ function StatementConverterPage() {
         ) : (
           <ul className="soft-card divide-y divide-ink/10 p-2">
             {history.map((h) => (
-              <li key={h.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3">
+              <li
+                key={h.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openHistory(h)}
+                onKeyDown={(e) => { if (e.key === "Enter") openHistory(h); }}
+                className="flex cursor-pointer flex-wrap items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-gold/5"
+              >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">
                     {h.client_name || "Sem cliente"} · <span className="font-normal">{h.filename}</span>
@@ -608,16 +604,13 @@ function StatementConverterPage() {
                     {formatDateTimePt(h.created_at)} · {h.row_count} movimentos
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  <Button type="button" onClick={() => openHistory(h)} className="rounded-full px-4 py-2 text-xs bg-gold text-ink font-medium transition-colors hover:bg-gold-deep">
-                    Abrir
-                  </Button>
-                  <Button type="button" onClick={() => generateExcel(h.rows, h.client_name)} className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-gold-deep">
-                    <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
-                  </Button>
-                  <Button type="button" aria-label="Apagar do histórico" onClick={() => onDeleteHistory(h.id)} className="rounded-full border border-ink/15 p-2 text-muted-foreground transition-colors hover:border-destructive hover:text-destructive">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                <div className="flex items-center gap-1">
+                  <button type="button" aria-label="Descarregar Excel" title="Descarregar Excel" onClick={(e) => { e.stopPropagation(); generateExcel(h.rows, h.client_name); }} className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-gold/10 hover:text-gold">
+                    <FileSpreadsheet className="h-4 w-4" />
+                  </button>
+                  <button type="button" aria-label="Apagar do histórico" title="Apagar" onClick={(e) => { e.stopPropagation(); void onDeleteHistory(h.id); }} className="rounded-full p-2 text-muted-foreground transition-colors hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               </li>
             ))}
