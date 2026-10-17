@@ -7,18 +7,19 @@ import {
   unlockExpiry,
 } from "@/lib/portal";
 
-/** Endereço do portal nos emails: SITE_URL, ou o próprio site de onde veio o pedido (ex.: Vercel). */
+/** Endereço do portal nos emails: SITE_URL, senão sempre o site da Vercel (nunca lovable.app). */
+const VERCEL_SITE = "https://as-contabilidade.vercel.app";
 function siteBaseUrl(): string {
   const env = process.env["SITE_URL"];
-  if (env) return env;
+  if (env && !/lovable\.app/.test(env)) return env;
   try {
     const req = getRequest();
     const origin = req?.headers.get("origin") || (req ? new URL(req.url).origin : "");
-    if (origin && !/localhost|127\.0\.0\.1/.test(origin)) return origin;
+    if (origin && /vercel\.app/.test(origin)) return origin;
   } catch {
     /* sem pedido (ex.: tarefa agendada) */
   }
-  return "https://as-golden-guidance.lovable.app";
+  return VERCEL_SITE;
 }
 
 type SubmissionInfo = {
