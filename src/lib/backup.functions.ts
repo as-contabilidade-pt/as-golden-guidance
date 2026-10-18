@@ -21,7 +21,9 @@ export const listBackupClients = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { data } = await context.supabase
       .from("profiles").select("id, full_name, nif").order("full_name");
-    return (data ?? []) as { id: string; full_name: string; nif: string }[];
+    const { data: ad } = await context.supabase.from("user_roles").select("user_id").eq("role", "admin");
+    const admins = new Set((ad ?? []).map((r: any) => r.user_id));
+    return (data ?? []).filter((p: any) => !admins.has(p.id)) as { id: string; full_name: string; nif: string }[];
   });
 
 export const buildBackupManifest = createServerFn({ method: "POST" })

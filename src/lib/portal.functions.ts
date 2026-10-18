@@ -316,6 +316,11 @@ export const getDownloadUrl = createServerFn({ method: "POST" })
     return { url: signed.signedUrl };
   });
 
+async function adminIdSet(context: any): Promise<Set<string>> {
+  const { data } = await context.supabase.from("user_roles").select("user_id").eq("role", "admin");
+  return new Set(((data ?? []) as { user_id: string }[]).map((r) => r.user_id));
+}
+
 export const listClients = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -325,7 +330,8 @@ export const listClients = createServerFn({ method: "GET" })
       .select("id, full_name, nif, email, created_at")
       .order("full_name", { ascending: true });
     if (error) throw new Error(error.message);
-    return data ?? [];
+    const admins = await adminIdSet(context);
+    return (data ?? []).filter((p) => !admins.has(p.id));
   });
 
 export const getClient = createServerFn({ method: "POST" })
@@ -1063,7 +1069,8 @@ export const listClientRecords = createServerFn({ method: "GET" })
       .order("name", { ascending: true })
       .limit(2000);
     if (error) throw new Error(error.message);
-    return data ?? [];
+    const admins = await adminIdSet(context);
+    return (data ?? []).filter((r) => !r.user_id || !admins.has(r.user_id));
   });
 
 export const getClientRecord = createServerFn({ method: "POST" })
