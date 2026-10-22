@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/admin-guard";
 import { friendlyError } from "@/lib/friendly-error";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, ArrowUpRight, FolderOpen, Loader2, Save, Trash2 } from "lucide-react";
@@ -154,13 +154,27 @@ function FichaPage() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  async function onSave() {
-    setError(null);
-    setNotice(null);
-    if (form.atSubuser === null || form.ssSubuser === null) {
-      setError("Indique «Sim» ou «Não» para os subutilizadores da AT e da Segurança Social antes de guardar.");
+  const loadedRef = useRef(false);
+  const savedRef = useRef<string>("");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+
+  useEffect(() => {
+    const snapshot = JSON.stringify(form);
+    if (!loadedRef.current) {
+      if (form.name) {
+        loadedRef.current = true;
+        savedRef.current = snapshot;
+      }
       return;
     }
+    if (snapshot === savedRef.current) return;
+    const t = setTimeout(() => void onSave(snapshot), 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form]);
+
+  async function onSave(snapshot: string) {
+    setError(null);
     if (form.name.trim().length < 2) {
       setError("O nome tem de ter pelo menos 2 caracteres.");
       return;
@@ -174,15 +188,14 @@ function FichaPage() {
       setError("O email indicado não é válido.");
       return;
     }
-    setBusy(true);
+    setSaveState("saving");
     try {
       await save({ data: { id: recordId, ...form, nif } });
-      setForm((f) => ({ ...f, nif }));
-      setNotice("Alterações guardadas.");
+      savedRef.current = snapshot;
+      setSaveState("saved");
     } catch (e) {
+      setSaveState("idle");
       setError(friendlyError(e, "Não foi possível guardar a ficha."));
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -285,7 +298,7 @@ function FichaPage() {
         </section>
       )}
 
-      <form onSubmit={(event) => { event.preventDefault(); void onSave(); }} className="rounded-3xl border border-gold/15 bg-card shadow-sm">
+      <form onSubmit={(event) => event.preventDefault()} className="rounded-3xl border border-gold/15 bg-card shadow-sm">
         <Tabs defaultValue="dados">
           <div className="border-b border-gold/10 px-5 pt-5 sm:px-7">
             <TabsList className="h-auto w-fit max-w-full gap-6 rounded-none bg-transparent p-0">
@@ -338,9 +351,10 @@ function FichaPage() {
           <Button type="button" variant="ghost" disabled={busy} onClick={() => void onDelete()} className="rounded-full text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
             <Trash2 className="size-4" /> Apagar cliente
           </Button>
-          <Button type="submit" disabled={busy} className="h-11 rounded-full px-6 shadow-none">
-            {busy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Guardar alterações
-          </Button>
+          <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+            {saveState === "saving" ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+            {saveState === "saving" ? "A guardar…" : saveState === "saved" ? "Alterações guardadas automaticamente" : "As alterações são guardadas automaticamente"}
+          </span>
         </div>
       </form>
       <ConfirmDialog
