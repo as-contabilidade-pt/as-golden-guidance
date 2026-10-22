@@ -1178,6 +1178,11 @@ export const updateClientRecord = createServerFn({ method: "POST" })
         msg.match(/Could not find the '([a-z_]+)' column/i)?.[1] ??
         msg.match(/column "?([a-z_]+)"? of relation/i)?.[1] ??
         msg.match(/column "?([a-z_]+)"? does not exist/i)?.[1];
+      if (missing === "at_subuser" || missing === "ss_subuser") {
+        throw new Error(
+          "A base de dados ainda não tem os campos de validação (AT/Segurança Social). É preciso atualizá-la para guardar estas respostas.",
+        );
+      }
       if (missing && missing in values) {
         delete values[missing];
         continue;
