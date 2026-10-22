@@ -25,8 +25,10 @@ export const Route = createFileRoute("/definir-password")({
 
 const PASSWORD_RULES: { label: string; test: (p: string) => boolean }[] = [
   { label: "Pelo menos 8 caracteres", test: (p) => p.length >= 8 },
-  { label: "Uma letra maiúscula (A-Z)", test: (p) => /[A-Z]/.test(p) },
-  { label: "Uma letra minúscula (a-z)", test: (p) => /[a-z]/.test(p) },
+  {
+    label: "Letras maiúsculas e minúsculas (ex.: A e a)",
+    test: (p) => /[A-Z]/.test(p) && /[a-z]/.test(p),
+  },
   { label: "Um número", test: (p) => /\d/.test(p) },
   { label: "Um carácter especial (ex.: ! @ # ?)", test: (p) => /[^A-Za-z0-9]/.test(p) },
 ];
