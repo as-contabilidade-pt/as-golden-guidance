@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export const Route = createFileRoute("/definir-password")({
   ssr: false,
@@ -24,8 +25,8 @@ export const Route = createFileRoute("/definir-password")({
 
 const PASSWORD_RULES: { label: string; test: (p: string) => boolean }[] = [
   { label: "Pelo menos 8 caracteres", test: (p) => p.length >= 8 },
-  { label: "Uma letra maiúscula", test: (p) => /[A-Z]/.test(p) },
-  { label: "Uma letra minúscula", test: (p) => /[a-z]/.test(p) },
+  { label: "Uma letra maiúscula (A-Z)", test: (p) => /[A-Z]/.test(p) },
+  { label: "Uma letra minúscula (a-z)", test: (p) => /[a-z]/.test(p) },
   { label: "Um número", test: (p) => /\d/.test(p) },
   { label: "Um carácter especial (ex.: ! @ # ?)", test: (p) => /[^A-Za-z0-9]/.test(p) },
 ];
@@ -104,9 +105,8 @@ function SetPasswordPage() {
             <label htmlFor="pw" className="mb-2 block text-xs font-medium text-foreground/80">
               Nova palavra-passe
             </label>
-            <input
+            <PasswordInput
               id="pw"
-              type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -127,9 +127,8 @@ function SetPasswordPage() {
             <label htmlFor="pw2" className="mb-2 block text-xs font-medium text-foreground/80">
               Confirmar palavra-passe
             </label>
-            <input
+            <PasswordInput
               id="pw2"
-              type="password"
               required
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}

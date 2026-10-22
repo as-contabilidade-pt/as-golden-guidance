@@ -3,6 +3,7 @@ import { friendlyError } from "@/lib/friendly-error";
 import { useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -118,9 +119,8 @@ function LoginPage() {
             <label htmlFor="password" className="mb-2 block text-xs font-medium text-foreground/80">
               Palavra-passe
             </label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
