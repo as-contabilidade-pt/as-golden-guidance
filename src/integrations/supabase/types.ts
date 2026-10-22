@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           address: string
           allowed_categories: string[] | null
+          at_subuser: boolean | null
           client_number: string
           created_at: string
           email: string
@@ -30,12 +31,14 @@ export type Database = {
           phone: string
           postal_code: string
           responsible_name: string
+          ss_subuser: boolean | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
           address?: string
           allowed_categories?: string[] | null
+          at_subuser?: boolean | null
           client_number?: string
           created_at?: string
           email?: string
@@ -48,12 +51,14 @@ export type Database = {
           phone?: string
           postal_code?: string
           responsible_name?: string
+          ss_subuser?: boolean | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
           address?: string
           allowed_categories?: string[] | null
+          at_subuser?: boolean | null
           client_number?: string
           created_at?: string
           email?: string
@@ -66,6 +71,7 @@ export type Database = {
           phone?: string
           postal_code?: string
           responsible_name?: string
+          ss_subuser?: boolean | null
           updated_at?: string
           user_id?: string | null
         }

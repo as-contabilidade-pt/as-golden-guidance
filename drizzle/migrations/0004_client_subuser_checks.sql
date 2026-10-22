@@ -1,0 +1,1 @@
+ALTER TABLE public.client_records ADD COLUMN IF NOT EXISTS at_subuser boolean, ADD COLUMN IF NOT EXISTS ss_subuser boolean;
