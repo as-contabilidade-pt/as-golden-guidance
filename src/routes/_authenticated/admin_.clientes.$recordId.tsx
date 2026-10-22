@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/admin-guard";
 import { friendlyError } from "@/lib/friendly-error";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, ArrowUpRight, FolderOpen, Loader2, Save, Trash2 } from "lucide-react";
