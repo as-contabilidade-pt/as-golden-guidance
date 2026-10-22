@@ -236,3 +236,9 @@
     font-size: 16px;
   }
 }
+
+/* Esconde o olho nativo do navegador (Edge) para mostrar só o nosso */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
