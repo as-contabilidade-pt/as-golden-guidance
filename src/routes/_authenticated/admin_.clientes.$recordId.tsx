@@ -64,6 +64,8 @@ type Form = {
   notes: string;
   folderActive: boolean;
   categories: string[] | null;
+  atSubuser: boolean | null;
+  ssSubuser: boolean | null;
 };
 
 const empty: Form = {
@@ -79,7 +81,25 @@ const empty: Form = {
   notes: "",
   folderActive: false,
   categories: null,
+  atSubuser: null,
+  ssSubuser: null,
 };
+
+function YesNo({ label, value, onChange }: { label: string; value: boolean | null; onChange: (v: boolean) => void }) {
+  const base = "inline-flex h-9 items-center gap-1.5 rounded-full border px-4 text-sm transition-colors";
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-background px-4 py-2.5 sm:col-span-2">
+      <span className="text-sm text-foreground">
+        {label}
+        {value === null && <span className="ml-2 text-xs text-destructive">Por validar</span>}
+      </span>
+      <div className="flex gap-2">
+        <button type="button" onClick={() => onChange(true)} className={`${base} ${value === true ? "border-gold bg-gold text-foreground" : "border-gold/20 text-muted-foreground hover:border-gold/50"}`}>✓ Sim</button>
+        <button type="button" onClick={() => onChange(false)} className={`${base} ${value === false ? "border-foreground bg-foreground text-background" : "border-gold/20 text-muted-foreground hover:border-gold/50"}`}>✕ Não</button>
+      </div>
+    </div>
+  );
+}
 
 function FichaPage() {
   const { recordId } = Route.useParams();
@@ -121,6 +141,8 @@ function FichaPage() {
           notes: String(r["notes"] ?? ""),
           folderActive: Boolean(r["folder_active"]),
           categories: (r["allowed_categories"] as string[] | null) ?? null,
+          atSubuser: (r["at_subuser"] as boolean | null | undefined) ?? null,
+          ssSubuser: (r["ss_subuser"] as boolean | null | undefined) ?? null,
         });
       } catch (e) {
         setError(friendlyError(e, "Erro ao carregar a ficha."));
@@ -135,6 +157,10 @@ function FichaPage() {
   async function onSave() {
     setError(null);
     setNotice(null);
+    if (form.atSubuser === null || form.ssSubuser === null) {
+      setError("Indique «Sim» ou «Não» para os subutilizadores da AT e da Segurança Social antes de guardar.");
+      return;
+    }
     if (form.name.trim().length < 2) {
       setError("O nome tem de ter pelo menos 2 caracteres.");
       return;
@@ -282,6 +308,10 @@ function FichaPage() {
               <Field label="Morada" value={form.address} onChange={(v) => set("address", v)} />
               <Field label="Código postal" value={form.postalCode} onChange={(v) => set("postalCode", v)} />
               <Field label="Localidade" value={form.locality} onChange={(v) => set("locality", v)} />
+            </Group>
+            <Group title="Validação de registo">
+              <YesNo label="Subutilizador criado na AT" value={form.atSubuser} onChange={(v) => set("atSubuser", v)} />
+              <YesNo label="Subutilizador criado na Segurança Social" value={form.ssSubuser} onChange={(v) => set("ssSubuser", v)} />
             </Group>
             <label className="block">
               <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.14em] text-gold-deep">Observações internas</span>

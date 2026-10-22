@@ -1040,6 +1040,8 @@ const recordSchema = z.object({
   notes: z.string().trim().max(4000).default(""),
   folderActive: z.boolean().default(false),
   categories: z.array(z.string().trim().min(1).max(60)).max(50).nullable().optional(),
+  atSubuser: z.boolean().nullable().optional(),
+  ssSubuser: z.boolean().nullable().optional(),
 });
 
 function recordColumns(v: z.infer<typeof recordSchema>) {
@@ -1056,6 +1058,8 @@ function recordColumns(v: z.infer<typeof recordSchema>) {
     notes: v.notes,
     folder_active: v.folderActive,
     ...(v.categories !== undefined ? { allowed_categories: v.categories } : {}),
+    ...(v.atSubuser !== undefined ? { at_subuser: v.atSubuser } : {}),
+    ...(v.ssSubuser !== undefined ? { ss_subuser: v.ssSubuser } : {}),
   };
 }
 
