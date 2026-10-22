@@ -242,3 +242,19 @@ input::-ms-reveal,
 input::-ms-clear {
   display: none;
 }
+
+/* Barra de deslocamento elegante (dourado suave, sem cinzento/branco) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--primary) 55%, transparent) transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--primary) 55%, transparent);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background-color: var(--primary); }
+*::-webkit-scrollbar-button { display: none; }
