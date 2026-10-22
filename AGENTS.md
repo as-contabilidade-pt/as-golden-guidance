@@ -14,3 +14,4 @@
 - Keep client-list rows focused on identification and document access; place editing, access management and confirmed deletion in the client detail page with compact tabbed sections.
 - Keep Vercel cron work in a separately authenticated GET callback using CRON_SECRET and a consolidated daily schedule (Hobby plan); preserve managed POST callbacks so existing schedules retain their credentials and behavior.
 - Keep statement batches isolated per source document; persist reviewed rows before export and package one workbook per document under separate client/month ZIP paths.
+- The daily Vercel cron GET also performs a minimal database read as a keep-alive, so the backend never goes idle on inactivity-pausing plans.

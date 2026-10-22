@@ -10,6 +10,9 @@ export const Route = createFileRoute("/api/public/jobs/vercel")({
         if (authFailure) return authFailure;
         try {
           const now = new Date();
+          // Keep-alive: minimal read so the backend registers daily activity.
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          await supabaseAdmin.from("user_roles").select("user_id", { head: true, count: "exact" }).limit(1);
           const { autoSubmitExpiredUnlocks, autoSubmitPendingMonths } = await import("@/lib/submission-email.server");
           await autoSubmitExpiredUnlocks(now);
           if (isMonthlySubmissionTime(now)) await autoSubmitPendingMonths(now);
