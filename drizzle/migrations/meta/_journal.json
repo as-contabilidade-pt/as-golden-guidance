@@ -29,6 +29,13 @@
       "when": 1791985725867,
       "tag": "0003_statement_conversions_grants_fix",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792679905015,
+      "tag": "0004_client_subuser_checks",
+      "breakpoints": true
     }
   ]
 }
