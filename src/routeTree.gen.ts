@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as DefinirPasswordRouteImport } from './routes/definir-password'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PoliticaDeCookiesRouteImport } from './routes/politica-de-cookies'
+import { Route as PoliticaDePrivacidadeRouteImport } from './routes/politica-de-privacidade'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -47,6 +49,16 @@ const DefinirPasswordRoute = DefinirPasswordRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PoliticaDeCookiesRoute = PoliticaDeCookiesRouteImport.update({
+  id: '/politica-de-cookies',
+  path: '/politica-de-cookies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PoliticaDePrivacidadeRoute = PoliticaDePrivacidadeRouteImport.update({
+  id: '/politica-de-privacidade',
+  path: '/politica-de-privacidade',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacidadeRoute = PrivacidadeRouteImport.update({
@@ -145,6 +157,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/definir-password': typeof DefinirPasswordRoute
   '/login': typeof LoginRoute
+  '/politica-de-cookies': typeof PoliticaDeCookiesRoute
+  '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
@@ -166,6 +180,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/definir-password': typeof DefinirPasswordRoute
   '/login': typeof LoginRoute
+  '/politica-de-cookies': typeof PoliticaDeCookiesRoute
+  '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/admin': typeof AuthenticatedAdminRoute
@@ -189,6 +205,8 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/definir-password': typeof DefinirPasswordRoute
   '/login': typeof LoginRoute
+  '/politica-de-cookies': typeof PoliticaDeCookiesRoute
+  '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/privacidade': typeof PrivacidadeRoute
   '/termos': typeof TermosRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
@@ -212,6 +230,8 @@ export interface FileRouteTypes {
     | '/'
     | '/definir-password'
     | '/login'
+    | '/politica-de-cookies'
+    | '/politica-de-privacidade'
     | '/privacidade'
     | '/termos'
     | '/admin'
@@ -233,6 +253,8 @@ export interface FileRouteTypes {
     | '/'
     | '/definir-password'
     | '/login'
+    | '/politica-de-cookies'
+    | '/politica-de-privacidade'
     | '/privacidade'
     | '/termos'
     | '/admin'
@@ -255,6 +277,8 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/definir-password'
     | '/login'
+    | '/politica-de-cookies'
+    | '/politica-de-privacidade'
     | '/privacidade'
     | '/termos'
     | '/_authenticated/admin'
@@ -278,6 +302,8 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   DefinirPasswordRoute: typeof DefinirPasswordRoute
   LoginRoute: typeof LoginRoute
+  PoliticaDeCookiesRoute: typeof PoliticaDeCookiesRoute
+  PoliticaDePrivacidadeRoute: typeof PoliticaDePrivacidadeRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   TermosRoute: typeof TermosRoute
   ApiPublicLembreteDocumentacaoRoute: typeof ApiPublicLembreteDocumentacaoRoute
@@ -314,6 +340,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/politica-de-cookies': {
+      id: '/politica-de-cookies'
+      path: '/politica-de-cookies'
+      fullPath: '/politica-de-cookies'
+      preLoaderRoute: typeof PoliticaDeCookiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/politica-de-privacidade': {
+      id: '/politica-de-privacidade'
+      path: '/politica-de-privacidade'
+      fullPath: '/politica-de-privacidade'
+      preLoaderRoute: typeof PoliticaDePrivacidadeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacidade': {
@@ -468,6 +508,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   DefinirPasswordRoute: DefinirPasswordRoute,
   LoginRoute: LoginRoute,
+  PoliticaDeCookiesRoute: PoliticaDeCookiesRoute,
+  PoliticaDePrivacidadeRoute: PoliticaDePrivacidadeRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   TermosRoute: TermosRoute,
   ApiPublicLembreteDocumentacaoRoute: ApiPublicLembreteDocumentacaoRoute,
