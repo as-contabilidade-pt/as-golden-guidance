@@ -7,6 +7,8 @@ export const contactSchema = z.object({
   lastName: z.string().trim().min(1, "Indique o seu último nome").max(80),
   email: z.string().trim().email("Endereço de email inválido").max(255),
   message: z.string().trim().min(5, "Escreva a sua mensagem").max(2000),
+  // Honeypot: campo invisível; humanos deixam-no vazio.
+  website: z.string().max(200).optional(),
 });
 
 export type ContactInput = z.infer<typeof contactSchema>;
@@ -14,8 +16,11 @@ export type ContactInput = z.infer<typeof contactSchema>;
 export const submitContactMessage = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => contactSchema.parse(input))
   .handler(async ({ data }) => {
+    // Bots preenchem o honeypot: fingir sucesso sem gravar nada.
+    if (data.website && data.website.trim() !== "") return { ok: true as const };
     const url = process.env["SUPABASE_URL"]!;
     const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
+
 
     const supabase = createClient(url, key, {
       auth: { persistSession: false },
