@@ -731,19 +731,82 @@ export const submitMonth = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
+    // (7) Falhas devolvem 401/403 com mensagens genéricas; detalhes só no log do servidor.
+    const { setResponseStatus } = await import("@tanstack/react-start/server");
+    const deny = (status: 401 | 403, message: string, detail?: unknown): never => {
+      if (detail) console.error("[submitMonth]", detail);
+      setResponseStatus(status);
+      throw new Error(message);
+    };
+    const GENERIC = "Não foi possível submeter a documentação.";
+
+    // (1) Identidade vem exclusivamente da sessão validada pelo middleware.
+    const userId = context.userId;
+    if (!userId) deny(401, "A sua sessão expirou. Entre novamente.");
+
+    // (2) Ficha tem de existir e a pasta tem de estar ativa.
+    const { data: record, error: recErr } = await context.supabase
+      .from("client_records")
+      .select("name, nif, email, responsible_name, folder_active")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (recErr) deny(403, GENERIC, recErr);
+    if (!record || record.folder_active !== true) {
+      deny(403, "A pasta do cliente não se encontra ativa.");
+    }
+
+    // (4) Submissão existente só pode ser substituída com desbloqueio aprovado ativo.
+    const alreadySubmitted = await monthIsSubmitted(context, userId, data.year, data.month);
+    let unlockActive = false;
+    if (alreadySubmitted) {
+      const { data: unlocks } = await context.supabase
+        .from("unlock_requests")
+        .select("decided_at")
+        .eq("user_id", userId)
+        .eq("year", data.year)
+        .eq("month", data.month)
+        .eq("status", "aprovado");
+      unlockActive = (unlocks ?? []).some((r: { decided_at: string | null }) =>
+        unlockIsActive(data.year, data.month, r.decided_at),
+      );
+      if (!unlockActive) deny(403, "Esta documentação já foi submetida.");
+    }
+
+    // (3) Regra oficial da base de dados para o mês estar aberto.
+    const { data: open, error: openErr } = await context.supabase.rpc("month_is_open" as never, {
+      p_user_id: userId,
+      p_year: data.year,
+      p_month: data.month,
+    } as never);
+    if (openErr) deny(403, GENERIC, openErr);
+    // Re-submissão após desbloqueio aprovado é a única exceção (month_is_open recusa meses já submetidos).
+    if (open !== true && !(alreadySubmitted && unlockActive)) {
+      deny(403, "O período selecionado encontra-se encerrado para submissão.");
+    }
+
+    // (6) Contagem e identidade calculadas no servidor; valores do pedido ignorados.
     const { count, error: countError } = await context.supabase
       .from("documents")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", context.userId)
+      .eq("user_id", userId)
       .eq("year", data.year)
       .eq("month", data.month);
-    if (countError) throw new Error(countError.message);
+    if (countError) deny(403, GENERIC, countError);
     if (!count) {
-      throw new Error("Anexe pelo menos um documento antes de submeter o mês.");
+      deny(403, "Anexe pelo menos um documento antes de submeter o mês.");
     }
 
-    const identity = await clientIdentity(context, context.userId);
-    const responsibleName = data.responsibleName?.trim() || identity.responsibleName;
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("full_name, nif, email")
+      .eq("id", userId)
+      .maybeSingle();
+    const identity = {
+      companyName: record!.name || profile?.full_name || "",
+      nif: record!.nif || profile?.nif || "",
+      email: record!.email || profile?.email || "",
+    };
+    const responsibleName = record!.responsible_name || profile?.full_name || identity.companyName;
     const at = new Date().toISOString();
     const declarationText = buildSubmissionDeclaration({
       nif: identity.nif,
@@ -754,8 +817,9 @@ export const submitMonth = createServerFn({ method: "POST" })
       at,
     });
 
+    // (5) declaration_accepted só chega aqui se o pedido trouxer exatamente true (z.literal).
     const payload = {
-      user_id: context.userId,
+      user_id: userId,
       nif: identity.nif,
       company_name: identity.companyName,
       responsible_name: responsibleName,
@@ -763,7 +827,7 @@ export const submitMonth = createServerFn({ method: "POST" })
       year: data.year,
       month: data.month,
       declaration_accepted: true,
-      document_count: count,
+      document_count: count as number,
     };
 
     const alreadySubmitted = await monthIsSubmitted(context, context.userId, data.year, data.month);
