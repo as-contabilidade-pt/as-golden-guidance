@@ -830,26 +830,20 @@ export const submitMonth = createServerFn({ method: "POST" })
       document_count: count as number,
     };
 
-    const alreadySubmitted = await monthIsSubmitted(context, context.userId, data.year, data.month);
     let row: { id: string; year: number; month: number; submitted_at: string; document_count: number };
     if (alreadySubmitted) {
-      // Re-submissão só permitida após reabertura aprovada pelo gabinete.
-      if (!(await monthIsWritable(context, context.userId, data.year, data.month))) {
-        throw new Error("Esta documentação já foi submetida.");
-      }
-      // Permissão já verificada acima; escrita feita no servidor de forma fiável.
+      // Desbloqueio aprovado já verificado acima; escrita feita no servidor.
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: upd, error } = await supabaseAdmin
         .from("month_submissions")
         .update({ ...payload, submitted_at: at })
-        .eq("user_id", context.userId)
+        .eq("user_id", userId)
         .eq("year", data.year)
         .eq("month", data.month)
         .select("id, year, month, submitted_at, document_count")
         .limit(1);
-      if (error) throw new Error(error.message);
-      if (!upd?.[0]) throw new Error("Não foi possível atualizar a submissão.");
-      row = upd[0];
+      if (error || !upd?.[0]) deny(403, GENERIC, error);
+      row = upd![0];
     } else {
       const { data: ins, error } = await context.supabase
         .from("month_submissions")
@@ -857,12 +851,10 @@ export const submitMonth = createServerFn({ method: "POST" })
         .select("id, year, month, submitted_at, document_count")
         .single();
       if (error) {
-        if (error.message.includes("duplicate")) {
-          throw new Error("Esta documentação já foi submetida.");
-        }
-        throw new Error(error.message);
+        if (error.message.includes("duplicate")) deny(403, "Esta documentação já foi submetida.");
+        deny(403, GENERIC, error);
       }
-      row = ins;
+      row = ins!;
     }
 
     // A reabertura termina com a nova submissão: a pasta volta a bloquear.
