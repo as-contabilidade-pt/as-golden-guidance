@@ -723,7 +723,7 @@ export const submitMonth = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({
-        year: z.number().int(),
+        year: z.number().int().min(2020).max(2100),
         month: z.number().int().min(1).max(12),
         responsibleName: z.string().trim().max(120).optional(),
         declarationAccepted: z.literal(true),
@@ -755,32 +755,15 @@ export const submitMonth = createServerFn({ method: "POST" })
       deny(403, "A pasta do cliente não se encontra ativa.");
     }
 
-    // (4) Submissão existente só pode ser substituída com desbloqueio aprovado ativo.
-    const alreadySubmitted = await monthIsSubmitted(context, userId, data.year, data.month);
-    let unlockActive = false;
-    if (alreadySubmitted) {
-      const { data: unlocks } = await context.supabase
-        .from("unlock_requests")
-        .select("decided_at")
-        .eq("user_id", userId)
-        .eq("year", data.year)
-        .eq("month", data.month)
-        .eq("status", "aprovado");
-      unlockActive = (unlocks ?? []).some((r: { decided_at: string | null }) =>
-        unlockIsActive(data.year, data.month, r.decided_at),
-      );
-      if (!unlockActive) deny(403, "Esta documentação já foi submetida.");
-    }
-
-    // (3) Regra oficial da base de dados para o mês estar aberto.
+    // (3)+(4) A decisão de abertura pertence exclusivamente à base de dados:
+    // month_is_open devolve true para mês aberto ou com desbloqueio aprovado posterior à submissão.
     const { data: open, error: openErr } = await context.supabase.rpc("month_is_open" as never, {
-      p_user_id: userId,
-      p_year: data.year,
-      p_month: data.month,
+      _user: userId,
+      _year: data.year,
+      _month: data.month,
     } as never);
     if (openErr) deny(403, GENERIC, openErr);
-    // Re-submissão após desbloqueio aprovado é a única exceção (month_is_open recusa meses já submetidos).
-    if (open !== true && !(alreadySubmitted && unlockActive)) {
+    if (open !== true) {
       deny(403, "O período selecionado encontra-se encerrado para submissão.");
     }
 
@@ -830,36 +813,40 @@ export const submitMonth = createServerFn({ method: "POST" })
       document_count: count as number,
     };
 
+    // Escrita só com o cliente de serviço, depois de todas as verificações; clientes não têm INSERT.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const cols = "id, year, month, submitted_at, document_count";
+    const { data: existing, error: exErr } = await supabaseAdmin
+      .from("month_submissions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("year", data.year)
+      .eq("month", data.month)
+      .maybeSingle();
+    if (exErr) deny(403, GENERIC, exErr);
     let row: { id: string; year: number; month: number; submitted_at: string; document_count: number };
-    if (alreadySubmitted) {
-      // Desbloqueio aprovado já verificado acima; escrita feita no servidor.
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (existing) {
       const { data: upd, error } = await supabaseAdmin
         .from("month_submissions")
         .update({ ...payload, submitted_at: at })
+        .eq("id", existing.id)
         .eq("user_id", userId)
-        .eq("year", data.year)
-        .eq("month", data.month)
-        .select("id, year, month, submitted_at, document_count")
-        .limit(1);
-      if (error || !upd?.[0]) deny(403, GENERIC, error);
-      row = upd![0]!;
-    } else {
-      const { data: ins, error } = await context.supabase
-        .from("month_submissions")
-        .insert(payload)
-        .select("id, year, month, submitted_at, document_count")
+        .select(cols)
         .single();
-      if (error) {
-        if (error.message.includes("duplicate")) deny(403, "Esta documentação já foi submetida.");
-        deny(403, GENERIC, error);
-      }
+      if (error || !upd) deny(403, GENERIC, error);
+      row = upd!;
+    } else {
+      const { data: ins, error } = await supabaseAdmin
+        .from("month_submissions")
+        .insert({ ...payload, submitted_at: at })
+        .select(cols)
+        .single();
+      if (error || !ins) deny(403, GENERIC, error);
       row = ins!;
     }
 
     // A reabertura termina com a nova submissão: a pasta volta a bloquear.
     {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       await supabaseAdmin
         .from("unlock_requests")
         .update({ status: "fechado" })
