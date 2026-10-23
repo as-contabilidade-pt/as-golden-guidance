@@ -153,6 +153,15 @@ function LoginPage() {
           </a>
           .
         </p>
+        <p className="mt-4 text-center text-[11px] text-muted-foreground/70">
+          <Link to="/politica-de-privacidade" className="hover:text-gold">
+            Política de Privacidade
+          </Link>
+          {" · "}
+          <Link to="/politica-de-cookies" className="hover:text-gold">
+            Política de Cookies
+          </Link>
+        </p>
       </div>
     </main>
   );

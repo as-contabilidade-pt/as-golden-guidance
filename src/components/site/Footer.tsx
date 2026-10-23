@@ -3,7 +3,8 @@ import { Logo } from "./Logo";
 
 const legais = [
   { label: "Termos e Condições", href: "/termos" },
-  { label: "Política de Privacidade", href: "/privacidade" },
+  { label: "Política de Privacidade", href: "/politica-de-privacidade" },
+  { label: "Política de Cookies", href: "/politica-de-cookies" },
   { label: "Livro de Reclamações", href: "https://www.livroreclamacoes.pt/Inicio/" },
   {
     label: "Resolução Alternativa de Litígios",
