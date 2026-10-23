@@ -843,7 +843,7 @@ export const submitMonth = createServerFn({ method: "POST" })
         .select("id, year, month, submitted_at, document_count")
         .limit(1);
       if (error || !upd?.[0]) deny(403, GENERIC, error);
-      row = upd![0];
+      row = upd![0]!;
     } else {
       const { data: ins, error } = await context.supabase
         .from("month_submissions")
@@ -863,7 +863,7 @@ export const submitMonth = createServerFn({ method: "POST" })
       await supabaseAdmin
         .from("unlock_requests")
         .update({ status: "fechado" })
-        .eq("user_id", context.userId)
+        .eq("user_id", userId)
         .eq("year", data.year)
         .eq("month", data.month)
         .eq("status", "aprovado");
@@ -880,7 +880,7 @@ export const submitMonth = createServerFn({ method: "POST" })
         year: data.year,
         month: data.month,
         submittedAt: row.submitted_at as string,
-        documentCount: count,
+        documentCount: count as number,
         declarationText,
       };
       await notifyAdminOfSubmission(info);
