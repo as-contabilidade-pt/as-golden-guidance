@@ -758,9 +758,9 @@ export const submitMonth = createServerFn({ method: "POST" })
     // (3)+(4) A decisão de abertura pertence exclusivamente à base de dados:
     // month_is_open devolve true para mês aberto ou com desbloqueio aprovado posterior à submissão.
     const { data: open, error: openErr } = await context.supabase.rpc("month_is_open" as never, {
-      _user: userId,
-      _year: data.year,
-      _month: data.month,
+      p_user_id: userId,
+      p_year: data.year,
+      p_month: data.month,
     } as never);
     if (openErr) deny(403, GENERIC, openErr);
     if (open !== true) {
