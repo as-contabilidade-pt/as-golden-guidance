@@ -189,7 +189,7 @@ export async function notifyClientOfSubmission(info: SubmissionInfo) {
       `Olá ${info.fullName},`,
       "",
       info.automatic
-        ? "O prazo terminou e a documentação que anexou foi submetida automaticamente. Não prestou a declaração de conclusão da entrega. Se faltar algum documento, contacte-nos."
+        ? "O prazo terminou e a documentação que anexou foi submetida automaticamente. Nos termos das Condições do portal, considera-se prestada, por decurso do prazo, a declaração de conclusão da entrega. Se faltar algum documento, contacte-nos."
         : `Confirmamos a receção da sua documentação de ${monthLabel(info.month)} ${info.year}.`,
       `Data/hora da submissão: ${formatDateTimePt(info.submittedAt)}`,
       `Número de documentos submetidos: ${info.documentCount}`,
@@ -372,11 +372,11 @@ export async function autoSubmitPendingMonths(now: Date = new Date()) {
 
     const responsibleName = c.responsible_name || c.name;
     const declarationText = [
-      "SUBMISSÃO AUTOMÁTICA POR DECURSO DO PRAZO",
+      "DECLARAÇÃO CONSIDERADA PRESTADA POR DECURSO DO PRAZO",
       `NIF DA EMPRESA: ${c.nif}`,
       `NOME DA EMPRESA: ${c.name}`,
       `PERÍODO: ${monthLabel(month)}/${year}`,
-      "O cliente não submeteu a documentação até ao fim do prazo. A documentação anexada até essa data foi considerada entregue para efeitos de processamento. Esta submissão foi feita automaticamente pela plataforma e não inclui a declaração de conclusão da entrega prestada pelo cliente.",
+      "O cliente anexou documentação e não a submeteu até ao fim do prazo. Nos termos das Condições do portal, a documentação foi submetida automaticamente e considera-se prestada, por decurso do prazo, a declaração de conclusão da entrega. Esta declaração não foi escrita nem confirmada pelo cliente no momento da submissão.",
       `DATA E HORA DO FIM DO PRAZO: ${formatDateTimePt(submittedAt)}`,
     ].join("\n");
     const { error: insErr } = await supabaseAdmin.from("month_submissions").insert({
@@ -462,11 +462,11 @@ export async function autoSubmitExpiredUnlocks(now: Date = new Date()) {
     const email = c?.email || p?.email || "";
     const responsibleName = c?.responsible_name || name;
     const declarationText = [
-      "SUBMISSÃO AUTOMÁTICA POR DECURSO DO PRAZO",
+      "DECLARAÇÃO CONSIDERADA PRESTADA POR DECURSO DO PRAZO",
       `NIF DA EMPRESA: ${nif}`,
       `NOME DA EMPRESA: ${name}`,
       `PERÍODO: ${monthLabel(r.month)}/${r.year}`,
-      "O cliente não submeteu a documentação até ao fim do prazo de reabertura. A documentação anexada até essa data foi considerada entregue para efeitos de processamento. Esta submissão foi feita automaticamente pela plataforma e não inclui a declaração de conclusão da entrega prestada pelo cliente.",
+      "O cliente anexou documentação e não a submeteu até ao fim do prazo de reabertura. Nos termos das Condições do portal, a documentação foi submetida automaticamente e considera-se prestada, por decurso do prazo, a declaração de conclusão da entrega. Esta declaração não foi escrita nem confirmada pelo cliente no momento da submissão.",
       `DATA E HORA DO FIM DO PRAZO: ${formatDateTimePt(submittedAt)}`,
     ].join("\n");
     const payload = {

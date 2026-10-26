@@ -1016,9 +1016,11 @@ export function DocumentExplorer({
                       </p>
                       <p className="mt-2 rounded-xl bg-gold/10 px-3 py-2 text-xs text-foreground/80">
                         Se não carregar em «Submeter Documentação do Mês», a documentação anexada é
-                        submetida automaticamente no dia 9 do mês seguinte às 23:59:59. Nesse caso, no
-                        dia 10 às 09:00 o cliente e a contabilista recebem os mesmos emails de
-                        confirmação de uma submissão manual.
+                        submetida automaticamente no fim do prazo (dia 10 do mês seguinte, às 23:59:59).
+                        Nos termos das Condições do portal, considera-se que o cliente conclui a entrega e
+                        presta a declaração de conclusão da entrega por decurso do prazo. Fica registado
+                        como submissão automática com declaração considerada prestada. No dia 11, o
+                        cliente e a contabilista recebem um email a informar.
                       </p>
                     </div>
                     <button
