@@ -6,6 +6,7 @@ import {
   REMINDER_BODY,
   unlockExpiry,
 } from "@/lib/portal";
+import { isMonthlySubmissionTime } from "@/lib/vercel-cron.server";
 
 /** Endereço do portal nos emails: SITE_URL, senão sempre o site da Vercel (nunca lovable.app). */
 const VERCEL_SITE = "https://as-contabilidade.vercel.app";
@@ -31,6 +32,7 @@ type SubmissionInfo = {
   submittedAt: string;
   documentCount: number;
   declarationText: string;
+  automatic?: boolean;
 };
 
 type UnlockDecisionInfo = {
@@ -76,7 +78,7 @@ function esc(s: string) {
 /** Converte o texto do email no modelo visual da marca (cabeçalho preto/dourado). */
 function brandHtml(title: string, body: string, admin = false) {
   const lines = body.split("\n").filter((l) => l.trim() !== "AS | Contabilidade, Fiscalidade e Gestão");
-  const declIdx = lines.findIndex((l) => /^DECLARAÇÃO/.test(l.trim()));
+  const declIdx = lines.findIndex((l) => /^(DECLARAÇÃO|REGISTO DA SUBMISSÃO AUTOMÁTICA)/.test(l.trim()));
   const main = declIdx >= 0 ? lines.slice(0, declIdx) : lines;
   const decl = declIdx >= 0 ? lines.slice(declIdx) : [];
 
@@ -160,7 +162,7 @@ export async function notifyAdminOfSubmission(info: SubmissionInfo) {
 
   await deliver(
     to,
-    `Nova submissão de documentação - ${info.fullName}`,
+    `${info.automatic ? "Submissão automática de documentação" : "Nova submissão de documentação"} - ${info.fullName}`,
     [
       `Cliente: ${info.fullName}`,
       `NIF: ${info.nif}`,
@@ -168,7 +170,7 @@ export async function notifyAdminOfSubmission(info: SubmissionInfo) {
       `Data/hora da submissão: ${formatDateTimePt(info.submittedAt)}`,
       `Total de documentos submetidos: ${info.documentCount}`,
       "",
-      "DECLARAÇÃO REGISTADA PELO CLIENTE",
+      info.automatic ? "REGISTO DA SUBMISSÃO AUTOMÁTICA" : "DECLARAÇÃO REGISTADA PELO CLIENTE",
       info.declarationText,
     ].join("\n"),
     "Nova submissão de documentação",
@@ -182,15 +184,17 @@ export async function notifyClientOfSubmission(info: SubmissionInfo) {
 
   await deliver(
     [info.email],
-    `Confirmação de submissão de documentação - ${monthLabel(info.month)} ${info.year}`,
+    `${info.automatic ? "Documentação submetida automaticamente" : "Confirmação de submissão de documentação"} - ${monthLabel(info.month)} ${info.year}`,
     [
       `Olá ${info.fullName},`,
       "",
-      `Confirmamos a receção da sua documentação de ${monthLabel(info.month)} ${info.year}.`,
+      info.automatic
+        ? "O prazo terminou e a documentação que anexou foi submetida automaticamente. Não prestou a declaração de conclusão da entrega. Se faltar algum documento, contacte-nos."
+        : `Confirmamos a receção da sua documentação de ${monthLabel(info.month)} ${info.year}.`,
       `Data/hora da submissão: ${formatDateTimePt(info.submittedAt)}`,
       `Número de documentos submetidos: ${info.documentCount}`,
       "",
-      "DECLARAÇÃO REGISTADA",
+      info.automatic ? "REGISTO DA SUBMISSÃO AUTOMÁTICA" : "DECLARAÇÃO REGISTADA",
       info.declarationText,
       "",
       "AS | Contabilidade, Fiscalidade e Gestão",
@@ -311,13 +315,13 @@ export async function sendMonthlyReminders(period?: string) {
 }
 
 /**
- * Submissão automática (corre dia 10 às 09:00, Lisboa): meses anteriores com
- * documentos anexados mas não submetidos ficam submetidos com data do dia 9
- * às 23:59:59, e cliente + administração recebem os emails habituais.
+ * Submissão automática (corre dia 11, Lisboa, depois de terminar o prazo): meses
+ * anteriores com documentos anexados mas não submetidos ficam registados com
+ * o fim do prazo, dia 10 às 23:59:59 Lisboa, sem declaração prestada pelo cliente.
  */
 export async function autoSubmitPendingMonths(now: Date = new Date()) {
+  if (!isMonthlySubmissionTime(now)) return { skipped: true, submitted: 0 };
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { buildSubmissionDeclaration } = await import("@/lib/portal");
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-GB", {
       timeZone: "Europe/Lisbon",
@@ -337,7 +341,7 @@ export async function autoSubmitPendingMonths(now: Date = new Date()) {
   const month = lisMonth === 1 ? 12 : lisMonth - 1;
   const year = lisMonth === 1 ? lisYear - 1 : lisYear;
   const submittedAt = new Date(
-    Date.UTC(lisYear, lisMonth - 1, 9, 23 - offsetH, 59, 59),
+    Date.UTC(lisYear, lisMonth - 1, 10, 23 - offsetH, 59, 59),
   ).toISOString();
 
   const { data: clients, error } = await supabaseAdmin
@@ -367,14 +371,14 @@ export async function autoSubmitPendingMonths(now: Date = new Date()) {
     if (!count) continue;
 
     const responsibleName = c.responsible_name || c.name;
-    const declarationText = buildSubmissionDeclaration({
-      nif: c.nif,
-      companyName: c.name,
-      responsibleName,
-      year,
-      month,
-      at: submittedAt,
-    }) + "\n\n(Submissão automática no fim do prazo)";
+    const declarationText = [
+      "SUBMISSÃO AUTOMÁTICA POR DECURSO DO PRAZO",
+      `NIF DA EMPRESA: ${c.nif}`,
+      `NOME DA EMPRESA: ${c.name}`,
+      `PERÍODO: ${monthLabel(month)}/${year}`,
+      "O cliente não submeteu a documentação até ao fim do prazo. A documentação anexada até essa data foi considerada entregue para efeitos de processamento. Esta submissão foi feita automaticamente pela plataforma e não inclui a declaração de conclusão da entrega prestada pelo cliente.",
+      `DATA E HORA DO FIM DO PRAZO: ${formatDateTimePt(submittedAt)}`,
+    ].join("\n");
     const { error: insErr } = await supabaseAdmin.from("month_submissions").insert({
       user_id: userId,
       nif: c.nif,
@@ -383,7 +387,7 @@ export async function autoSubmitPendingMonths(now: Date = new Date()) {
       declaration_text: declarationText,
       year,
       month,
-      declaration_accepted: true,
+      declaration_accepted: false,
       document_count: count,
       submitted_at: submittedAt,
     });
@@ -400,6 +404,7 @@ export async function autoSubmitPendingMonths(now: Date = new Date()) {
       submittedAt,
       documentCount: count,
       declarationText,
+      automatic: true,
     };
     try {
       await notifyAdminOfSubmission(info);
@@ -419,7 +424,6 @@ export async function autoSubmitPendingMonths(now: Date = new Date()) {
  */
 export async function autoSubmitExpiredUnlocks(now: Date = new Date()) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { buildSubmissionDeclaration } = await import("@/lib/portal");
   const { data: reqs, error } = await supabaseAdmin
     .from("unlock_requests")
     .select("id, user_id, year, month, decided_at")
@@ -457,15 +461,14 @@ export async function autoSubmitExpiredUnlocks(now: Date = new Date()) {
     const nif = c?.nif || p?.nif || "";
     const email = c?.email || p?.email || "";
     const responsibleName = c?.responsible_name || name;
-    const declarationText =
-      buildSubmissionDeclaration({
-        nif,
-        companyName: name,
-        responsibleName,
-        year: r.year,
-        month: r.month,
-        at: submittedAt,
-      }) + "\n\n(Submissão automática no fim do prazo de reabertura)";
+    const declarationText = [
+      "SUBMISSÃO AUTOMÁTICA POR DECURSO DO PRAZO",
+      `NIF DA EMPRESA: ${nif}`,
+      `NOME DA EMPRESA: ${name}`,
+      `PERÍODO: ${monthLabel(r.month)}/${r.year}`,
+      "O cliente não submeteu a documentação até ao fim do prazo de reabertura. A documentação anexada até essa data foi considerada entregue para efeitos de processamento. Esta submissão foi feita automaticamente pela plataforma e não inclui a declaração de conclusão da entrega prestada pelo cliente.",
+      `DATA E HORA DO FIM DO PRAZO: ${formatDateTimePt(submittedAt)}`,
+    ].join("\n");
     const payload = {
       user_id: r.user_id,
       nif,
@@ -474,7 +477,7 @@ export async function autoSubmitExpiredUnlocks(now: Date = new Date()) {
       declaration_text: declarationText,
       year: r.year,
       month: r.month,
-      declaration_accepted: true,
+      declaration_accepted: false,
       document_count: count,
       submitted_at: submittedAt,
     };
@@ -501,6 +504,7 @@ export async function autoSubmitExpiredUnlocks(now: Date = new Date()) {
       submittedAt,
       documentCount: count,
       declarationText,
+      automatic: true,
     };
     try {
       await notifyAdminOfSubmission(info);
