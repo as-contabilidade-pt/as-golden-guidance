@@ -112,9 +112,10 @@ function brandHtml(title: string, body: string, admin = false) {
 </div>`;
 }
 
-async function deliver(to: string[], subject: string, body: string, title = subject, admin = false) {
+async function deliver(to: string[], subject: string, body: string, title = subject, admin = false, idempotencyKey?: string): Promise<boolean> {
   const original = Array.from(new Set(to.filter(Boolean)));
-  if (original.length === 0) return;
+  if (original.length === 0) return false;
+  let ok = true;
   const recipients = TEST_EMAIL_OVERRIDE ? [TEST_EMAIL_OVERRIDE] : original;
   const apiKey = process.env['RESEND_API_KEY'];
   const from = process.env['RESEND_FROM'] || "AS Contabilidade <onboarding@resend.dev>";
@@ -132,14 +133,23 @@ async function deliver(to: string[], subject: string, body: string, title = subj
     try {
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+        },
         body: JSON.stringify({ from, to: [address], subject: finalSubject, text, html }),
       });
-      if (!res.ok) console.error(`[email] Resend falhou (${res.status}): ${await res.text()}`);
+      if (!res.ok) {
+        ok = false;
+        console.error(`[email] Resend falhou (${res.status}): ${await res.text()}`);
+      }
     } catch (e) {
+      ok = false;
       console.error("[email] erro ao enviar", e);
     }
   }
+  return ok;
 }
 
 
@@ -275,24 +285,29 @@ export async function notifyUnlockRequested(info: {
   }
 }
 
-/** Lembrete do dia 8 para todos os clientes com pasta de submissão ativa. */
-export async function sendMonthlyReminders() {
+/**
+ * Lembrete do dia 8 para todos os clientes com pasta de submissão ativa.
+ * Com `period` ("AAAA-MM"), cada envio leva um Idempotency-Key do Resend por cliente e mês.
+ */
+export async function sendMonthlyReminders(period?: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: rows, error } = await supabaseAdmin
     .from("client_records")
-    .select("email, name")
+    .select("id, email")
     .eq("folder_active", true);
   if (error) throw new Error(error.message);
 
-  const recipients = (rows ?? [])
-    .map((r: { email: string | null }) => (r.email ?? "").trim())
-    .filter((e: string) => e.includes("@"));
-
-  for (const address of recipients) {
-    await deliver([address], REMINDER_SUBJECT, REMINDER_BODY, "Lembrete de prazo");
+  let sent = 0;
+  let failed = 0;
+  for (const r of (rows ?? []) as { id: string; email: string | null }[]) {
+    const address = (r.email ?? "").trim();
+    if (!address.includes("@")) continue;
+    const key = period ? `lembrete-${period}-${r.id}` : undefined;
+    if (await deliver([address], REMINDER_SUBJECT, REMINDER_BODY, "Lembrete de prazo", false, key)) sent++;
+    else failed++;
   }
 
-  return { sent: recipients.length };
+  return { sent, failed };
 }
 
 /**
