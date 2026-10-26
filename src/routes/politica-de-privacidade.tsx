@@ -58,7 +58,13 @@ const sections: LegalSection[] = [
             "Receção e tratamento da documentação contabilística no portal",
             "documentos em PDF submetidos pelo cliente (faturas, extratos bancários, documentos de salários e outros), que podem conter dados pessoais do cliente e de terceiros.",
             "execução do contrato e cumprimento de obrigações legais contabilísticas e fiscais.",
-            "no portal, 12 meses; no arquivo contabilístico, pelo prazo legal aplicável (em regra, 10 anos).",
+            "No portal, em regra 12 meses, sendo depois eliminados pela administração após arquivo; no arquivo contabilístico, pelo prazo legal aplicável (em regra, 10 anos).",
+          ],
+          [
+            "Conversão de extratos bancários (ferramenta interna da administração)",
+            "movimentos extraídos dos extratos (data, descrição, débito, crédito e saldo), nome do cliente e nome do ficheiro",
+            "execução do contrato",
+            "30 dias, sendo depois eliminados automaticamente",
           ],
           [
             "Registo de submissões, declarações e pedidos de reabertura de períodos",
@@ -103,6 +109,7 @@ const sections: LegalSection[] = [
           <li>Supabase: base de dados, autenticação e armazenamento de ficheiros (infraestrutura na União Europeia, região de Estocolmo).</li>
           <li>Vercel: alojamento do site.</li>
           <li>Resend: envio de emails de serviço.</li>
+          <li>Anthropic: tratamento dos extratos bancários na ferramenta de conversão, através de interface comercial, ao abrigo de termos que excluem a utilização dos dados para treino de modelos e de um acordo de tratamento de dados.</li>
         </ul>
         <p>
           Podemos ainda comunicar dados a autoridades públicas (Autoridade Tributária, Segurança Social, tribunais) quando a lei o exigir. Não vendemos dados pessoais nem os utilizamos para publicidade.
@@ -118,7 +125,7 @@ const sections: LegalSection[] = [
     title: "5. Transferências para fora do Espaço Económico Europeu",
     body: (
       <p>
-        Alguns prestadores podem tratar dados fora do EEE. Nesses casos, a transferência assenta em garantias adequadas, quando aplicável, como cláusulas contratuais-tipo aprovadas pela Comissão Europeia ou o Quadro de Privacidade de Dados UE-EUA.
+        Alguns prestadores podem tratar dados fora do EEE. Nesses casos, a transferência assenta em garantias adequadas, quando aplicável, como cláusulas contratuais-tipo aprovadas pela Comissão Europeia ou o Quadro de Privacidade de Dados UE-EUA. Isto inclui o prestador de inteligência artificial, que pode tratar dados fora do EEE ao abrigo de cláusulas contratuais-tipo.
       </p>
     ),
   },

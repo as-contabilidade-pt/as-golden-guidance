@@ -63,6 +63,11 @@ const sections = [
       "Reservamos o direito de atualizar ou modificar estes termos e condições a qualquer momento. Quaisquer alterações serão publicadas neste site e entram em vigor imediatamente após a publicação. É da sua responsabilidade verificar periodicamente os termos e condições para se manter informado sobre quaisquer atualizações.",
   },
   {
+    title: "Portal de clientes",
+    content:
+      "O acesso ao portal é feito por conta criada pela administração. As credenciais são pessoais e confidenciais, e o cliente deve comunicar de imediato qualquer acesso indevido. O portal destina-se à entrega de documentos em formato PDF. O cliente é responsável pela legitimidade e integridade dos documentos que submete, e o portal é um canal de entrega e não um arquivo: o cliente deve conservar os originais nos termos legais. Cada mês fica aberto para entrega até ao dia 10 do mês seguinte. Depois disso, o período é bloqueado. O cliente pode pedir a reabertura mediante declaração, e, se a reabertura for aprovada, mantém-se durante 72 horas úteis (de segunda a sexta-feira, sem dedução de feriados). Ao submeter a documentação, o cliente confirma, através de declaração, que a entrega está completa. A submissão fecha o período e fica registada com data e hora. Fazemos os possíveis por manter o portal disponível, sem garantir funcionamento ininterrupto. O acesso pode ser suspenso em caso de utilização indevida.",
+  },
+  {
     title: "Contacto",
     content:
       "Se tiver alguma dúvida ou preocupação sobre estes termos e condições, entre em contacto connosco através das informações de contacto fornecidas no nosso site.",

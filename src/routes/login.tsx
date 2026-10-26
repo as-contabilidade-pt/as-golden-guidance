@@ -161,6 +161,10 @@ function LoginPage() {
           <Link to="/politica-de-cookies" className="hover:text-gold">
             Política de Cookies
           </Link>
+          {" · "}
+          <Link to="/termos" className="hover:text-gold">
+            Termos e Condições
+          </Link>
         </p>
       </div>
     </main>
