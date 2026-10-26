@@ -43,12 +43,6 @@ const sections: LegalSection[] = [
         head={["Finalidade", "Dados", "Fundamento", "Conservação"]}
         rows={[
           [
-            "Resposta a pedidos de contacto (formulário do site)",
-            "nome, apelido, email e mensagem.",
-            "diligências pré-contratuais e interesse legítimo em responder ao pedido.",
-            "12 meses após o último contacto.",
-          ],
-          [
             "Gestão da relação com clientes e criação da conta no portal",
             "nome ou designação, NIF, morada, email, telefone, nome do responsável e número de cliente.",
             "execução do contrato de prestação de serviços.",
