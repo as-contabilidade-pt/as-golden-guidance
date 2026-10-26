@@ -1,26 +1,26 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 
-const writes: { operation: string; payload: Record<string, unknown> }[] = [];
+const writes = [];
 let reopening = false;
 let existingSubmission = false;
 
 const database = {
-  from(table: string) {
+  from(table) {
     const query = {
       select: () => query,
       eq: () => query,
       not: () => query,
       limit: () => query,
       maybeSingle: () => query,
-      insert(payload: Record<string, unknown>) {
+      insert(payload) {
         if (table === "month_submissions") writes.push({ operation: "insert", payload });
         return query;
       },
-      update(payload: Record<string, unknown>) {
+      update(payload) {
         if (table === "month_submissions") writes.push({ operation: "update", payload });
         return query;
       },
-      then(resolve: (value: unknown) => unknown) {
+      then(resolve) {
         const client = { user_id: "fixture-client", name: "Fixture", nif: "123456789", email: null, responsible_name: "Fixture" };
         const data = table === "client_records" ? (reopening ? client : [client])
           : table === "unlock_requests" ? [{ id: "fixture-request", user_id: "fixture-client", year: 2026, month: 9, decided_at: "2026-10-12T09:00:00Z" }]
@@ -50,7 +50,7 @@ describe("automatic submission records", () => {
       ["2026-10-11T08:00:00Z", "2026-10-10T22:59:59.000Z", 2026, 9],
       ["2026-12-11T08:00:00Z", "2026-12-10T23:59:59.000Z", 2026, 11],
       ["2027-01-11T08:00:00Z", "2027-01-10T23:59:59.000Z", 2026, 12],
-    ] as const) {
+    ]) {
       writes.length = 0;
       await autoSubmitPendingMonths(new Date(now));
       expect(writes).toHaveLength(1);
