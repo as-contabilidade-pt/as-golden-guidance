@@ -8,8 +8,9 @@ export const Route = createFileRoute("/api/public/jobs/vercel")({
         const { authenticateVercelCron, isMonthlySubmissionTime } = await import("@/lib/vercel-cron.server");
         const authFailure = await authenticateVercelCron(request, process.env["CRON_SECRET"]);
         if (authFailure) return authFailure;
+        const now = new Date();
+        let coreFailed = false;
         try {
-          const now = new Date();
           // Keep-alive: minimal read so the backend registers daily activity.
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           await supabaseAdmin.from("user_roles").select("user_id", { head: true, count: "exact" }).limit(1);
@@ -17,10 +18,10 @@ export const Route = createFileRoute("/api/public/jobs/vercel")({
           await autoSubmitExpiredUnlocks(now);
           if (isMonthlySubmissionTime(now)) await autoSubmitPendingMonths(now);
         } catch {
-          return Response.json({ error: "Não foi possível concluir o processamento automático." }, { status: 500 });
+          coreFailed = true;
+          console.error("[cron] processamento de submissões falhou");
         }
 
-        const now = new Date();
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         // 1) Lembrete do dia 8 (Lisboa), sem pg_cron/pg_net/verify_reminder_token.
@@ -58,11 +59,10 @@ export const Route = createFileRoute("/api/public/jobs/vercel")({
           console.error("[cron] limpeza statement_conversions falhou");
         }
 
-        try {
-          return Response.json({ success: true }, { headers: { "Cache-Control": "no-store" } });
-        } catch {
+        if (coreFailed) {
           return Response.json({ error: "Não foi possível concluir o processamento automático." }, { status: 500 });
         }
+        return Response.json({ success: true }, { headers: { "Cache-Control": "no-store" } });
       },
     },
   },
