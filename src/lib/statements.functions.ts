@@ -36,77 +36,107 @@ export type StatementRow = {
   saldo: string;
 };
 
-const PROMPT = `És um assistente de contabilidade em Portugal. Analisa o extrato bancário em PDF em anexo (pode ser de qualquer banco português e ter várias páginas).
+const PROMPT = `És um assistente de contabilidade em Portugal. Analisa o extrato bancário em PDF em anexo (pode ser de qualquer banco português; é um excerto de poucas páginas de um extrato maior).
 
 Extrai TODOS os movimentos/transações reais. Ignora cabeçalhos, rodapés, totais, resumos e linhas que não sejam movimentos.
 
-Para cada movimento devolve:
+Cada movimento é uma lista de 5 textos, por esta ordem:
+[data, descricao, debito, credito, saldo]
 - data: data do movimento (data valor se existir), sempre no formato DD/MM/AAAA
-- descricao: descrição do movimento em texto simples
-- debito: valor de saída, número decimal com ponto (ex: "1234.56"); string vazia se não aplicável
-- credito: valor de entrada, número decimal com ponto; string vazia se não aplicável
-- saldo: saldo após o movimento, número decimal com ponto; string vazia se não existir no extrato
+- descricao: descrição do movimento em texto simples e curto
+- debito: valor de saída, número decimal com ponto (ex: "1234.56"); "" se não aplicável
+- credito: valor de entrada, número decimal com ponto; "" se não aplicável
+- saldo: saldo após o movimento, número decimal com ponto; "" se não existir no extrato
 
-Sem separadores de milhares. Sem símbolos de moeda. Responde APENAS com json válido no formato:
-{"movimentos":[{"data":"","descricao":"","debito":"","credito":"","saldo":""}]}`;
+Sem separadores de milhares. Sem símbolos de moeda. Responde APENAS com json válido, sem texto antes ou depois, neste formato:
+{"m":[["","","","",""]]}`;
 
 // Modelo Claude utilizado na extração. Alterar aqui para mudar de modelo.
-const CLAUDE_MODEL = "claude-sonnet-5-5";
+// O alojamento gratuito corta pedidos aos 10 s, por isso usa-se um modelo rápido
+// e o PDF é processado página a página (ver extractStatementChunk).
+const CLAUDE_MODEL = "claude-haiku-5-5";
+const CLAUDE_TIMEOUT_MS = 9000;
 
-export const extractBankStatement = createServerFn({ method: "POST" })
+async function loadPdfBase64(data: z.infer<typeof inputSchema>): Promise<string> {
+  if (data.fileData) return data.fileData;
+  if (!data.documentId) throw new Error("Nenhum ficheiro indicado.");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: doc } = await supabaseAdmin
+    .from("documents")
+    .select("storage_path")
+    .eq("id", data.documentId)
+    .maybeSingle();
+  if (!doc) throw new Error("Documento não encontrado.");
+  const { data: blob, error } = await supabaseAdmin.storage.from("documentos").download(doc.storage_path);
+  if (error || !blob) throw new Error("Não foi possível abrir o documento do cliente.");
+  return toBase64(await blob.arrayBuffer());
+}
+
+const chunkSchema = inputSchema.extend({
+  page: z.number().int().min(1).max(2000),
+  pages: z.number().int().min(1).max(10).default(1),
+});
+
+/** Processa um pequeno grupo de páginas; o ecrã chama isto em ciclo. Não grava histórico. */
+export const extractStatementChunk = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => inputSchema.parse(data))
+  .inputValidator((data: unknown) => chunkSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-
-    let fileData = data.fileData;
-    if (!fileData && data.documentId) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: doc } = await supabaseAdmin
-        .from("documents")
-        .select("storage_path")
-        .eq("id", data.documentId)
-        .maybeSingle();
-      if (!doc) throw new Error("Documento não encontrado.");
-      const { data: blob, error } = await supabaseAdmin.storage
-        .from("documentos")
-        .download(doc.storage_path);
-      if (error || !blob) throw new Error("Não foi possível abrir o documento do cliente.");
-      fileData = toBase64(await blob.arrayBuffer());
-    }
-    if (!fileData) throw new Error("Nenhum ficheiro indicado.");
 
     const apiKey = process.env["ANTHROPIC_API_KEY"];
     if (!apiKey) throw new Error("Serviço de processamento não configurado.");
 
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: CLAUDE_MODEL,
-        max_tokens: 16000,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "document",
-                source: {
-                  type: "base64",
-                  media_type: "application/pdf",
-                  data: fileData,
-                },
-              },
-              { type: "text", text: PROMPT },
-            ],
-          },
-        ],
-      }),
+    const { PDFDocument } = await import("pdf-lib");
+    const source = await PDFDocument.load(Buffer.from(await loadPdfBase64(data), "base64"), {
+      ignoreEncryption: true,
     });
+    const totalPages = source.getPageCount();
+    if (data.page > totalPages) return { rows: [] as StatementRow[], totalPages };
+
+    const last = Math.min(totalPages, data.page + data.pages - 1);
+    const part = await PDFDocument.create();
+    const copied = await part.copyPages(
+      source,
+      Array.from({ length: last - data.page + 1 }, (_, i) => data.page - 1 + i),
+    );
+    copied.forEach((p) => part.addPage(p));
+    const chunkBase64 = await part.saveAsBase64();
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CLAUDE_TIMEOUT_MS);
+    let res: Response;
+    try {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: CLAUDE_MODEL,
+          max_tokens: 4000,
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "document", source: { type: "base64", media_type: "application/pdf", data: chunkBase64 } },
+                { type: "text", text: PROMPT },
+              ],
+            },
+          ],
+        }),
+      });
+    } catch (e) {
+      if ((e as Error)?.name === "AbortError") {
+        throw new Error(`A página ${data.page} demorou demasiado a processar. Tente novamente.`);
+      }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
 
     if (!res.ok) {
       const body = await res.text();
@@ -124,9 +154,7 @@ export const extractBankStatement = createServerFn({ method: "POST" })
       throw new Error(`Falha no processamento do extrato (${res.status}). ${body.slice(0, 300)}`);
     }
 
-    const payload = (await res.json()) as {
-      content?: Array<{ type?: string; text?: string }>;
-    };
+    const payload = (await res.json()) as { content?: Array<{ type?: string; text?: string }> };
     const text = (payload.content ?? [])
       .filter((block) => block?.type === "text")
       .map((block) => block.text ?? "")
@@ -134,47 +162,68 @@ export const extractBankStatement = createServerFn({ method: "POST" })
     const start = text.indexOf("{");
     const end = text.lastIndexOf("}");
     if (start === -1 || end === -1) {
-      throw new Error("Não foi possível interpretar os movimentos do extrato.");
+      throw new Error(`Não foi possível interpretar os movimentos da página ${data.page}.`);
     }
 
-
-    let parsed: { movimentos?: unknown };
+    let parsed: { m?: unknown };
     try {
-      parsed = JSON.parse(text.slice(start, end + 1)) as { movimentos?: unknown };
+      parsed = JSON.parse(text.slice(start, end + 1)) as { m?: unknown };
     } catch {
-      throw new Error("Resposta inválida do processamento. Tente novamente.");
+      throw new Error(`Resposta inválida na página ${data.page}. Tente novamente.`);
     }
 
-    const rows = Array.isArray(parsed.movimentos) ? parsed.movimentos : [];
     const clean = (v: unknown) => (typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : "");
+    const rows = (Array.isArray(parsed.m) ? parsed.m : [])
+      .filter((r): r is unknown[] => Array.isArray(r))
+      .map(
+        (r) =>
+          ({
+            data: clean(r[0]),
+            descricao: clean(r[1]),
+            debito: clean(r[2]),
+            credito: clean(r[3]),
+            saldo: clean(r[4]),
+          }) satisfies StatementRow,
+      );
+    return { rows, totalPages };
+  });
 
-    const mapped = rows.map((r) => {
-        const row = (r ?? {}) as Record<string, unknown>;
-        return {
-          data: clean(row["data"]),
-          descricao: clean(row["descricao"]),
-          debito: clean(row["debito"]),
-          credito: clean(row["credito"]),
-          saldo: clean(row["saldo"]),
-        } satisfies StatementRow;
-      });
+const saveSchema = z.object({
+  filename: z.string().min(1),
+  documentId: z.string().uuid().optional(),
+  clientName: z.string().max(200).optional(),
+  rows: z.array(
+    z.object({
+      data: z.string(),
+      descricao: z.string(),
+      debito: z.string(),
+      credito: z.string(),
+      saldo: z.string(),
+    }),
+  ),
+});
 
-    const { supabaseAdmin: historyDb } = await import("@/integrations/supabase/client.server");
-    const { data: saved, error: historyError } = await historyDb
+/** Grava no histórico o resultado já reunido de todas as páginas. */
+export const saveStatementConversion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => saveSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: saved, error } = await supabaseAdmin
       .from("statement_conversions")
       .insert({
         created_by: context.userId,
         client_name: data.clientName?.trim() ?? "",
         filename: data.filename,
         source_document_id: data.documentId ?? null,
-        rows: mapped,
-        row_count: mapped.length,
+        rows: data.rows,
+        row_count: data.rows.length,
       })
       .select("id")
       .maybeSingle();
-
-    if (historyError) console.error("statement history save failed", historyError.message);
-    return { rows: mapped, historyId: (saved?.id as string | undefined) ?? null };
+    if (error) console.error("statement history save failed", error.message);
+    return { historyId: (saved?.id as string | undefined) ?? null };
   });
 
 export type HistoryItem = {

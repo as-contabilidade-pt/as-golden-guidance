@@ -10,7 +10,8 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
 import {
   deleteStatementHistory,
-  extractBankStatement,
+  extractStatementChunk,
+  saveStatementConversion,
   getClientStatementUrl,
   listClientStatements,
   listStatementHistory,
@@ -63,7 +64,40 @@ function fileToBase64(file: File) {
 }
 
 function StatementConverterPage() {
-  const extract = useServerFn(extractBankStatement);
+  const extractChunk = useServerFn(extractStatementChunk);
+  const saveConversion = useServerFn(saveStatementConversion);
+
+  // O alojamento corta pedidos longos: o extrato é lido página a página e reunido aqui.
+  async function extract({
+    data,
+  }: {
+    data: { filename: string; mimeType: string; fileData?: string; documentId?: string; clientName?: string };
+  }): Promise<{ rows: StatementRow[]; historyId: string | null }> {
+    const rows: StatementRow[] = [];
+    let page = 1;
+    let totalPages = 1;
+    while (page <= totalPages) {
+      const label = `A converter ${data.filename}`;
+      setProgressLabel(totalPages > 1 ? `${label} · página ${page} de ${totalPages}` : label);
+      let result: Awaited<ReturnType<typeof extractChunk>> | undefined;
+      for (let attempt = 0; attempt < 2 && !result; attempt++) {
+        try {
+          result = await extractChunk({ data: { ...data, page, pages: 1 } });
+        } catch (e) {
+          if (attempt === 1) throw e;
+        }
+      }
+      if (!result) break;
+      totalPages = result.totalPages;
+      rows.push(...result.rows);
+      page += 1;
+    }
+    if (!rows.length) return { rows, historyId: null };
+    const saved = await saveConversion({
+      data: { filename: data.filename, documentId: data.documentId, clientName: data.clientName, rows },
+    });
+    return { rows, historyId: saved.historyId };
+  }
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
