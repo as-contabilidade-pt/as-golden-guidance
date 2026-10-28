@@ -33,3 +33,6 @@ dist-ssr
 
 # Testes de segurança (credenciais locais)
 .env.test
+
+# Saída de build do Netlify
+.netlify
