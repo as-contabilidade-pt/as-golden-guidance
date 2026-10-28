@@ -30,7 +30,6 @@ const database = {
 };
 
 mock.module("@/integrations/supabase/client.server", () => ({ supabaseAdmin: database }));
-mock.module("@tanstack/react-router", () => ({ createFileRoute: () => (options) => options }));
 const { sendMonthlyReminders } = await import("./submission-email.server");
 const { Route } = await import("../routes/api/public/jobs/vercel");
 const originalCronSecret = process.env.CRON_SECRET;
@@ -102,7 +101,7 @@ test("daily callback sends on Lisbon day 6 and not day 8", async () => {
   try {
     for (const [date, count] of [["2026-10-06T08:00:00Z", 1], ["2026-10-08T08:00:00Z", 0], ["2026-10-05T23:30:00Z", 1], ["2026-12-05T23:30:00Z", 0]]) {
       setSystemTime(new Date(date)); deliveries = [];
-      const response = await Route.server.handlers.GET({ request: new Request("https://example.test/api/public/jobs/vercel", { headers: { authorization: "Bearer test-only-cron-fixture" } }) });
+      const response = await Route.options.server.handlers.GET({ request: new Request("https://example.test/api/public/jobs/vercel", { headers: { authorization: "Bearer test-only-cron-fixture" } }) });
       expect(response.status).toBe(200);
       expect(deliveries).toHaveLength(count);
     }
