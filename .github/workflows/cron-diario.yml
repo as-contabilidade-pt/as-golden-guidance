@@ -19,7 +19,10 @@ jobs:
           if printf '%s' "$CRON_SECRET" | grep -q '[[:space:],]'; then echo "AVISO: o segredo tem espaços, vírgulas ou quebras de linha; o servidor recusa-os."; else echo "Formato do segredo: ok"; fi
           printf 'SITE_URL: comprimento=%s\n' "${#SITE_URL}"
           if printf '%s' "$SITE_URL" | grep -q '[[:space:]]$\|/$'; then echo "AVISO: SITE_URL termina em espaço ou barra."; else echo "Formato do SITE_URL: ok"; fi
-          curl --fail --silent --show-error --retry 3 --retry-delay 30 \
+          status=$(curl -sS -D /tmp/h -o /dev/null -w '%{http_code}' \
             -H "Authorization: Bearer $CRON_SECRET" \
-            "$SITE_URL/api/public/jobs/vercel" -o /dev/null
+            "$SITE_URL/api/public/jobs/vercel" || true)
+          echo "HTTP $status"
+          grep -i '^x-auth-debug' /tmp/h || true
+          [ "$status" = "200" ] || exit 22
           echo "Tarefa diária concluída"
