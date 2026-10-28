@@ -8,19 +8,19 @@ import {
 } from "@/lib/portal";
 import { isMonthlySubmissionTime } from "@/lib/vercel-cron.server";
 
-/** Endereço do portal nos emails: SITE_URL, senão sempre o site da Vercel (nunca lovable.app). */
-const VERCEL_SITE = "https://as-contabilidade.vercel.app";
+/** Endereço do portal nos emails: SITE_URL (obrigatório em produção), senão a origem do pedido (nunca lovable.app). */
+const FALLBACK_SITE = "https://as-contabilidade.vercel.app";
 function siteBaseUrl(): string {
   const env = process.env["SITE_URL"];
   if (env && !/lovable\.app/.test(env)) return env;
   try {
     const req = getRequest();
     const origin = req?.headers.get("origin") || (req ? new URL(req.url).origin : "");
-    if (origin && /vercel\.app/.test(origin)) return origin;
+    if (origin && !/lovable\.app|localhost/.test(origin)) return origin;
   } catch {
     /* sem pedido (ex.: tarefa agendada) */
   }
-  return VERCEL_SITE;
+  return FALLBACK_SITE;
 }
 
 type SubmissionInfo = {
