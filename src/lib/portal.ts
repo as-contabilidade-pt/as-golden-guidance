@@ -229,13 +229,13 @@ export function buildSubmissionDeclaration(f: DeclarationFields) {
 export const REMINDER_SUBJECT = "Lembrete - Prazo de entrega de documentação";
 
 export const REMINDER_BODY = [
-  "Caro cliente,",
+  "Bom dia,",
   "",
   "Recordamos que dia 10 é o último dia para disponibilizar as faturas e restante documentação contabilística referente ao mês anterior.",
   "",
   "Caso ainda não tenha procedido ao envio ou disponibilização da documentação, solicitamos que o faça com a maior brevidade possível.",
   "",
-  "Caso a documentação já tenha sido disponibilizada, agradecemos que desconsidere esta mensagem, a qual é enviada automaticamente.",
+  "Se anexou documentos e não carregou em «Submeter Documentação do Mês» até ao fim do prazo, a documentação é submetida automaticamente, nos termos das Condições do portal.",
   "",
-  "AS | Contabilidade, Fiscalidade e Gestão",
+  "Observação: Caso a documentação já tenha sido disponibilizada, agradecemos que desconsidere este e-mail, o qual é enviado automaticamente.",
 ].join("\n");

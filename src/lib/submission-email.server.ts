@@ -114,7 +114,7 @@ function brandHtml(title: string, body: string, admin = false) {
 </div>`;
 }
 
-async function deliver(to: string[], subject: string, body: string, title = subject, admin = false, idempotencyKey?: string): Promise<boolean> {
+async function deliver(to: string[], subject: string, body: string, title = subject, admin = false, idempotencyKey?: string, countsOnly = false): Promise<boolean> {
   const original = Array.from(new Set(to.filter(Boolean)));
   if (original.length === 0) return false;
   let ok = true;
@@ -129,6 +129,7 @@ async function deliver(to: string[], subject: string, body: string, title = subj
 
   for (const address of recipients) {
     if (!apiKey) {
+      if (countsOnly) { ok = false; continue; }
       console.log(`[email] (sem RESEND_API_KEY) para ${address} :: ${finalSubject}\n${text}`);
       continue;
     }
@@ -144,11 +145,11 @@ async function deliver(to: string[], subject: string, body: string, title = subj
       });
       if (!res.ok) {
         ok = false;
-        console.error(`[email] Resend falhou (${res.status}): ${await res.text()}`);
+        if (!countsOnly) console.error(`[email] Resend falhou (${res.status}): ${await res.text()}`);
       }
     } catch (e) {
       ok = false;
-      console.error("[email] erro ao enviar", e);
+      if (!countsOnly) console.error("[email] erro ao enviar", e);
     }
   }
   return ok;
@@ -290,24 +291,42 @@ export async function notifyUnlockRequested(info: {
 }
 
 /**
- * Lembrete do dia 8 para todos os clientes com pasta de submissão ativa.
+ * Lembrete do dia 6 para clientes ativos que ainda não submeteram o mês anterior (Lisboa).
  * Com `period` ("AAAA-MM"), cada envio leva um Idempotency-Key do Resend por cliente e mês.
  */
 export async function sendMonthlyReminders(period?: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Lisbon", year: "numeric", month: "2-digit" })
+      .formatToParts(new Date()).map((p) => [p.type, p.value]),
+  );
+  const currentYear = Number(parts["year"]);
+  const currentMonth = Number(parts["month"]);
+  const year = currentMonth === 1 ? currentYear - 1 : currentYear;
+  const month = currentMonth === 1 ? 12 : currentMonth - 1;
   const { data: rows, error } = await supabaseAdmin
     .from("client_records")
-    .select("id, email")
-    .eq("folder_active", true);
+    .select("id, user_id, email")
+    .eq("folder_active", true)
+    .not("user_id", "is", null);
   if (error) throw new Error(error.message);
 
   let sent = 0;
   let failed = 0;
-  for (const r of (rows ?? []) as { id: string; email: string | null }[]) {
+  for (const r of (rows ?? []) as { id: string; user_id: string | null; email: string | null }[]) {
     const address = (r.email ?? "").trim();
-    if (!address.includes("@")) continue;
+    if (!r.user_id || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) continue;
+    const { data: submissions, error: submissionError } = await supabaseAdmin
+      .from("month_submissions")
+      .select("id")
+      .eq("user_id", r.user_id)
+      .eq("year", year)
+      .eq("month", month)
+      .limit(1);
+    if (submissionError) { failed++; continue; }
+    if (submissions?.length) continue;
     const key = period ? `lembrete-${period}-${r.id}` : undefined;
-    if (await deliver([address], REMINDER_SUBJECT, REMINDER_BODY, "Lembrete de prazo", false, key)) sent++;
+    if (await deliver([address], REMINDER_SUBJECT, REMINDER_BODY, "Lembrete de prazo", false, key, true)) sent++;
     else failed++;
   }
 

@@ -24,20 +24,20 @@ export const Route = createFileRoute("/api/public/jobs/vercel")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        // 1) Lembrete do dia 8 (Lisboa), sem pg_cron/pg_net/verify_reminder_token.
+        // 1) Lembrete do dia 6 (Lisboa), sem pg_cron/pg_net/verify_reminder_token.
         try {
           const parts = Object.fromEntries(
             new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Lisbon", year: "numeric", month: "2-digit", day: "numeric" })
               .formatToParts(now)
               .map((p) => [p.type, p.value]),
           );
-          if (Number(parts["day"]) === 8) {
+          if (Number(parts["day"]) === 6) {
             const { sendMonthlyReminders } = await import("@/lib/submission-email.server");
             const { sent, failed } = await sendMonthlyReminders(`${parts["year"]}-${parts["month"]}`);
-            console.log(`[cron] lembrete dia 8: enviados=${sent} falhas=${failed}`);
+            console.log(`[cron] lembrete dia 6: enviados=${sent} falhas=${failed}`);
           }
         } catch {
-          console.error("[cron] lembrete dia 8 falhou");
+          console.error("[cron] lembrete dia 6 falhou");
         }
 
         // 2) contact_messages com mais de 12 meses.
