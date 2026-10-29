@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ZipDownloadBar } from "@/components/portal/ZipDownloadBar";
 import { friendlyError } from "@/lib/friendly-error";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -804,6 +805,16 @@ export function DocumentExplorer({
         <p className="mt-6 rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-3 text-sm text-destructive">
           {error}
         </p>
+      ) : null}
+
+      {readOnly && clientId ? (
+        <ZipDownloadBar
+          clientId={clientId}
+          year={year}
+          month={month}
+          category={category}
+          categoryLabel={categories.find((c) => c.slug === category)?.label}
+        />
       ) : null}
 
       <div className="mt-8">

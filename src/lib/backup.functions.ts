@@ -6,6 +6,7 @@ const schema = z.object({
   clientId: z.string().uuid().optional(),
   year: z.number().int().min(2000).max(2100).optional(),
   month: z.number().int().min(1).max(12).optional(),
+  category: z.string().min(1).max(100).optional(),
   fromKey: z.number().int().optional(),
   toKey: z.number().int().optional(),
 });
@@ -56,7 +57,7 @@ export const buildBackupManifest = createServerFn({ method: "POST" })
       const k = r.year * 12 + (r.month - 1);
       return (data.fromKey === undefined || k >= data.fromKey) && (data.toKey === undefined || k <= data.toKey);
     };
-    const docRows = ((docs.data ?? []) as any[]).filter(inRange);
+    const docRows = ((docs.data ?? []) as any[]).filter(inRange).filter((r) => !data.category || r.category === data.category);
     subs.data = (subs.data ?? []).filter(inRange);
     reqs.data = (reqs.data ?? []).filter(inRange);
     const paths = docRows.map((d) => d.storage_path);
