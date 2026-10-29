@@ -69,7 +69,7 @@ function StatementConverterPage() {
   }: {
     data: { filename: string; mimeType: string; fileData?: string; documentId?: string; clientName?: string };
   }): Promise<{ rows: StatementRow[]; historyId: string | null }> {
-    const { data: result, error } = await supabase.functions.invoke("extract-statement", {
+    const { data: result, error } = await supabase.functions.invoke("rapid-endpoint", {
       body: { filename: data.filename, fileData: data.fileData, documentId: data.documentId, clientName: data.clientName },
     });
     if (error) {

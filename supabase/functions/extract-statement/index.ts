@@ -1,4 +1,4 @@
-// Edge Function do Supabase: lê um extrato bancário em PDF com a IA e devolve os movimentos.
+// Edge Function do Supabase (publicada com o nome "rapid-endpoint"): lê um extrato bancário em PDF com a IA e devolve os movimentos.
 // Corre no Supabase porque aguenta pedidos longos (o alojamento do site corta aos 10 s).
 // Segredo necessário (Edge Functions → Secrets): ANTHROPIC_API_KEY
 import { createClient } from "npm:@supabase/supabase-js@2";
