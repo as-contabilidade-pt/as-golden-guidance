@@ -121,15 +121,15 @@ Deno.serve(async (req) => {
   }
 
   const payload = (await res.json()) as { stop_reason?: string; content?: Array<{ type?: string; text?: string }> };
+  // Resposta cortada = movimentos em falta: nunca devolver um resultado incompleto.
+  if (payload.stop_reason === "max_tokens") {
+    return fail("O extrato é demasiado extenso para uma só conversão. Divida o PDF em duas partes e converta cada uma.", 422);
+  }
   const text = (payload.content ?? []).filter((b) => b?.type === "text").map((b) => b.text ?? "").join("");
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end === -1) return fail("Não foi possível interpretar os movimentos do extrato.", 502);
 
-  // Resposta cortada = movimentos em falta: nunca devolver um resultado incompleto.
-  if (payload.stop_reason === "max_tokens") {
-    return fail("O extrato é demasiado extenso para uma só conversão. Divida o PDF em duas partes e converta cada uma.", 422);
-  }
   let items: unknown[] = [];
   try {
     const parsed = JSON.parse(text.slice(start, end + 1)) as { m?: unknown };
