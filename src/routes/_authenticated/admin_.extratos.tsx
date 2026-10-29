@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import { requireAdmin } from "@/lib/admin-guard";
 import { friendlyError } from "@/lib/friendly-error";
 import { createFileRoute } from "@tanstack/react-router";
@@ -10,7 +11,6 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { ConfirmDialog } from "@/components/portal/ConfirmDialog";
 import {
   deleteStatementHistory,
-  extractBankStatement,
   getClientStatementUrl,
   listClientStatements,
   listStatementHistory,
@@ -63,7 +63,30 @@ function fileToBase64(file: File) {
 }
 
 function StatementConverterPage() {
-  const extract = useServerFn(extractBankStatement);
+  // A leitura do PDF corre numa Edge Function do Supabase (aguenta pedidos longos).
+  async function extract({
+    data,
+  }: {
+    data: { filename: string; mimeType: string; fileData?: string; documentId?: string; clientName?: string };
+  }): Promise<{ rows: StatementRow[]; historyId: string | null }> {
+    const { data: result, error } = await supabase.functions.invoke("extract-statement", {
+      body: { filename: data.filename, fileData: data.fileData, documentId: data.documentId, clientName: data.clientName },
+    });
+    if (error) {
+      let message = "Erro ao processar o extrato.";
+      const response = (error as { context?: Response }).context;
+      if (response && typeof response.json === "function") {
+        try {
+          const body = (await response.json()) as { error?: string };
+          if (body?.error) message = body.error;
+        } catch {
+          /* mantém a mensagem genérica */
+        }
+      }
+      throw new Error(message);
+    }
+    return result as { rows: StatementRow[]; historyId: string | null };
+  }
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
