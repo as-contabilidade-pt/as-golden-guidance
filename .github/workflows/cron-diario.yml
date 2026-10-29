@@ -9,20 +9,28 @@ jobs:
   chamar:
     runs-on: ubuntu-latest
     steps:
+      # Mantém a base de dados ativa mesmo que o site esteja indisponível.
+      # O URL e a chave pública (publishable) são os mesmos que o site já expõe aos browsers.
+      - name: Manter a base de dados ativa
+        env:
+          SUPABASE_URL: https://dwtofbbzjsgndtloeqas.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_rZqrC9fksuMfZ1YPXX-Ixg_6rAuKHeP
+        run: |
+          status=$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 10 \
+            -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+            "$SUPABASE_URL/rest/v1/profiles?select=id&limit=1" || true)
+          echo "Base de dados: HTTP $status"
+          [ "$status" = "200" ] || exit 22
+
       - name: Chamar o endpoint diário
+        if: always()
         env:
           SITE_URL: ${{ secrets.SITE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          # Diagnóstico sem revelar o valor: comprimento e caracteres que o servidor recusa.
-          printf 'CRON_SECRET: comprimento=%s\n' "${#CRON_SECRET}"
-          if printf '%s' "$CRON_SECRET" | grep -q '[[:space:],]'; then echo "AVISO: o segredo tem espaços, vírgulas ou quebras de linha; o servidor recusa-os."; else echo "Formato do segredo: ok"; fi
-          printf 'SITE_URL: comprimento=%s\n' "${#SITE_URL}"
-          if printf '%s' "$SITE_URL" | grep -q '[[:space:]]$\|/$'; then echo "AVISO: SITE_URL termina em espaço ou barra."; else echo "Formato do SITE_URL: ok"; fi
-          status=$(curl -sS -D /tmp/h -o /dev/null -w '%{http_code}' \
+          status=$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 15 --retry-all-errors \
             -H "Authorization: Bearer $CRON_SECRET" \
             "$SITE_URL/api/public/jobs/vercel" || true)
-          echo "HTTP $status"
-          grep -i '^x-auth-debug' /tmp/h || true
+          echo "Site: HTTP $status"
           [ "$status" = "200" ] || exit 22
           echo "Tarefa diária concluída"
