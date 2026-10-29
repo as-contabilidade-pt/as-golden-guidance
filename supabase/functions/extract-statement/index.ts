@@ -11,15 +11,16 @@ const PROMPT = `És um assistente de contabilidade em Portugal. Analisa o extrat
 
 Extrai TODOS os movimentos/transações reais. Ignora cabeçalhos, rodapés, totais, resumos e linhas que não sejam movimentos.
 
-Para cada movimento devolve:
+Cada movimento é uma lista de 5 textos, por esta ordem:
+[data, descricao, debito, credito, saldo]
 - data: data do movimento (data valor se existir), sempre no formato DD/MM/AAAA
-- descricao: descrição do movimento em texto simples
-- debito: valor de saída, número decimal com ponto (ex: "1234.56"); string vazia se não aplicável
-- credito: valor de entrada, número decimal com ponto; string vazia se não aplicável
-- saldo: saldo após o movimento, número decimal com ponto; string vazia se não existir no extrato
+- descricao: descrição do movimento em texto simples e curto
+- debito: valor de saída, número decimal com ponto (ex: "1234.56"); "" se não aplicável
+- credito: valor de entrada, número decimal com ponto; "" se não aplicável
+- saldo: saldo após o movimento, número decimal com ponto; "" se não existir no extrato
 
-Sem separadores de milhares. Sem símbolos de moeda. Responde APENAS com json válido no formato:
-{"movimentos":[{"data":"","descricao":"","debito":"","credito":"","saldo":""}]}`;
+Sem separadores de milhares. Sem símbolos de moeda. Responde APENAS com json válido, sem texto antes ou depois, neste formato:
+{"m":[["","","","",""]]}`;
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -92,7 +93,7 @@ Deno.serve(async (req) => {
       headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 16000,
+        max_tokens: 32000,
         messages: [
           {
             role: "user",
@@ -119,30 +120,34 @@ Deno.serve(async (req) => {
     return fail(`Falha no processamento do extrato (${res.status}). ${body.slice(0, 300)}`, 502);
   }
 
-  const payload = (await res.json()) as { content?: Array<{ type?: string; text?: string }> };
+  const payload = (await res.json()) as { stop_reason?: string; content?: Array<{ type?: string; text?: string }> };
   const text = (payload.content ?? []).filter((b) => b?.type === "text").map((b) => b.text ?? "").join("");
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end === -1) return fail("Não foi possível interpretar os movimentos do extrato.", 502);
 
-  let parsed: { movimentos?: unknown };
+  // Resposta cortada = movimentos em falta: nunca devolver um resultado incompleto.
+  if (payload.stop_reason === "max_tokens") {
+    return fail("O extrato é demasiado extenso para uma só conversão. Divida o PDF em duas partes e converta cada uma.", 422);
+  }
+  let items: unknown[] = [];
   try {
-    parsed = JSON.parse(text.slice(start, end + 1));
+    const parsed = JSON.parse(text.slice(start, end + 1)) as { m?: unknown };
+    items = Array.isArray(parsed.m) ? parsed.m : [];
   } catch {
     return fail("Resposta inválida do processamento. Tente novamente.", 502);
   }
 
   const clean = (v: unknown) => (typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : "");
-  const rows: Row[] = (Array.isArray(parsed.movimentos) ? parsed.movimentos : []).map((r) => {
-    const row = (r ?? {}) as Record<string, unknown>;
-    return {
-      data: clean(row["data"]),
-      descricao: clean(row["descricao"]),
-      debito: clean(row["debito"]),
-      credito: clean(row["credito"]),
-      saldo: clean(row["saldo"]),
-    };
-  });
+  const rows: Row[] = items
+    .filter((r): r is unknown[] => Array.isArray(r))
+    .map((r) => ({
+      data: clean(r[0]),
+      descricao: clean(r[1]),
+      debito: clean(r[2]),
+      credito: clean(r[3]),
+      saldo: clean(r[4]),
+    }));
 
   // 4. Histórico.
   const { data: saved, error: historyError } = await admin
