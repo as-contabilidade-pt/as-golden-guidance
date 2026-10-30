@@ -5,6 +5,10 @@ import {
   REMINDER_SUBJECT,
   REMINDER_BODY,
   unlockExpiry,
+  RULES_INTRO,
+  RULES_ITEMS,
+  RULES_FOOTER,
+  RULES_EMAIL_SUBJECT,
 } from "@/lib/portal";
 import { isMonthlySubmissionTime } from "@/lib/vercel-cron.server";
 
@@ -534,4 +538,27 @@ export async function autoSubmitExpiredUnlocks(now: Date = new Date()) {
     submitted++;
   }
   return { submitted };
+}
+
+
+/** Envia ao cliente novo as regras de entrega de documentação (segundo email, a seguir ao convite). */
+export async function sendClientRulesEmail(info: { email: string; fullName: string }) {
+  if (!info.email) return false;
+  return deliver(
+    [info.email],
+    RULES_EMAIL_SUBJECT,
+    [
+      `Olá ${info.fullName},`,
+      "",
+      "A sua área de cliente está pronta. Antes de começar, leia com atenção as regras de entrega da documentação.",
+      "",
+      RULES_INTRO,
+      "",
+      ...RULES_ITEMS.flatMap((r, i) => [`${i + 1}. ${r.title}: ${r.text}`, ""]),
+      RULES_FOOTER,
+      "",
+      "Na primeira vez que entrar na área de cliente ser-lhe-á pedido que confirme que leu estas regras. Dúvidas: geral@as-contabilidade.pt",
+    ].join("\n"),
+    RULES_EMAIL_SUBJECT,
+  );
 }

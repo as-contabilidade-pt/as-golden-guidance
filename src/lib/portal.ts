@@ -179,7 +179,7 @@ export const DECLARATION_CHECKBOX =
   "Confirmo que tomei conhecimento e solicito a reabertura do período.";
 
 export const SUBMISSION_DECLARATION_TEXT =
-  "Declaro que concluí a submissão da documentação referente ao período acima indicado e que, tanto quanto é do meu conhecimento, foram entregues todos os documentos e informações necessários ao processamento da contabilidade, não tendo sido omitido ou ocultado qualquer elemento relevante. Declaro ainda ter conhecimento da obrigação de conservar os documentos originais nos termos e pelos prazos legalmente aplicáveis.";
+  "Declaro que concluí a submissão da documentação referente ao período acima indicado e que, tanto quanto é do meu conhecimento, foram entregues todos os documentos e informações necessários ao processamento da contabilidade, não tendo sido omitido ou ocultado qualquer elemento relevante. Declaro ainda ter conhecimento da obrigação de conservar os documentos originais nos termos e pelos prazos legalmente aplicáveis. Declaro igualmente que a documentação entregue está completa, incluindo os extratos bancários, que cada ficheiro corresponde a um único documento ou transação e que cada documento foi colocado no mês a que respeita, tendo conhecimento de que documentação que não cumpra estas regras, ou que seja enviada por outra via que não a área de cliente, poderá não ser considerada.";
 
 export const SUBMISSION_DECLARATION_CHECKBOX =
   "Confirmo a conclusão da entrega e as declarações acima.";
@@ -239,3 +239,52 @@ export const REMINDER_BODY = [
   "",
   "Observação: Caso a documentação já tenha sido disponibilizada, agradecemos que desconsidere este e-mail, o qual é enviado automaticamente.",
 ].join("\n");
+
+
+/* ------------------------- Regras de entrega ------------------------- */
+
+/** Versão das regras. Alterar quando o texto mudar, para pedir nova aceitação. */
+export const RULES_VERSION = "2026-10";
+
+export const RULES_INTRO =
+  "Para que a contabilidade seja tratada a tempo, pedimos que cumpra as seguintes regras:";
+
+export const RULES_ITEMS: { title: string; text: string }[] = [
+  {
+    title: "Prazo",
+    text: "A documentação de cada mês deve ser disponibilizada até ao dia 10 do mês seguinte.",
+  },
+  {
+    title: "Documentação completa",
+    text: "A documentação deve ser submetida na sua totalidade, incluindo os respetivos extratos bancários. É natural que pontualmente falte algum documento, mas devem evitar-se situações recorrentes ou um volume significativo de documentação em falta, pois isso dificulta o nosso trabalho e pode ter consequências no cumprimento atempado das obrigações da empresa.",
+  },
+  {
+    title: "Um ficheiro por documento",
+    text: "Cada ficheiro submetido deve corresponder apenas a uma fatura, documento ou transação. Não junte várias faturas num único PDF: caso sejam submetidos vários documentos num só ficheiro, não garantimos o seu correto tratamento contabilístico.",
+  },
+  {
+    title: "Apenas pela área de cliente",
+    text: "Os documentos devem ser submetidos exclusivamente através da área de cliente. Documentação enviada por email, WhatsApp ou entregue em papel não será considerada, salvo quando, por uma situação excecional, formos nós a solicitar o envio por outra via.",
+  },
+  {
+    title: "Mês certo",
+    text: "Coloque cada documento no mês a que efetivamente respeita. Documentação submetida numa pasta ou período incorreto poderá não ser considerada no tratamento contabilístico desse mês.",
+  },
+];
+
+export const RULES_FOOTER =
+  "No fim de cada mês de entrega, deve submeter o mês na área de cliente. Se não o fizer até ao prazo, a submissão é feita automaticamente no dia 11. Deve ainda conservar os documentos originais pelos prazos legais.";
+
+export const RULES_ACCEPT_CHECKBOX =
+  "Li e aceito as regras de entrega de documentação.";
+
+export const RULES_EMAIL_SUBJECT = "Como entregar a documentação na área de cliente";
+
+/** Texto integral das regras, para registo da aceitação. */
+export function buildRulesText() {
+  return [
+    RULES_INTRO,
+    ...RULES_ITEMS.map((r, i) => `${i + 1}. ${r.title}: ${r.text}`),
+    RULES_FOOTER,
+  ].join("\n");
+}

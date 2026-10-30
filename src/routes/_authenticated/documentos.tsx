@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { DocumentExplorer } from "@/components/portal/DocumentExplorer";
 import { PortalShell } from "@/components/portal/PortalShell";
+import { RulesGate, RulesNotice } from "@/components/portal/RulesGate";
 import { getMyClientIdentity } from "@/lib/portal.functions";
 
 export const Route = createFileRoute("/_authenticated/documentos")({
@@ -62,7 +63,11 @@ function DocumentosPage() {
           </p>
         </div>
       ) : (
-        <DocumentExplorer />
+        <>
+          <RulesGate />
+          <RulesNotice />
+          <DocumentExplorer />
+        </>
       )}
     </PortalShell>
   );

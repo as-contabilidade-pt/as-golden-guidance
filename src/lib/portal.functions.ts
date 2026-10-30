@@ -6,6 +6,8 @@ import {
   unlockIsActive,
   buildUnlockDeclaration,
   buildSubmissionDeclaration,
+  RULES_VERSION,
+  buildRulesText,
 } from "@/lib/portal";
 
 const categoryEnum = z
@@ -349,6 +351,48 @@ export const getClient = createServerFn({ method: "POST" })
     return row;
   });
 
+/** Segundo email ao cliente novo, com as regras de entrega. Nunca faz falhar a criação. */
+async function sendRulesEmailSafe(email: string, fullName: string) {
+  try {
+    const { sendClientRulesEmail } = await import("@/lib/submission-email.server");
+    await sendClientRulesEmail({ email, fullName });
+  } catch (e) {
+    console.error("[regras] não foi possível enviar o email de regras", e);
+  }
+}
+
+/** Indica se o cliente já aceitou a versão atual das regras. Administradores não precisam. */
+export const getRulesStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    if (await isAdmin(context)) return { required: false, accepted: true };
+    const { data, error } = await context.supabase
+      .from("rules_acceptances")
+      .select("id")
+      .eq("user_id", context.userId)
+      .eq("version", RULES_VERSION)
+      .limit(1);
+    // Se a tabela ainda não existir, não bloqueia o cliente.
+    if (error) {
+      console.error("[regras] não foi possível ler a aceitação", error.message);
+      return { required: false, accepted: true };
+    }
+    return { required: true, accepted: (data ?? []).length > 0 };
+  });
+
+/** Regista a aceitação das regras pelo cliente autenticado. */
+export const acceptRules = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { error } = await context.supabase.from("rules_acceptances").insert({
+      user_id: context.userId,
+      version: RULES_VERSION,
+      rules_text: buildRulesText(),
+    });
+    if (error && error.code !== "23505") throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const createClient = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -397,6 +441,8 @@ export const createClient = createServerFn({ method: "POST" })
       allowed_categories: data.categories,
     });
     if (recError) throw new Error(recError.message);
+
+    await sendRulesEmailSafe(data.email, data.fullName);
 
     return { id: invited.user.id };
   });
@@ -1418,6 +1464,7 @@ async function sendAccessInvite(recordId: string, redirectTo: string) {
     .update({ user_id: uid, folder_active: true })
     .eq("id", rec.id);
   if (ue) throw new Error(ue.message);
+  await sendRulesEmailSafe(email, rec.name);
   return { email, invited: true };
 }
 

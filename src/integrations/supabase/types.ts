@@ -299,6 +299,30 @@ export type Database = {
         }
         Relationships: []
       }
+      rules_acceptances: {
+        Row: {
+          accepted_at: string
+          id: string
+          rules_text: string
+          user_id: string
+          version: string
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          rules_text: string
+          user_id: string
+          version: string
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          rules_text?: string
+          user_id?: string
+          version?: string
+        }
+        Relationships: []
+      }
       unlock_requests: {
         Row: {
           admin_note: string | null
