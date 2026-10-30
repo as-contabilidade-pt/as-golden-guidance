@@ -9,7 +9,7 @@ import {
 import { isMonthlySubmissionTime } from "@/lib/vercel-cron.server";
 
 /** Endereço do portal nos emails: SITE_URL (obrigatório em produção), senão a origem do pedido (nunca lovable.app). */
-const FALLBACK_SITE = "https://as-contabilidade.vercel.app";
+const FALLBACK_SITE = "https://as-contabilidade.pt";
 function siteBaseUrl(): string {
   const env = process.env["SITE_URL"];
   if (env && !/lovable\.app/.test(env)) return env;
