@@ -75,6 +75,12 @@ const norm = (s: string) =>
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 
+/** "-", "?" e semelhantes não são NIF: ficam como "sem NIF". */
+const cleanNif = (raw: string) => {
+  const v = raw.replace(/\s+/g, "").slice(0, 20);
+  return /^[0-9A-Za-z]*[0-9A-Za-z]$/.test(v) && /\d/.test(v) ? v : "";
+};
+
 function ClientesPage() {
   const navigate = useNavigate();
   const fetchList = useServerFn(listClientRecords);
@@ -183,7 +189,7 @@ function ClientesPage() {
       };
       const idx = {
         number: col([
-          (h) => h === "cli" || h === "n" || h === "no",
+          (h) => h === "cli" || h === "n" || h === "no" || h === "cod" || h === "cod cliente",
           (h) => h.includes("de cliente") || h === "numero" || h === "codigo" || h === "no cliente",
         ]),
         name: col([(h) => h.includes("denominacao"), (h) => h === "nome" || h === "cliente"]),
@@ -205,13 +211,14 @@ function ClientesPage() {
       const existingNifs = new Set(rows.map((r) => r.nif.trim()).filter(Boolean));
       const seen = new Set<string>();
       let skipped = 0;
+      const skippedNames: string[] = [];
 
       const parsed = grid
         .slice(headerIdx + 1)
         .map((row) => ({
           clientNumber: cell(row, idx.number).slice(0, 30),
           name: cell(row, idx.name).slice(0, 160),
-          nif: cell(row, idx.nif).replace(/\s+/g, "").slice(0, 20),
+          nif: cleanNif(cell(row, idx.nif)),
           address: cell(row, idx.address).slice(0, 200),
           postalCode: cell(row, idx.postal).slice(0, 20),
           locality: cell(row, idx.locality).slice(0, 120),
@@ -225,6 +232,7 @@ function ClientesPage() {
           if (r.name.length < 2) return false;
           if (r.nif && (existingNifs.has(r.nif) || seen.has(r.nif))) {
             skipped++;
+            skippedNames.push(`${r.clientNumber ? r.clientNumber + " " : ""}${r.name} (NIF ${r.nif})`);
             return false;
           }
           if (r.nif) seen.add(r.nif);
@@ -246,7 +254,7 @@ function ClientesPage() {
         imported += res.imported;
       }
       setNotice(
-        `${imported} cliente(s) importado(s) como inativos — ative-os manualmente para enviar o email de acesso.${skipped ? ` ${skipped} já existiam e foram ignorados.` : ""}`,
+        `${imported} cliente(s) importado(s) como inativos — ative-os manualmente para enviar o email de acesso.${skipped ? ` ${skipped} ignorado(s) por NIF repetido: ${skippedNames.slice(0, 10).join("; ")}.` : ""}`,
       );
       await load();
     } catch (e) {
