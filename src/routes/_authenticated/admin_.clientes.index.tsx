@@ -503,15 +503,17 @@ function NewRecordDialog({ onCreated, onImport, importBusy }: {
       setError("Indique um email válido.");
       return;
     }
-    if (categories !== null && categories.length === 0) {
+    // Só um cliente ativo precisa de pastas; num inativo ficam "todas" (valor por defeito) até ser ativado.
+    if (f.folderActive && categories !== null && categories.length === 0) {
       setError("Selecione pelo menos uma categoria para este cliente.");
       return;
     }
+    const categoriesToSave = f.folderActive || (categories && categories.length > 0) ? categories : null;
     setBusy(true);
     setError(null);
     try {
       const row = (await create({
-        data: { ...f, categories, redirectTo: `${window.location.origin}/definir-password` },
+        data: { ...f, categories: categoriesToSave, redirectTo: `${window.location.origin}/definir-password` },
       })) as { id: string; inviteError: string | null };
       if (row.inviteError) window.alert(`Cliente criado, mas o email não foi enviado: ${friendlyError(row.inviteError, "verifique o endereço e tente novamente.")}`);
       setOpen(false);

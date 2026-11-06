@@ -200,6 +200,11 @@ function FichaPage() {
   }
 
   async function doToggle() {
+    if (!form.folderActive && form.categories !== null && form.categories.length === 0) {
+      setPendingToggle(false);
+      setError("Selecione pelo menos uma pasta antes de ativar o cliente.");
+      return;
+    }
     const email = needsEmail ? emailInput.trim() : form.email.trim();
     if (needsEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setEmailError("Introduza um email válido.");
