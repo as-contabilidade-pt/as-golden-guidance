@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { zipSync } from "fflate";
 import { Archive, Loader2 } from "lucide-react";
 import { buildBackupManifest } from "@/lib/backup.functions";
-import { MONTHS } from "@/lib/portal";
+import { MONTHS, documentNumber } from "@/lib/portal";
 
 const safe = (s: string) => (s || "").replace(/[\\/:*?"<>|]+/g, "-").trim() || "sem-nome";
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -62,9 +62,10 @@ export function ZipDownloadBar({
         while (queue.length) {
           const d = queue.shift()!;
           const folder = `${d.year}/${pad(d.month)} - ${MONTHS[d.month - 1]}/${safe(cat.get(d.category) ?? d.category)}`;
-          let name = `${folder}/${safe(d.original_name)}`;
+          const base = d.label ? `${safe(documentNumber(d.label))}.pdf` : safe(d.original_name);
+          let name = `${folder}/${base}`;
           let k = 2;
-          while (used.has(name)) name = `${folder}/${k++}_${safe(d.original_name)}`;
+          while (used.has(name)) name = `${folder}/${k++}_${base}`;
           used.add(name);
           try {
             if (!d.url) throw new Error();

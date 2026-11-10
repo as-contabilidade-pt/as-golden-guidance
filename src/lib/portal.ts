@@ -64,13 +64,18 @@ export function dashedDatePt(value: string) {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : value;
 }
 
+/** Só o número do documento, sem o prefixo da pasta (ex.: "DESP-11-01" → "11-01"). */
+export function documentNumber(label: string) {
+  return label.replace(/^[A-Za-z]+-(?=\d)/, "");
+}
+
 /** Nome completo do documento: "{numero} {fornecedor} {data}" (ex: "05-01 EDP 10-05-2026"). */
 export function documentDisplayName(
   label: string,
   supplier?: string | null,
   docDate?: string | null,
 ) {
-  return [label, supplier?.trim() || null, docDate ? dashedDatePt(docDate.slice(0, 10)) : null]
+  return [documentNumber(label), supplier?.trim() || null, docDate ? dashedDatePt(docDate.slice(0, 10)) : null]
     .filter(Boolean)
     .join(" ");
 }

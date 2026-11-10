@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   isMonthPastDeadline,
+  documentNumber,
   unlockIsActive,
   buildUnlockDeclaration,
   buildSubmissionDeclaration,
@@ -305,15 +306,17 @@ export const getDownloadUrl = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: doc, error } = await context.supabase
       .from("documents")
-      .select("storage_path")
+      .select("storage_path, label")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!doc) throw new Error("Documento não encontrado.");
 
+    // O ficheiro descarregado chama-se sempre só o número (ex.: "11-01.pdf").
+    const fileName = documentNumber(doc.label).replace(/[\\/:*?"<>|]+/g, "-").trim() || "documento";
     const { data: signed, error: signError } = await context.supabase.storage
       .from("documentos")
-      .createSignedUrl(doc.storage_path, 60);
+      .createSignedUrl(doc.storage_path, 60, { download: `${fileName}.pdf` });
     if (signError || !signed) throw new Error(signError?.message ?? "Erro ao gerar ligação.");
     return { url: signed.signedUrl };
   });

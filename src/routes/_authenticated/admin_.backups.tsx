@@ -11,7 +11,7 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { Button } from "@/components/ui/button";
 import { buildBackupManifest, listBackupClients } from "@/lib/backup.functions";
-import { formatDatePt, formatDateTimePt } from "@/lib/portal";
+import { formatDatePt, formatDateTimePt, documentNumber } from "@/lib/portal";
 
 export const Route = createFileRoute("/_authenticated/admin_/backups")({
   beforeLoad: requireAdmin,
@@ -85,9 +85,10 @@ function BackupPage() {
           const d = queue.shift()!;
           const p = prof.get(d.user_id);
           const folder = `Documentos/${safe(p?.full_name ?? "Cliente")} (NIF ${p?.nif || "-"})/${d.year}/${pad(d.month)} - ${MONTHS[d.month - 1]}/${safe(cat.get(d.category) ?? d.category)}`;
-          let name = `${folder}/${safe(d.original_name)}`;
+          const base = d.label ? `${safe(documentNumber(d.label))}.pdf` : safe(d.original_name);
+          let name = `${folder}/${base}`;
           let k = 2;
-          while (used.has(name)) name = `${folder}/${k++}_${safe(d.original_name)}`;
+          while (used.has(name)) name = `${folder}/${k++}_${base}`;
           used.add(name);
           try {
             if (!d.url) throw new Error();
