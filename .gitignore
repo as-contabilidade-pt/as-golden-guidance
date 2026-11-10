@@ -36,3 +36,9 @@ dist-ssr
 
 # Saída de build do Netlify
 .netlify
+
+# Variáveis de ambiente locais (não versionar)
+.env
+.env.*
+!.env.example
+!.env.test.example

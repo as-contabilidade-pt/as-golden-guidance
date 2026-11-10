@@ -3,7 +3,7 @@ import { friendlyError } from "@/lib/friendly-error";
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, ArrowUpRight, FolderOpen, Loader2, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, FolderOpen, Loader2, Mail, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PortalShell } from "@/components/portal/PortalShell";
@@ -15,6 +15,8 @@ import {
   deleteClientRecord,
   setClientActive,
   getClientDeleteInfo,
+  getClientAccessInfo,
+  inviteFromRecord,
 } from "@/lib/portal.functions";
 
 export const Route = createFileRoute("/_authenticated/admin_/clientes/$recordId")({
@@ -110,6 +112,50 @@ function FichaPage() {
   const toggleActive = useServerFn(setClientActive);
   const fetchDeleteInfo = useServerFn(getClientDeleteInfo);
   const [userId, setUserId] = useState<string | null>(null);
+  const fetchAccessInfo = useServerFn(getClientAccessInfo);
+  const resendInvite = useServerFn(inviteFromRecord);
+  const [access, setAccess] = useState<{
+    hasAccount: boolean;
+    confirmed: boolean;
+    rulesAcceptedAt: string | null;
+    rulesVersion: string | null;
+  } | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  async function loadAccess() {
+    try {
+      setAccess(await fetchAccessInfo({ data: { id: recordId } }));
+    } catch {
+      setAccess(null);
+    }
+  }
+
+  async function onResendInvite() {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = (await resendInvite({
+        data: { id: recordId, redirectTo: `${window.location.origin}/definir-password` },
+      })) as { email: string };
+      setNotice(`Convite reenviado para ${res.email}. O link é válido durante 24 horas e só pode ser usado uma vez.`);
+      setCooldown(60);
+      await loadAccess();
+    } catch (e) {
+      const msg = friendlyError(e, "Não foi possível reenviar o convite.");
+      setError(msg);
+      const m = /(\d+)\s*segundos/.exec(msg);
+      if (m) setCooldown(Number(m[1]));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const [form, setForm] = useState<Form>(empty);
   const [busy, setBusy] = useState(false);
@@ -128,6 +174,7 @@ function FichaPage() {
       try {
         const r = (await fetchRecord({ data: { id: recordId } })) as Record<string, unknown>;
         setUserId((r["user_id"] as string | null) ?? null);
+        void loadAccess();
         setForm({
           clientNumber: String(r["client_number"] ?? ""),
           name: String(r["name"] ?? ""),
@@ -349,6 +396,39 @@ function FichaPage() {
                 {form.folderActive ? "Desativar" : "Ativar cliente"}
               </Button>
             </div>
+            {userId && access ? (
+              <div className="space-y-3 rounded-2xl bg-background p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium">
+                      {access.confirmed ? "Conta confirmada" : "Convite ainda não confirmado"}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {access.confirmed
+                        ? "O cliente já definiu a palavra-passe e consegue entrar."
+                        : "O cliente ainda não abriu o link. Pode reenviar o convite (válido 24 horas, uso único)."}
+                    </p>
+                  </div>
+                  {!access.confirmed ? (
+                    <Button type="button" variant="outline" disabled={busy || cooldown > 0} onClick={() => void onResendInvite()} className="h-10 rounded-full px-5 text-sm">
+                      <Mail className="size-4" />
+                      {cooldown > 0 ? `Reenviar convite (${cooldown} s)` : "Reenviar convite"}
+                    </Button>
+                  ) : null}
+                </div>
+                <div className="border-t border-gold/10 pt-3">
+                  <h3 className="text-sm font-medium">Regras de entrega de documentação</h3>
+                  <p className="text-xs text-muted-foreground">
+                    {access.rulesAcceptedAt
+                      ? `Aceites em ${new Date(access.rulesAcceptedAt).toLocaleString("pt-PT", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Lisbon" })}${access.rulesVersion ? ` (versão ${access.rulesVersion})` : ""}.`
+                      : "Ainda não aceites pelo cliente."}
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground/80">
+                    Atenção: apagar o cliente apaga também este registo de aceitação.
+                  </p>
+                </div>
+              </div>
+            ) : null}
             <CategoryPicker value={form.categories} onChange={(v) => set("categories", v)} />
           </TabsContent>
         </Tabs>

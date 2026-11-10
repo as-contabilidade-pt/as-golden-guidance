@@ -23,6 +23,55 @@ export const Route = createFileRoute("/definir-password")({
   }),
 });
 
+/** Traduz os erros reais de `updateUser({ password })` para mensagens claras. */
+function mapUpdatePasswordError(err: {
+  code?: string | undefined;
+  message?: string | undefined;
+  status?: number | undefined;
+}): {
+  message: string;
+  needsNewLink: boolean;
+} {
+  const code = err.code ?? "";
+  const msg = (err.message ?? "").toLowerCase();
+  if (code === "same_password" || /different from the old password|same.*password/.test(msg)) {
+    return {
+      message: "A nova palavra-passe tem de ser diferente da anterior. Escolha outra.",
+      needsNewLink: false,
+    };
+  }
+  if (code === "weak_password" || /weak|should contain|at least \d+ char/.test(msg)) {
+    return {
+      message:
+        "A palavra-passe é demasiado fraca ou fácil de adivinhar. Use pelo menos 8 caracteres, com maiúsculas, minúsculas, um número e um carácter especial.",
+      needsNewLink: false,
+    };
+  }
+  if (
+    code === "session_not_found" ||
+    code === "session_expired" ||
+    code === "refresh_token_not_found" ||
+    code === "bad_jwt" ||
+    err.status === 401 ||
+    /session.*(missing|not found|expired)|jwt|not authenticated|invalid.*token|expired/.test(msg)
+  ) {
+    return {
+      message: "O link expirou ou já foi utilizado. Os links são válidos durante 24 horas e só podem ser usados uma vez.",
+      needsNewLink: true,
+    };
+  }
+  if (err.status === 429 || code === "over_request_rate_limit" || /rate limit|too many/.test(msg)) {
+    return {
+      message: "Demasiadas tentativas seguidas. Aguarde cerca de um minuto e tente novamente.",
+      needsNewLink: false,
+    };
+  }
+  return {
+    message: "Não foi possível definir a palavra-passe. Tente novamente; se continuar, peça um novo link.",
+    needsNewLink: true,
+  };
+}
+
 const PASSWORD_RULES: { label: string; test: (p: string) => boolean }[] = [
   { label: "Pelo menos 8 caracteres", test: (p) => p.length >= 8 },
   {
@@ -40,6 +89,7 @@ function SetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsNewLink, setNeedsNewLink] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -64,10 +114,13 @@ function SetPasswordPage() {
     }
     setBusy(true);
     setError(null);
+    setNeedsNewLink(false);
     const { error: updateError } = await supabase.auth.updateUser({ password });
     setBusy(false);
     if (updateError) {
-      setError("Não foi possível definir a palavra-passe. Peça um novo link.");
+      const mapped = mapUpdatePasswordError(updateError);
+      setError(mapped.message);
+      setNeedsNewLink(mapped.needsNewLink);
       return;
     }
     const { data: user } = await supabase.auth.getUser();
@@ -92,13 +145,26 @@ function SetPasswordPage() {
 
         {!ready ? (
           <p className="mt-6 rounded-2xl border border-gold/30 bg-gold/10 px-5 py-3 text-sm text-foreground">
-            Abra esta página através da ligação que recebeu por email.
+            Abra esta página através da ligação que recebeu por email. Se o link já não funcionar,{" "}
+            <Link to="/login" className="font-medium underline underline-offset-2">
+              peça um novo no início de sessão
+            </Link>
+            .
           </p>
         ) : null}
 
         {error ? (
           <p className="mt-6 rounded-2xl border border-destructive/30 bg-destructive/10 px-5 py-3 text-sm text-destructive">
             {error}
+            {needsNewLink ? (
+              <>
+                {" "}
+                <Link to="/login" className="font-medium underline underline-offset-2">
+                  Pedir um novo link no início de sessão
+                </Link>
+                .
+              </>
+            ) : null}
           </p>
         ) : null}
 

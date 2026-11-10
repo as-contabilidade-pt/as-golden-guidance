@@ -1438,8 +1438,30 @@ export const createRecordFromAccount = createServerFn({ method: "POST" })
     return row;
   });
 
-/** Cria a conta de acesso para uma ficha e envia o email de autenticação. */
-async function sendAccessInvite(recordId: string, redirectTo: string) {
+/** Intervalo mínimo (em segundos) entre emails de autenticação para o mesmo utilizador. */
+const INVITE_COOLDOWN_SECONDS = 60;
+
+function isRateLimitError(
+  e: { status?: number | undefined; code?: string | undefined; message?: string | undefined } | null | undefined,
+) {
+  if (!e) return false;
+  return (
+    e.status === 429 ||
+    e.code === "over_email_send_rate_limit" ||
+    /rate limit|only request this after|too many/i.test(e.message ?? "")
+  );
+}
+
+/**
+ * Cria a conta de acesso para uma ficha e envia o email de autenticação.
+ * Com `resend`, se a conta já existir mas o email ainda não tiver sido confirmado,
+ * reenvia o convite (respeitando o intervalo de 60 s do Supabase por utilizador).
+ */
+async function sendAccessInvite(
+  recordId: string,
+  redirectTo: string,
+  opts: { resend?: boolean } = {},
+) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: rec, error: re } = await supabaseAdmin
     .from("client_records")
@@ -1447,13 +1469,41 @@ async function sendAccessInvite(recordId: string, redirectTo: string) {
     .eq("id", recordId)
     .maybeSingle();
   if (re || !rec) throw new Error("Ficha não encontrada.");
-  if (rec.user_id) return { email: rec.email, invited: false };
+  if (rec.user_id) {
+    if (!opts.resend) return { email: rec.email, invited: false, resent: false };
+    const { data: existing, error: ge } = await supabaseAdmin.auth.admin.getUserById(rec.user_id);
+    if (ge || !existing?.user) throw new Error("Não foi possível verificar a conta do cliente.");
+    const u = existing.user;
+    if (u.email_confirmed_at) return { email: rec.email, invited: false, resent: false };
+    const target = (u.email ?? rec.email ?? "").trim();
+    if (!target.includes("@")) throw new Error("A conta do cliente não tem um email válido.");
+    const lastSent = u.invited_at ?? u.confirmation_sent_at ?? null;
+    if (lastSent) {
+      const wait = INVITE_COOLDOWN_SECONDS - Math.floor((Date.now() - new Date(lastSent).getTime()) / 1000);
+      if (wait > 0) {
+        throw new Error(`Aguarde ${wait} segundos antes de reenviar o convite.`);
+      }
+    }
+    const { error: rie } = await supabaseAdmin.auth.admin.inviteUserByEmail(target, { redirectTo });
+    if (rie) {
+      if (isRateLimitError(rie)) {
+        throw new Error(`Aguarde cerca de ${INVITE_COOLDOWN_SECONDS} segundos antes de reenviar o convite.`);
+      }
+      throw new Error(rie.message ?? "Não foi possível reenviar o convite.");
+    }
+    return { email: target, invited: true, resent: true };
+  }
   const email = (rec.email ?? "").trim();
   if (!email.includes("@")) throw new Error("Preencha e guarde o email do cliente primeiro.");
   const { data: invited, error: ie } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
     redirectTo,
   });
-  if (ie || !invited?.user) throw new Error(ie?.message ?? "Não foi possível enviar o convite.");
+  if (ie || !invited?.user) {
+    if (isRateLimitError(ie)) {
+      throw new Error(`Aguarde cerca de ${INVITE_COOLDOWN_SECONDS} segundos antes de tentar novamente.`);
+    }
+    throw new Error(ie?.message ?? "Não foi possível enviar o convite.");
+  }
   const uid = invited.user.id;
   await supabaseAdmin
     .from("profiles")
@@ -1465,7 +1515,7 @@ async function sendAccessInvite(recordId: string, redirectTo: string) {
     .eq("id", rec.id);
   if (ue) throw new Error(ue.message);
   await sendRulesEmailSafe(email, rec.name);
-  return { email, invited: true };
+  return { email, invited: true, resent: false };
 }
 
 /** Ativa/desativa o cliente; ao ativar pela primeira vez envia o email de autenticação. */
@@ -1504,7 +1554,46 @@ export const inviteFromRecord = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
-    const res = await sendAccessInvite(data.id, data.redirectTo);
+    const res = await sendAccessInvite(data.id, data.redirectTo, { resend: true });
     if (!res.invited) throw new Error("Este cliente já tem acesso.");
-    return { email: res.email };
+    return { email: res.email, resent: res.resent };
+  });
+
+/** Estado do acesso do cliente (conta confirmada?) e data de aceitação das regras. Só administradores. */
+export const getClientAccessInfo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (!(await isAdmin(context))) throw new Error("Acesso restrito.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rec, error } = await supabaseAdmin
+      .from("client_records")
+      .select("user_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error || !rec) throw new Error("Ficha não encontrada.");
+    if (!rec.user_id) {
+      return {
+        hasAccount: false,
+        confirmed: false,
+        lastInviteAt: null as string | null,
+        rulesAcceptedAt: null as string | null,
+        rulesVersion: null as string | null,
+      };
+    }
+    const { data: au } = await supabaseAdmin.auth.admin.getUserById(rec.user_id);
+    const u = au?.user;
+    const { data: acc } = await context.supabase
+      .from("rules_acceptances")
+      .select("accepted_at, version")
+      .eq("user_id", rec.user_id)
+      .order("accepted_at", { ascending: false })
+      .limit(1);
+    return {
+      hasAccount: true,
+      confirmed: Boolean(u?.email_confirmed_at),
+      lastInviteAt: (u?.invited_at ?? u?.confirmation_sent_at ?? null) as string | null,
+      rulesAcceptedAt: (acc?.[0]?.accepted_at ?? null) as string | null,
+      rulesVersion: (acc?.[0]?.version ?? null) as string | null,
+    };
   });
