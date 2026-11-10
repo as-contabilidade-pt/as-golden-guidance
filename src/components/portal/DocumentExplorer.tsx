@@ -178,7 +178,10 @@ export function DocumentExplorer({
   );
   const setYear = (y: number) => updateNav({ ano: y, mes: null, pasta: null });
   const setMonth = (m: number | null) => updateNav({ mes: m, pasta: null });
-  const setCategory = (c: string | null) => updateNav({ pasta: c });
+  const setCategory = (c: string | null) => {
+    setUploadedMsg(null);
+    updateNav({ pasta: c });
+  };
   const [categories, setCategories] = useState<Category[]>([]);
   const [staged, setStaged] = useState<File[]>([]);
   const [progress, setProgress] = useState(0);
@@ -188,6 +191,7 @@ export function DocumentExplorer({
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadedMsg, setUploadedMsg] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [requests, setRequests] = useState<UnlockRequest[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -605,6 +609,7 @@ export function DocumentExplorer({
   function handleFiles(files: FileList | File[] | null) {
     if (!files || month === null || category === null) return;
     setError(null);
+    setUploadedMsg(null);
     const list = Array.from(files);
     const bad = list.filter(
       (f) => f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf"),
@@ -622,6 +627,7 @@ export function DocumentExplorer({
     setBusy(true);
     setProgress(0);
     setPendingConfirm(null);
+    setUploadedMsg(null);
     const sent: File[] = [];
     try {
       for (const file of files) {
@@ -650,6 +656,13 @@ export function DocumentExplorer({
         setProgress(sent.length);
       }
       setPendingConfirm(null);
+      if (sent.length > 0) {
+        setUploadedMsg(
+          sent.length === 1
+            ? "Documento enviado com sucesso."
+            : `${sent.length} documentos enviados com sucesso.`,
+        );
+      }
     } catch (e) {
       setError(friendlyErrorMessage(e, "Erro ao enviar o documento."));
       setPendingConfirm(null);
@@ -1178,9 +1191,30 @@ export function DocumentExplorer({
             ) : null}
 
             <div className="mx-auto mt-5 w-full max-w-3xl space-y-3">
-              {!loading && docs.length > 0 ? (
-                <p className="pt-1 text-center text-xs font-medium uppercase tracking-[0.15em] text-foreground/70">
-                  Documentos submetidos ({docs.length})
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                <p className="text-xs font-medium uppercase tracking-[0.15em] text-foreground/70">
+                  {!loading && docs.length > 0 ? `Documentos submetidos (${docs.length})` : ""}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setCategory(null)}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-gold px-6 py-2.5 text-xs font-medium uppercase tracking-wider text-ink transition-colors hover:bg-gold-deep"
+                >
+                  Continuar <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+              {uploadedMsg ? (
+                <p
+                  role="status"
+                  className="inline-flex items-center gap-2 rounded-full bg-gold/15 px-4 py-1.5 text-xs font-medium text-foreground"
+                >
+                  <CheckCircle2 className="h-4 w-4 text-gold" /> {uploadedMsg}
+                </p>
+              ) : null}
+              {!readOnly && !locked && docs.length > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Quando terminar todas as pastas, carregue em «Submeter Documentação do Mês» para
+                  concluir a entrega.
                 </p>
               ) : null}
               {loading ? (
@@ -1250,22 +1284,6 @@ export function DocumentExplorer({
                   </div>
                 ))
               )}
-            </div>
-
-            <div className="mx-auto mt-8 flex w-full max-w-3xl flex-col items-center gap-3 text-center">
-              {!readOnly && !locked ? (
-                <p className="text-xs text-muted-foreground">
-                  Quando terminar todas as pastas, não se esqueça de carregar em «Submeter
-                  Documentação do Mês».
-                </p>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => setCategory(null)}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gold px-8 py-3.5 text-sm font-medium uppercase tracking-wider text-ink transition-colors hover:bg-gold-deep sm:w-auto"
-              >
-                Continuar <ArrowRight className="h-4 w-4" />
-              </button>
             </div>
           </div>
         )}
