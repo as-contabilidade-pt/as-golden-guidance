@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { friendlyError } from "@/lib/friendly-error";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PasswordInput } from "@/components/PasswordInput";
@@ -26,6 +26,28 @@ export const Route = createFileRoute("/login")({
   }),
 });
 
+/** Intervalo mínimo entre pedidos de recuperação (o Supabase só envia 1 email por minuto). */
+const RESET_COOLDOWN_SECONDS = 60;
+const RESET_STORAGE_KEY = "as-reset-cooldown-until";
+
+function readCooldownEnd(): number {
+  try {
+    const raw = window.localStorage.getItem(RESET_STORAGE_KEY);
+    const n = raw ? Number(raw) : 0;
+    return Number.isFinite(n) ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeCooldownEnd(ts: number) {
+  try {
+    window.localStorage.setItem(RESET_STORAGE_KEY, String(ts));
+  } catch {
+    /* armazenamento indisponível: o contador continua a funcionar em memória */
+  }
+}
+
 function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -33,6 +55,29 @@ function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [cooldownEnd, setCooldownEnd] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  const secondsLeft = Math.max(0, Math.ceil((cooldownEnd - now) / 1000));
+
+  useEffect(() => {
+    setCooldownEnd(readCooldownEnd());
+    setNow(Date.now());
+  }, []);
+
+  useEffect(() => {
+    if (cooldownEnd <= Date.now()) return;
+    const t = setInterval(() => {
+      setNow(Date.now());
+    }, 500);
+    return () => clearInterval(t);
+  }, [cooldownEnd]);
+
+  function startCooldown() {
+    const end = Date.now() + RESET_COOLDOWN_SECONDS * 1000;
+    writeCooldownEnd(end);
+    setCooldownEnd(end);
+    setNow(Date.now());
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -60,6 +105,7 @@ function LoginPage() {
   }
 
   async function handleReset() {
+    if (secondsLeft > 0 || busy) return;
     if (!email) {
       setError("Escreva o seu email para receber a ligação de recuperação.");
       return;
@@ -70,8 +116,23 @@ function LoginPage() {
       redirectTo: `${window.location.origin}/definir-password`,
     });
     setBusy(false);
-    if (resetError) setError("Não foi possível enviar o email de recuperação.");
-    else setNotice("Enviámos um email com instruções para definir uma nova palavra-passe.");
+    if (resetError) {
+      const limited =
+        resetError.status === 429 ||
+        resetError.code === "over_email_send_rate_limit" ||
+        /rate limit|only request this after|too many/i.test(resetError.message ?? "");
+      if (limited) {
+        startCooldown();
+        setError("Já pedimos um email há instantes. Aguarde um minuto antes de pedir outro.");
+      } else {
+        setError("Não foi possível enviar o email de recuperação.");
+      }
+      return;
+    }
+    startCooldown();
+    setNotice(
+      "Se o email estiver registado, enviámos instruções para definir uma nova palavra-passe. Verifique também a pasta de spam.",
+    );
   }
 
   return (
@@ -141,9 +202,13 @@ function LoginPage() {
         <button
           type="button"
           onClick={() => void handleReset()}
-          className="mt-5 w-full text-center text-xs text-gold underline underline-offset-2"
+          disabled={busy || secondsLeft > 0}
+          aria-live="polite"
+          className="mt-5 w-full text-center text-xs text-gold underline underline-offset-2 disabled:cursor-not-allowed disabled:no-underline disabled:opacity-60"
         >
-          Esqueci-me da palavra-passe
+          {secondsLeft > 0
+            ? `Pode pedir novo email dentro de ${secondsLeft} s`
+            : "Esqueci-me da palavra-passe"}
         </button>
 
         <p className="mt-8 text-center text-xs text-muted-foreground/80">

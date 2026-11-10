@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   ArrowLeft,
+  ArrowRight,
   ChevronRight,
   ChevronDown,
   Download,
@@ -1249,6 +1250,22 @@ export function DocumentExplorer({
                   </div>
                 ))
               )}
+            </div>
+
+            <div className="mx-auto mt-8 flex w-full max-w-3xl flex-col items-center gap-3 text-center">
+              {!readOnly && !locked ? (
+                <p className="text-xs text-muted-foreground">
+                  Quando terminar todas as pastas, não se esqueça de carregar em «Submeter
+                  Documentação do Mês».
+                </p>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setCategory(null)}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gold px-8 py-3.5 text-sm font-medium uppercase tracking-wider text-ink transition-colors hover:bg-gold-deep sm:w-auto"
+              >
+                Continuar <ArrowRight className="h-4 w-4" />
+              </button>
             </div>
           </div>
         )}
