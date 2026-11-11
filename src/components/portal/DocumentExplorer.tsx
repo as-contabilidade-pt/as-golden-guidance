@@ -1185,7 +1185,16 @@ export function DocumentExplorer({
                 <ScanDialog
                   open={showScan}
                   onClose={() => setShowScan(false)}
-                  onReady={(file) => handleFiles([file])}
+                  pendingCount={staged.length}
+                  onReady={(file, mode) => {
+                    if (mode === "stage") {
+                      handleFiles([file]);
+                      return;
+                    }
+                    // fica na lista até o envio terminar, para não se perder se falhar
+                    setStaged((s) => [...s, file]);
+                    return doUpload([...staged, file]);
+                  }}
                 />
               </div>
             ) : null}

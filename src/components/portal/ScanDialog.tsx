@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { friendlyError } from "@/lib/friendly-error";
-import { Camera, Loader2, Plus, RotateCcw, Trash2, X, ZoomIn } from "lucide-react";
+import { Camera, FileText, Loader2, Plus, RotateCcw, Trash2, X, ZoomIn } from "lucide-react";
 import { ScanPageEditor, type EditResult } from "@/components/portal/ScanPageEditor";
 import { FULL_QUAD, loadImage, renderScan, type Quad, type ScanSource } from "@/lib/scan-image";
 
@@ -61,10 +61,13 @@ export function ScanDialog({
   open,
   onClose,
   onReady,
+  pendingCount = 0,
 }: {
   open: boolean;
   onClose: () => void;
-  onReady: (file: File) => void | Promise<void>;
+  onReady: (file: File, mode: "send" | "stage") => void | Promise<void>;
+  /** Documentos já preparados (lista «Prontos a enviar») que seguem juntos. */
+  pendingCount?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pages, setPages] = useState<Page[]>([]);
@@ -143,7 +146,7 @@ export function ScanDialog({
     }
   }
 
-  async function handleConfirm() {
+  async function handleConfirm(mode: "send" | "stage") {
     if (pages.length === 0) return;
     setWorking(true);
     setError(null);
@@ -163,8 +166,16 @@ export function ScanDialog({
 
       const blob = pdf.output("blob");
       const file = new File([blob], scanFileName(), { type: "application/pdf" });
-      await onReady(file);
-      onClose();
+      await onReady(file, mode);
+      if (mode === "send") {
+        onClose();
+      } else {
+        // novo documento: recomeça e abre a câmara outra vez
+        setPages([]);
+        setEditingIndex(null);
+        setReplaceLast(false);
+        setTimeout(() => inputRef.current?.click(), 50);
+      }
     } catch (e) {
       setError(friendlyError(e, "Não foi possível gerar o PDF."));
     } finally {
@@ -256,7 +267,7 @@ export function ScanDialog({
         ) : (
           <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto">
             {pages.map((page, index) => (
-              <div key={index} className="soft-card flex items-center gap-4 p-3">
+              <div key={index} className="soft-card flex items-center gap-2 p-3 sm:gap-4">
                 <button
                   type="button"
                   disabled={working}
@@ -270,12 +281,14 @@ export function ScanDialog({
                     className="h-24 w-20 rounded-xl bg-white object-contain"
                   />
                 </button>
-                <p className="flex-1 text-sm text-foreground">Página {index + 1}</p>
+                <p className="hidden min-w-0 flex-1 text-sm text-foreground sm:block">
+                  Página {index + 1}
+                </p>
                 <button
                   type="button"
                   disabled={working}
                   onClick={() => setEditingIndex(index)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-2 text-xs font-medium text-foreground transition-colors hover:text-gold disabled:opacity-50"
+                  className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-2 text-xs font-medium text-foreground transition-colors hover:text-gold disabled:opacity-50"
                 >
                   <ZoomIn className="h-4 w-4" />
                   Ajustar e ampliar
@@ -285,7 +298,7 @@ export function ScanDialog({
                   disabled={working}
                   onClick={() => setPages((prev) => prev.filter((_, i) => i !== index))}
                   aria-label={`Remover página ${index + 1}`}
-                  className="rounded-full bg-secondary p-2 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
+                  className="shrink-0 rounded-full bg-secondary p-2 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -295,42 +308,63 @@ export function ScanDialog({
         )}
 
         {pages.length > 0 && !editingPage && (
-          <div className="mt-4 grid shrink-0 gap-3 sm:flex sm:flex-wrap [&_button]:justify-center [&_button]:text-center">
-            <>
-              <button
-                type="button"
-                disabled={working}
-                onClick={() => {
-                  setReplaceLast(false);
-                  inputRef.current?.click();
-                }}
-                className="inline-flex items-center gap-2 rounded-full border border-gold px-5 py-2.5 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" />
-                Adicionar outra página a este documento
-              </button>
-              <button
-                type="button"
-                disabled={working}
-                onClick={() => {
-                  setReplaceLast(true);
-                  inputRef.current?.click();
-                }}
-                className="inline-flex items-center gap-2 rounded-full bg-secondary px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:text-gold disabled:opacity-50"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Tirar a última página outra vez
-              </button>
-              <button
-                type="button"
-                disabled={working}
-                onClick={() => void handleConfirm()}
-                className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
-              >
+          <div className="mt-4 grid shrink-0 gap-2 sm:gap-3">
+            <button
+              type="button"
+              disabled={working}
+              onClick={() => void handleConfirm("send")}
+              className="inline-flex flex-col items-center justify-center rounded-full bg-gold px-6 py-2.5 text-center text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
+            >
+              <span className="inline-flex items-center gap-2">
                 {working ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {working ? "A preparar o documento…" : "Enviar documento"}
-              </button>
-            </>
+                {working
+                  ? "A preparar o documento…"
+                  : pendingCount > 0
+                    ? `Enviar ${pendingCount + 1} documentos`
+                    : "Enviar documento"}
+              </span>
+            </button>
+            <button
+              type="button"
+              disabled={working}
+              onClick={() => {
+                setReplaceLast(false);
+                inputRef.current?.click();
+              }}
+              className="inline-flex flex-col items-center justify-center rounded-full border border-gold px-5 py-2 text-center text-sm font-medium leading-tight text-gold transition-colors hover:bg-gold hover:text-ink disabled:opacity-50"
+            >
+              <span className="inline-flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Mais uma folha deste documento
+              </span>
+              <span className="text-[11px] font-normal opacity-80">
+                (a mesma fatura, com várias páginas)
+              </span>
+            </button>
+            <button
+              type="button"
+              disabled={working}
+              onClick={() => void handleConfirm("stage")}
+              className="inline-flex flex-col items-center justify-center rounded-full border border-gold px-5 py-2 text-center text-sm font-medium leading-tight text-gold transition-colors hover:bg-gold hover:text-ink disabled:opacity-50"
+            >
+              <span className="inline-flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Outro documento
+              </span>
+              <span className="text-[11px] font-normal opacity-80">(uma fatura diferente)</span>
+            </button>
+            <button
+              type="button"
+              disabled={working}
+              onClick={() => {
+                setReplaceLast(true);
+                inputRef.current?.click();
+              }}
+              className="inline-flex items-center justify-center gap-2 py-1 text-xs text-muted-foreground underline-offset-2 transition-colors hover:text-gold hover:underline disabled:opacity-50"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Tirar a última página outra vez
+            </button>
           </div>
         )}
       </div>
