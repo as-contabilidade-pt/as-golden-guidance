@@ -78,6 +78,9 @@ export function ScanDialog({
   const [working, setWorking] = useState(false);
   const [replaceLast, setReplaceLast] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [confirm, setConfirm] = useState<
+    { kind: "close" } | { kind: "page"; index: number } | { kind: "doc"; index: number } | null
+  >(null);
   // documentos já terminados nesta sessão (ficam na lista «Prontos a enviar»)
   const [prepared, setPrepared] = useState<{ file: File; thumb: string; pageCount: number }[]>([]);
 
@@ -85,6 +88,7 @@ export function ScanDialog({
     if (open) {
       setPages([]);
       setPrepared([]);
+      setConfirm(null);
       setEditingIndex(null);
       setError(null);
       setWorking(false);
@@ -195,6 +199,55 @@ export function ScanDialog({
 
   if (!open) return null;
 
+  const confirmCopy =
+    confirm?.kind === "close"
+      ? {
+          title: "Cancelar a digitalização?",
+          text:
+            (pages.length === 1
+              ? "Vai perder a página que fotografou."
+              : `Vai perder as ${pages.length} páginas que fotografou.`) +
+            (prepared.length > 0
+              ? " Os documentos já preparados continuam na lista para enviar."
+              : ""),
+          yes: "Sim, cancelar",
+          no: "Continuar a digitalizar",
+        }
+      : confirm?.kind === "page"
+        ? {
+            title: "Eliminar esta página?",
+            text: `A página ${confirm.index + 1} será removida do documento.`,
+            yes: "Sim, eliminar",
+            no: "Não, manter",
+          }
+        : confirm?.kind === "doc"
+          ? {
+              title: "Eliminar este documento?",
+              text: `O documento ${confirm.index + 1} será removido e não será enviado.`,
+              yes: "Sim, eliminar",
+              no: "Não, manter",
+            }
+          : null;
+
+  function runConfirm() {
+    if (!confirm) return;
+    if (confirm.kind === "close") {
+      setConfirm(null);
+      onClose();
+      return;
+    }
+    if (confirm.kind === "page") {
+      const index = confirm.index;
+      setPages((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      const doc = prepared[confirm.index];
+      if (doc) onDiscard?.(doc.file);
+      const index = confirm.index;
+      setPrepared((prev) => prev.filter((_, j) => j !== index));
+    }
+    setConfirm(null);
+  }
+
   const strip =
     prepared.length > 0 || pages.length > 0 ? (
       <div className="mt-4 shrink-0">
@@ -210,10 +263,7 @@ export function ScanDialog({
                 <button
                   type="button"
                   disabled={working}
-                  onClick={() => {
-                    onDiscard?.(doc.file);
-                    setPrepared((prev) => prev.filter((_, j) => j !== i));
-                  }}
+                  onClick={() => setConfirm({ kind: "doc", index: i })}
                   aria-label={`Remover documento ${i + 1}`}
                   className="absolute -right-1.5 -top-1.5 rounded-full bg-background p-1.5 text-muted-foreground shadow ring-1 ring-border hover:text-destructive disabled:opacity-50"
                 >
@@ -248,7 +298,7 @@ export function ScanDialog({
                 <button
                   type="button"
                   disabled={working}
-                  onClick={() => setPages((prev) => prev.filter((_, i) => i !== index))}
+                  onClick={() => setConfirm({ kind: "page", index })}
                   aria-label={`Remover página ${index + 1}`}
                   className="absolute -right-1.5 -top-1.5 rounded-full bg-background p-1.5 text-muted-foreground shadow ring-1 ring-border hover:text-destructive disabled:opacity-50"
                 >
@@ -299,7 +349,7 @@ export function ScanDialog({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => (pages.length > 0 ? setConfirm({ kind: "close" }) : onClose())}
             aria-label="Fechar"
             className="rounded-full bg-secondary p-2 text-foreground transition-colors hover:text-gold"
           >
@@ -418,6 +468,37 @@ export function ScanDialog({
           </div>
         )}
       </div>
+      {confirmCopy ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/60 p-6">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="scan-confirm-title"
+            className="w-full max-w-sm rounded-3xl bg-background p-5 shadow-xl"
+          >
+            <h4 id="scan-confirm-title" className="font-display text-lg text-foreground">
+              {confirmCopy.title}
+            </h4>
+            <p className="mt-2 text-sm text-muted-foreground">{confirmCopy.text}</p>
+            <div className="mt-5 grid gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirm(null)}
+                className="rounded-full bg-gold px-5 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-gold-deep"
+              >
+                {confirmCopy.no}
+              </button>
+              <button
+                type="button"
+                onClick={runConfirm}
+                className="rounded-full border border-destructive/40 px-5 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive hover:text-white"
+              >
+                {confirmCopy.yes}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
