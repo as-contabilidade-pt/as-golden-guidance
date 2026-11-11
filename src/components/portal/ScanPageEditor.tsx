@@ -259,17 +259,17 @@ export function ScanPageEditor({
   const loupeScale = clamp((stageW / src.width) * 3, 0.6, 2);
 
   return (
-    <div className="mt-5">
-      <p className="text-sm text-muted-foreground">
-        Arraste cada canto dourado até ao canto do papel (ou arraste a moldura inteira). Ao aplicar,
-        o documento é endireitado. Amplie com + ou com dois dedos para confirmar que tudo está
-        legível.
+    <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3">
+      <p className="text-xs text-muted-foreground sm:text-sm">
+        {zoom > MIN_ZOOM
+          ? "Ampliado: arraste a imagem para percorrer. Volte a 100% para mover a moldura."
+          : "Arraste cada canto dourado até ao canto do papel. Dois dedos para ampliar."}
       </p>
 
-      <div ref={wrapperRef} className="relative mt-4">
+      <div ref={wrapperRef} className="relative min-h-0 flex-1">
         <div
           ref={viewportRef}
-          className="flex h-[50vh] select-none overflow-auto rounded-2xl bg-secondary"
+          className="flex h-full select-none overflow-auto rounded-2xl bg-secondary"
           style={{ touchAction: "none" }}
           aria-label="Pré-visualização da página"
           onPointerDown={onPointerDown}
@@ -362,13 +362,7 @@ export function ScanPageEditor({
         ) : null}
       </div>
 
-      <p className="mt-2 text-xs text-muted-foreground">
-        {zoom > MIN_ZOOM
-          ? "Ampliado: arraste a imagem para percorrer a página. Volte a 100% para mover a moldura."
-          : "Ao arrastar um canto aparece uma lupa para o acertar com precisão."}
-      </p>
-
-      <div className="mt-3 flex items-center gap-3">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => changeZoom(zoom - 0.5)}
@@ -378,16 +372,9 @@ export function ScanPageEditor({
         >
           <Minus className="h-4 w-4" />
         </button>
-        <input
-          type="range"
-          min={MIN_ZOOM}
-          max={MAX_ZOOM}
-          step={0.05}
-          value={zoom}
-          onChange={(e) => changeZoom(Number(e.target.value))}
-          aria-label="Ampliação"
-          className="min-w-0 flex-1 accent-gold"
-        />
+        <span className="w-11 text-center text-xs tabular-nums text-muted-foreground">
+          {Math.round(zoom * 100)}%
+        </span>
         <button
           type="button"
           onClick={() => changeZoom(zoom + 0.5)}
@@ -397,17 +384,11 @@ export function ScanPageEditor({
         >
           <Plus className="h-4 w-4" />
         </button>
-        <span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
-          {Math.round(zoom * 100)}%
-        </span>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-3">
         <button
           type="button"
           disabled={busy}
           onClick={() => void rotate()}
-          className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-sm font-medium text-foreground transition-colors hover:text-gold disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-2 text-xs font-medium text-foreground transition-colors hover:text-gold disabled:opacity-50"
         >
           {rotating ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -416,7 +397,16 @@ export function ScanPageEditor({
           )}
           Rodar
         </button>
-        <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">
+        <button
+          type="button"
+          disabled={busy || isDefault}
+          onClick={() => setQuad(FULL_QUAD)}
+          className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-2 text-xs font-medium text-foreground transition-colors hover:text-gold disabled:opacity-50"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Repor
+        </button>
+        <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-foreground sm:text-sm">
           <input
             type="checkbox"
             checked={filter}
@@ -424,11 +414,19 @@ export function ScanPageEditor({
             onChange={(e) => setFilter(e.target.checked)}
             className="h-4 w-4 accent-gold"
           />
-          Filtro «documento» (preto e branco)
+          Preto e branco
         </label>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:flex sm:flex-wrap">
+      <div className="grid shrink-0 grid-cols-[1fr_2fr] gap-3">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onCancel}
+          className="inline-flex items-center justify-center rounded-full border border-gold px-4 py-2.5 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink disabled:opacity-50"
+        >
+          Cancelar
+        </button>
         <button
           type="button"
           disabled={busy}
@@ -437,23 +435,6 @@ export function ScanPageEditor({
         >
           {working ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           {working ? "A aplicar…" : "Aplicar"}
-        </button>
-        <button
-          type="button"
-          disabled={busy || isDefault}
-          onClick={() => setQuad(FULL_QUAD)}
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-secondary px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:text-gold disabled:opacity-50"
-        >
-          <RotateCcw className="h-4 w-4" />
-          Repor página inteira
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={onCancel}
-          className="inline-flex items-center justify-center rounded-full border border-gold px-5 py-2.5 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink disabled:opacity-50"
-        >
-          Cancelar
         </button>
       </div>
     </div>

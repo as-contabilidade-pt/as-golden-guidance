@@ -178,8 +178,12 @@ export function ScanDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/70 p-0 backdrop-blur-sm sm:items-center sm:p-6">
-      <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-background p-6 shadow-xl sm:rounded-3xl">
-        <div className="flex items-start justify-between gap-4">
+      <div
+        className={`flex w-full max-w-xl flex-col overflow-hidden rounded-t-3xl bg-background p-4 shadow-xl sm:rounded-3xl sm:p-6 ${
+          editingPage ? "h-[92dvh]" : "max-h-[92dvh]"
+        }`}
+      >
+        <div className="flex shrink-0 items-start justify-between gap-4">
           <div>
             <h3 className="font-display text-xl text-foreground">
               {editingPage ? `Ajustar página ${editingIndex! + 1}` : "Digitalizar documento"}
@@ -210,7 +214,7 @@ export function ScanDialog({
         />
 
         {error && (
-          <p className="mt-4 rounded-2xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <p className="mt-3 shrink-0 rounded-2xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}
           </p>
         )}
@@ -226,7 +230,7 @@ export function ScanDialog({
             onCancel={() => setEditingIndex(null)}
           />
         ) : pages.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-dashed border-gold/40 px-6 py-10 text-center">
+          <div className="mt-6 overflow-y-auto rounded-2xl border border-dashed border-gold/40 px-6 py-10 text-center">
             <p className="text-sm text-muted-foreground">
               {working ? "A preparar a fotografia…" : "Nenhuma página capturada."}
             </p>
@@ -244,7 +248,7 @@ export function ScanDialog({
             </p>
           </div>
         ) : (
-          <div className="mt-6 space-y-3">
+          <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto">
             {pages.map((page, index) => (
               <div key={index} className="soft-card flex items-center gap-4 p-3">
                 <button
@@ -284,8 +288,8 @@ export function ScanDialog({
           </div>
         )}
 
-        <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
-          {pages.length > 0 && !editingPage && (
+        {pages.length > 0 && !editingPage && (
+          <div className="mt-4 grid shrink-0 gap-3 sm:flex sm:flex-wrap">
             <>
               <button
                 type="button"
@@ -321,8 +325,8 @@ export function ScanDialog({
                 {working ? "A preparar PDF…" : "Confirmar e gerar PDF"}
               </button>
             </>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
