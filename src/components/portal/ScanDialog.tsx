@@ -1,11 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { friendlyError } from "@/lib/friendly-error";
-import { Camera, Loader2, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { Camera, Loader2, Plus, RotateCcw, Trash2, X, ZoomIn } from "lucide-react";
+import { ScanPageEditor, type EditResult } from "@/components/portal/ScanPageEditor";
+import { FULL_QUAD, loadImage, renderScan, type Quad, type ScanSource } from "@/lib/scan-image";
 
-type Page = { dataUrl: string; width: number; height: number };
+/** `dataUrl` é a página final (já endireitada) que vai para o PDF; `source` é a foto original, para reajustar. */
+type Page = {
+  dataUrl: string;
+  width: number;
+  height: number;
+  source: ScanSource;
+  quad: Quad;
+  filter: boolean;
+};
 
-const MAX_SIDE = 1600;
-const QUALITY = 0.7;
+const SOURCE_MAX_SIDE = 2400;
+const SOURCE_QUALITY = 0.85;
 
 async function compressImage(file: File): Promise<Page> {
   const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -15,27 +25,28 @@ async function compressImage(file: File): Promise<Page> {
     reader.readAsDataURL(file);
   });
 
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const el = new Image();
-    el.onload = () => resolve(el);
-    el.onerror = () => reject(new Error("Não foi possível abrir a fotografia."));
-    el.src = dataUrl;
-  });
+  const img = await loadImage(dataUrl);
 
-  const scale = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
-  const width = Math.max(1, Math.round(img.width * scale));
-  const height = Math.max(1, Math.round(img.height * scale));
+  // Foto original (reduzida) guardada para poder reenquadrar; depois a página final.
+  const sScale = Math.min(1, SOURCE_MAX_SIDE / Math.max(img.width, img.height));
+  const sWidth = Math.max(1, Math.round(img.width * sScale));
+  const sHeight = Math.max(1, Math.round(img.height * sScale));
+  const sCanvas = document.createElement("canvas");
+  sCanvas.width = sWidth;
+  sCanvas.height = sHeight;
+  const sCtx = sCanvas.getContext("2d");
+  if (!sCtx) throw new Error("Não foi possível processar a fotografia.");
+  sCtx.fillStyle = "#ffffff";
+  sCtx.fillRect(0, 0, sWidth, sHeight);
+  sCtx.drawImage(img, 0, 0, sWidth, sHeight);
+  const source: ScanSource = {
+    dataUrl: sCanvas.toDataURL("image/jpeg", SOURCE_QUALITY),
+    width: sWidth,
+    height: sHeight,
+  };
 
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Não foi possível processar a fotografia.");
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, width, height);
-  ctx.drawImage(img, 0, 0, width, height);
-
-  return { dataUrl: canvas.toDataURL("image/jpeg", QUALITY), width, height };
+  const page = await renderScan(source, FULL_QUAD, false);
+  return { ...page, source, quad: FULL_QUAD, filter: false };
 }
 
 function scanFileName() {
@@ -60,10 +71,12 @@ export function ScanDialog({
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [replaceLast, setReplaceLast] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (open) {
       setPages([]);
+      setEditingIndex(null);
       setError(null);
       setWorking(false);
       setReplaceLast(false);
@@ -78,6 +91,7 @@ export function ScanDialog({
     if (!files || files.length === 0) return;
     setError(null);
     setWorking(true);
+    const targetIndex = replaceLast && pages.length > 0 ? pages.length - 1 : pages.length;
     try {
       const captured: Page[] = [];
       for (const file of Array.from(files)) {
@@ -87,8 +101,12 @@ export function ScanDialog({
         captured.push(await compressImage(file));
       }
       setPages((prev) =>
-        replaceLast && prev.length > 0 ? [...prev.slice(0, -1), ...captured] : [...prev, ...captured],
+        replaceLast && prev.length > 0
+          ? [...prev.slice(0, -1), ...captured]
+          : [...prev, ...captured],
       );
+      // Abre logo o ajuste da página acabada de fotografar (enquadrar e ampliar).
+      setEditingIndex(targetIndex);
     } catch (e) {
       setError(
         friendlyError(e, "É necessário autorizar o acesso à câmara para digitalizar documentos."),
@@ -97,6 +115,31 @@ export function ScanDialog({
       setReplaceLast(false);
       setWorking(false);
       if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function handleApplyEdit(result: EditResult) {
+    if (editingIndex === null) return;
+    const current = pages[editingIndex];
+    if (!current) return;
+    setWorking(true);
+    setError(null);
+    try {
+      // deixa o botão mostrar «A aplicar…» antes do cálculo pesado
+      await new Promise((r) => setTimeout(r, 30));
+      const next = await renderScan(result.source, result.quad, result.filter);
+      setPages((prev) =>
+        prev.map((p, i) =>
+          i === editingIndex
+            ? { ...p, ...next, source: result.source, quad: result.quad, filter: result.filter }
+            : p,
+        ),
+      );
+      setEditingIndex(null);
+    } catch (e) {
+      setError(friendlyError(e, "Não foi possível aplicar o ajuste."));
+    } finally {
+      setWorking(false);
     }
   }
 
@@ -131,15 +174,21 @@ export function ScanDialog({
 
   if (!open) return null;
 
+  const editingPage = editingIndex !== null ? (pages[editingIndex] ?? null) : null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/70 p-0 backdrop-blur-sm sm:items-center sm:p-6">
       <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-background p-6 shadow-xl sm:rounded-3xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="font-display text-xl text-foreground">Digitalizar documento</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Fotografe cada página. As páginas são reunidas num único PDF.
-            </p>
+            <h3 className="font-display text-xl text-foreground">
+              {editingPage ? `Ajustar página ${editingIndex! + 1}` : "Digitalizar documento"}
+            </h3>
+            {editingPage ? null : (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Fotografe cada página. As páginas são reunidas num único PDF.
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -166,7 +215,17 @@ export function ScanDialog({
           </p>
         )}
 
-        {pages.length === 0 ? (
+        {editingPage ? (
+          <ScanPageEditor
+            key={editingIndex}
+            source={editingPage.source}
+            initialQuad={editingPage.quad}
+            initialFilter={editingPage.filter}
+            working={working}
+            onApply={(result) => void handleApplyEdit(result)}
+            onCancel={() => setEditingIndex(null)}
+          />
+        ) : pages.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-dashed border-gold/40 px-6 py-10 text-center">
             <p className="text-sm text-muted-foreground">
               {working ? "A preparar a fotografia…" : "Nenhuma página capturada."}
@@ -188,12 +247,29 @@ export function ScanDialog({
           <div className="mt-6 space-y-3">
             {pages.map((page, index) => (
               <div key={index} className="soft-card flex items-center gap-4 p-3">
-                <img
-                  src={page.dataUrl}
-                  alt={`Página ${index + 1}`}
-                  className="h-24 w-20 rounded-xl object-cover"
-                />
+                <button
+                  type="button"
+                  disabled={working}
+                  onClick={() => setEditingIndex(index)}
+                  aria-label={`Ajustar e ampliar página ${index + 1}`}
+                  className="shrink-0 disabled:opacity-50"
+                >
+                  <img
+                    src={page.dataUrl}
+                    alt={`Página ${index + 1}`}
+                    className="h-24 w-20 rounded-xl bg-white object-contain"
+                  />
+                </button>
                 <p className="flex-1 text-sm text-foreground">Página {index + 1}</p>
+                <button
+                  type="button"
+                  disabled={working}
+                  onClick={() => setEditingIndex(index)}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-2 text-xs font-medium text-foreground transition-colors hover:text-gold disabled:opacity-50"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                  Ajustar e ampliar
+                </button>
                 <button
                   type="button"
                   disabled={working}
@@ -209,7 +285,7 @@ export function ScanDialog({
         )}
 
         <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
-          {pages.length > 0 && (
+          {pages.length > 0 && !editingPage && (
             <>
               <button
                 type="button"
