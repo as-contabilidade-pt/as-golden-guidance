@@ -186,11 +186,17 @@ export function ScanDialog({
         <div className="flex shrink-0 items-start justify-between gap-4">
           <div>
             <h3 className="font-display text-xl text-foreground">
-              {editingPage ? `Ajustar página ${editingIndex! + 1}` : "Digitalizar documento"}
+              {editingPage
+                ? `Ajustar página ${editingIndex! + 1}`
+                : pages.length > 0
+                  ? `Documento com ${pages.length} ${pages.length === 1 ? "página" : "páginas"}`
+                  : "Digitalizar documento"}
             </h3>
             {editingPage ? null : (
               <p className="mt-1 text-sm text-muted-foreground">
-                Fotografe cada página. As páginas são reunidas num único PDF.
+                {pages.length > 0
+                  ? "Todas as páginas ficam juntas num único documento."
+                  : "Fotografe cada página. Ficam todas juntas num único documento."}
               </p>
             )}
           </div>
@@ -289,7 +295,7 @@ export function ScanDialog({
         )}
 
         {pages.length > 0 && !editingPage && (
-          <div className="mt-4 grid shrink-0 gap-3 sm:flex sm:flex-wrap">
+          <div className="mt-4 grid shrink-0 gap-3 sm:flex sm:flex-wrap [&_button]:justify-center [&_button]:text-center">
             <>
               <button
                 type="button"
@@ -301,7 +307,7 @@ export function ScanDialog({
                 className="inline-flex items-center gap-2 rounded-full border border-gold px-5 py-2.5 text-sm font-medium text-gold transition-colors hover:bg-gold hover:text-ink disabled:opacity-50"
               >
                 <Plus className="h-4 w-4" />
-                Adicionar página
+                Adicionar outra página a este documento
               </button>
               <button
                 type="button"
@@ -313,7 +319,7 @@ export function ScanDialog({
                 className="inline-flex items-center gap-2 rounded-full bg-secondary px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:text-gold disabled:opacity-50"
               >
                 <RotateCcw className="h-4 w-4" />
-                Repetir última
+                Tirar a última página outra vez
               </button>
               <button
                 type="button"
@@ -322,7 +328,7 @@ export function ScanDialog({
                 className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
               >
                 {working ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {working ? "A preparar PDF…" : "Confirmar e gerar PDF"}
+                {working ? "A preparar o documento…" : "Enviar documento"}
               </button>
             </>
           </div>
