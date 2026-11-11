@@ -61,11 +61,14 @@ export function ScanDialog({
   open,
   onClose,
   onReady,
+  onDiscard,
   pendingCount = 0,
 }: {
   open: boolean;
   onClose: () => void;
   onReady: (file: File, mode: "send" | "stage") => void | Promise<void>;
+  /** Chamado quando o cliente remove um documento já preparado. */
+  onDiscard?: (file: File) => void;
   /** Documentos já preparados (lista «Prontos a enviar») que seguem juntos. */
   pendingCount?: number;
 }) {
@@ -75,10 +78,13 @@ export function ScanDialog({
   const [working, setWorking] = useState(false);
   const [replaceLast, setReplaceLast] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  // documentos já terminados nesta sessão (ficam na lista «Prontos a enviar»)
+  const [prepared, setPrepared] = useState<{ file: File; thumb: string; pageCount: number }[]>([]);
 
   useEffect(() => {
     if (open) {
       setPages([]);
+      setPrepared([]);
       setEditingIndex(null);
       setError(null);
       setWorking(false);
@@ -171,6 +177,10 @@ export function ScanDialog({
         onClose();
       } else {
         // novo documento: recomeça e abre a câmara outra vez
+        const first = pages[0];
+        if (first) {
+          setPrepared((prev) => [...prev, { file, thumb: first.dataUrl, pageCount: pages.length }]);
+        }
         setPages([]);
         setEditingIndex(null);
         setReplaceLast(false);
@@ -184,6 +194,80 @@ export function ScanDialog({
   }
 
   if (!open) return null;
+
+  const strip =
+    prepared.length > 0 || pages.length > 0 ? (
+      <div className="mt-4 shrink-0">
+        <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2">
+          {prepared.map((doc, i) => (
+            <div key={`d${i}`} className="w-20 shrink-0 snap-start">
+              <div className="relative">
+                <img
+                  src={doc.thumb}
+                  alt={`Documento ${i + 1}`}
+                  className="h-24 w-20 rounded-xl border border-border bg-white object-contain"
+                />
+                <button
+                  type="button"
+                  disabled={working}
+                  onClick={() => {
+                    onDiscard?.(doc.file);
+                    setPrepared((prev) => prev.filter((_, j) => j !== i));
+                  }}
+                  aria-label={`Remover documento ${i + 1}`}
+                  className="absolute -right-1.5 -top-1.5 rounded-full bg-background p-1.5 text-muted-foreground shadow ring-1 ring-border hover:text-destructive disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <p className="mt-1 text-center text-[11px] leading-tight text-muted-foreground">
+                Documento {i + 1}
+                {doc.pageCount > 1 ? ` (${doc.pageCount} pág.)` : ""}
+              </p>
+            </div>
+          ))}
+          {pages.map((page, index) => (
+            <div key={`p${index}`} className="w-20 shrink-0 snap-start">
+              <div className="relative">
+                <button
+                  type="button"
+                  disabled={working}
+                  onClick={() => setEditingIndex(index)}
+                  aria-label={`Ajustar e ampliar página ${index + 1}`}
+                  className="block disabled:opacity-50"
+                >
+                  <img
+                    src={page.dataUrl}
+                    alt={`Página ${index + 1}`}
+                    className="h-24 w-20 rounded-xl border-2 border-gold bg-white object-contain"
+                  />
+                  <span className="absolute bottom-1 right-1 rounded-full bg-ink/70 p-1 text-white">
+                    <ZoomIn className="h-3 w-3" />
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  disabled={working}
+                  onClick={() => setPages((prev) => prev.filter((_, i) => i !== index))}
+                  aria-label={`Remover página ${index + 1}`}
+                  className="absolute -right-1.5 -top-1.5 rounded-full bg-background p-1.5 text-muted-foreground shadow ring-1 ring-border hover:text-destructive disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <p className="mt-1 text-center text-[11px] font-medium leading-tight text-foreground">
+                {pages.length > 1 || prepared.length > 0 ? `Página ${index + 1}` : "Esta página"}
+              </p>
+            </div>
+          ))}
+        </div>
+        {pages.length > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Toque numa página para a ajustar ou ampliar.
+          </p>
+        ) : null}
+      </div>
+    ) : null;
 
   const editingPage = editingIndex !== null ? (pages[editingIndex] ?? null) : null;
 
@@ -201,7 +285,9 @@ export function ScanDialog({
                 ? `Ajustar página ${editingIndex! + 1}`
                 : pages.length > 0
                   ? `Documento com ${pages.length} ${pages.length === 1 ? "página" : "páginas"}`
-                  : "Digitalizar documento"}
+                  : prepared.length > 0
+                    ? "Digitalizar outro documento"
+                    : "Digitalizar documento"}
             </h3>
             {editingPage ? null : (
               <p className="mt-1 text-sm text-muted-foreground">
@@ -247,64 +333,28 @@ export function ScanDialog({
             onCancel={() => setEditingIndex(null)}
           />
         ) : pages.length === 0 ? (
-          <div className="mt-6 overflow-y-auto rounded-2xl border border-dashed border-gold/40 px-6 py-10 text-center">
-            <p className="text-sm text-muted-foreground">
-              {working ? "A preparar a fotografia…" : "Nenhuma página capturada."}
-            </p>
-            <button
-              type="button"
-              disabled={working}
-              onClick={() => inputRef.current?.click()}
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
-            >
-              <Camera className="h-4 w-4" />
-              Tirar fotografia
-            </button>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Melhor no telemóvel: a câmara abre diretamente.
-            </p>
-          </div>
+          <>
+            {strip}
+            <div className="mt-6 overflow-y-auto rounded-2xl border border-dashed border-gold/40 px-6 py-10 text-center">
+              <p className="text-sm text-muted-foreground">
+                {working ? "A preparar a fotografia…" : "Nenhuma página capturada."}
+              </p>
+              <button
+                type="button"
+                disabled={working}
+                onClick={() => inputRef.current?.click()}
+                className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
+              >
+                <Camera className="h-4 w-4" />
+                Tirar fotografia
+              </button>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Melhor no telemóvel: a câmara abre diretamente.
+              </p>
+            </div>
+          </>
         ) : (
-          <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto">
-            {pages.map((page, index) => (
-              <div key={index} className="soft-card flex items-center gap-2 p-3 sm:gap-4">
-                <button
-                  type="button"
-                  disabled={working}
-                  onClick={() => setEditingIndex(index)}
-                  aria-label={`Ajustar e ampliar página ${index + 1}`}
-                  className="shrink-0 disabled:opacity-50"
-                >
-                  <img
-                    src={page.dataUrl}
-                    alt={`Página ${index + 1}`}
-                    className="h-24 w-20 rounded-xl bg-white object-contain"
-                  />
-                </button>
-                <p className="hidden min-w-0 flex-1 text-sm text-foreground sm:block">
-                  Página {index + 1}
-                </p>
-                <button
-                  type="button"
-                  disabled={working}
-                  onClick={() => setEditingIndex(index)}
-                  className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-2 text-xs font-medium text-foreground transition-colors hover:text-gold disabled:opacity-50"
-                >
-                  <ZoomIn className="h-4 w-4" />
-                  Ajustar e ampliar
-                </button>
-                <button
-                  type="button"
-                  disabled={working}
-                  onClick={() => setPages((prev) => prev.filter((_, i) => i !== index))}
-                  aria-label={`Remover página ${index + 1}`}
-                  className="shrink-0 rounded-full bg-secondary p-2 text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
+          <div className="min-h-0 flex-1">{strip}</div>
         )}
 
         {pages.length > 0 && !editingPage && (

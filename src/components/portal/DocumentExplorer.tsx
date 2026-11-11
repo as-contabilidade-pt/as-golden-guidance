@@ -1186,6 +1186,7 @@ export function DocumentExplorer({
                   open={showScan}
                   onClose={() => setShowScan(false)}
                   pendingCount={staged.length}
+                  onDiscard={(file) => setStaged((s) => s.filter((f) => f !== file))}
                   onReady={(file, mode) => {
                     if (mode === "stage") {
                       handleFiles([file]);
