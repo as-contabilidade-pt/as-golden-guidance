@@ -22,16 +22,25 @@ const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
 const PAD = 20;
 const HANDLE = 32;
+/** Diâmetro da lupa que aparece ao arrastar um canto. */
+const LOUPE = 120;
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
 /** Aproximação visual do filtro «documento» (o resultado real é calculado ao aplicar). */
 const FILTER_PREVIEW = "grayscale(1) contrast(1.6) brightness(1.1)";
 
+type Gesture =
+  | { type: "corner"; id: number; index: number; px: number; py: number; quad: Quad }
+  | { type: "move"; id: number; px: number; py: number; quad: Quad }
+  | { type: "pan"; id: number; px: number; py: number; left: number; top: number }
+  | { type: "pinch"; d0: number; z0: number };
+
 /**
  * Editor de uma página digitalizada: 4 cantos independentes para acompanhar o
- * papel (o documento é endireitado ao aplicar), rotação, filtro «documento»
- * e ampliação para confirmar que está legível.
+ * papel (o documento é endireitado ao aplicar), lupa ao arrastar um canto,
+ * rotação, filtro «documento» e ampliação (botões ou pinça com dois dedos)
+ * para confirmar que está legível.
  */
 export function ScanPageEditor({
   source,
@@ -49,14 +58,18 @@ export function ScanPageEditor({
   onCancel: () => void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const [vp, setVp] = useState({ w: 0, h: 0 });
   const [zoom, setZoom] = useState(MIN_ZOOM);
   const [src, setSrc] = useState<ScanSource>(source);
   const [quad, setQuad] = useState<Quad>(initialQuad);
   const [filter, setFilter] = useState(initialFilter);
   const [rotating, setRotating] = useState(false);
-  const drag = useRef<{ kind: "move" | number; px: number; py: number; quad: Quad } | null>(null);
-  const keepCenter = useRef<{ cx: number; cy: number } | null>(null);
+  const [loupe, setLoupe] = useState<number | null>(null);
+  const [loupeSide, setLoupeSide] = useState<"left" | "right">("right");
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const gesture = useRef<Gesture | null>(null);
+  const keepAnchor = useRef<{ rx: number; ry: number; ox: number; oy: number } | null>(null);
 
   useEffect(() => {
     const el = viewportRef.current;
@@ -76,60 +89,152 @@ export function ScanPageEditor({
   const stageH = src.height * base * zoom;
   const busy = working || rotating;
 
-  function changeZoom(next: number) {
+  /** Altera a ampliação mantendo no mesmo sítio o ponto `anchor` (por omissão, o centro da vista). */
+  function changeZoom(next: number, anchor?: { ox: number; oy: number }) {
     const z = clamp(Math.round(next * 100) / 100, MIN_ZOOM, MAX_ZOOM);
     const v = viewportRef.current;
     if (v && v.scrollWidth > 0 && v.scrollHeight > 0) {
-      keepCenter.current = {
-        cx: (v.scrollLeft + v.clientWidth / 2) / v.scrollWidth,
-        cy: (v.scrollTop + v.clientHeight / 2) / v.scrollHeight,
+      const ox = anchor?.ox ?? v.clientWidth / 2;
+      const oy = anchor?.oy ?? v.clientHeight / 2;
+      keepAnchor.current = {
+        rx: (v.scrollLeft + ox) / v.scrollWidth,
+        ry: (v.scrollTop + oy) / v.scrollHeight,
+        ox,
+        oy,
       };
     }
     setZoom(z);
   }
 
-  // Mantém o centro da vista ao ampliar/reduzir.
+  // Depois de ampliar/reduzir, repõe o ponto ancorado no mesmo sítio do ecrã.
   useLayoutEffect(() => {
     const v = viewportRef.current;
-    const k = keepCenter.current;
+    const k = keepAnchor.current;
     if (!v || !k) return;
-    v.scrollLeft = k.cx * v.scrollWidth - v.clientWidth / 2;
-    v.scrollTop = k.cy * v.scrollHeight - v.clientHeight / 2;
-    keepCenter.current = null;
+    v.scrollLeft = k.rx * v.scrollWidth - k.ox;
+    v.scrollTop = k.ry * v.scrollHeight - k.oy;
+    keepAnchor.current = null;
   }, [zoom]);
 
-  function down(kind: "move" | number) {
-    return (e: ReactPointerEvent<HTMLElement>) => {
-      e.preventDefault();
-      e.stopPropagation();
-      e.currentTarget.setPointerCapture(e.pointerId);
-      drag.current = { kind, px: e.clientX, py: e.clientY, quad };
-    };
+  function onPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    const v = viewportRef.current;
+    if (!v) return;
+    v.setPointerCapture(e.pointerId);
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointers.current.size === 2) {
+      // Dois dedos: pinça (a não ser que um canto esteja a ser arrastado).
+      if (gesture.current?.type === "corner") return;
+      const [a, b] = Array.from(pointers.current.values()) as [
+        { x: number; y: number },
+        { x: number; y: number },
+      ];
+      gesture.current = {
+        type: "pinch",
+        d0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+        z0: zoom,
+      };
+      return;
+    }
+    if (pointers.current.size > 2) return;
+
+    const kind = (e.target as HTMLElement).closest("[data-kind]")?.getAttribute("data-kind");
+    if (kind === "move") {
+      gesture.current = { type: "move", id: e.pointerId, px: e.clientX, py: e.clientY, quad };
+    } else if (kind !== null && kind !== undefined) {
+      const index = Number(kind);
+      gesture.current = {
+        type: "corner",
+        id: e.pointerId,
+        index,
+        px: e.clientX,
+        py: e.clientY,
+        quad,
+      };
+      setLoupe(index);
+      updateLoupeSide(e.clientX);
+    } else {
+      gesture.current = {
+        type: "pan",
+        id: e.pointerId,
+        px: e.clientX,
+        py: e.clientY,
+        left: v.scrollLeft,
+        top: v.scrollTop,
+      };
+    }
   }
 
-  function move(e: ReactPointerEvent<HTMLElement>) {
-    const d = drag.current;
-    if (!d || stageW <= 0 || stageH <= 0) return;
-    const dx = (e.clientX - d.px) / stageW;
-    const dy = (e.clientY - d.py) / stageH;
+  function updateLoupeSide(clientX: number) {
+    const w = wrapperRef.current;
+    if (!w) return;
+    const r = w.getBoundingClientRect();
+    setLoupeSide(clientX - r.left < r.width / 2 ? "right" : "left");
+  }
+
+  function onPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    const tracked = pointers.current.get(e.pointerId);
+    if (tracked) {
+      tracked.x = e.clientX;
+      tracked.y = e.clientY;
+    }
+    const g = gesture.current;
+    const v = viewportRef.current;
+    if (!g || !v) return;
+
+    if (g.type === "pinch") {
+      if (pointers.current.size < 2) return;
+      const [a, b] = Array.from(pointers.current.values()) as [
+        { x: number; y: number },
+        { x: number; y: number },
+      ];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const r = v.getBoundingClientRect();
+      changeZoom(g.z0 * (d / g.d0), {
+        ox: (a.x + b.x) / 2 - r.left,
+        oy: (a.y + b.y) / 2 - r.top,
+      });
+      return;
+    }
+    if (g.id !== e.pointerId) return;
+
+    if (g.type === "pan") {
+      v.scrollLeft = g.left - (e.clientX - g.px);
+      v.scrollTop = g.top - (e.clientY - g.py);
+      return;
+    }
+    if (stageW <= 0 || stageH <= 0) return;
+    const dx = (e.clientX - g.px) / stageW;
+    const dy = (e.clientY - g.py) / stageH;
     let next: Quad;
-    if (d.kind === "move") {
-      const xs = d.quad.map((p) => p.x);
-      const ys = d.quad.map((p) => p.y);
+    if (g.type === "move") {
+      const xs = g.quad.map((p) => p.x);
+      const ys = g.quad.map((p) => p.y);
       const mx = clamp(dx, -Math.min(...xs), 1 - Math.max(...xs));
       const my = clamp(dy, -Math.min(...ys), 1 - Math.max(...ys));
-      next = d.quad.map((p) => ({ x: p.x + mx, y: p.y + my })) as Quad;
+      next = g.quad.map((p) => ({ x: p.x + mx, y: p.y + my })) as Quad;
     } else {
-      next = d.quad.map((p, i) =>
-        i === d.kind ? { x: clamp(p.x + dx, 0, 1), y: clamp(p.y + dy, 0, 1) } : p,
+      next = g.quad.map((p, i) =>
+        i === g.index ? { x: clamp(p.x + dx, 0, 1), y: clamp(p.y + dy, 0, 1) } : p,
       ) as Quad;
+      updateLoupeSide(e.clientX);
     }
     // Ignora posições que cruzam os cantos ou deixam a moldura minúscula.
     if (isValidQuad(next)) setQuad(next);
   }
 
-  function up() {
-    drag.current = null;
+  function onPointerEnd(e: ReactPointerEvent<HTMLDivElement>) {
+    pointers.current.delete(e.pointerId);
+    const g = gesture.current;
+    if (!g) return;
+    if (g.type === "pinch") {
+      if (pointers.current.size < 2) gesture.current = null;
+      return;
+    }
+    if (g.id === e.pointerId) {
+      gesture.current = null;
+      setLoupe(null);
+    }
   }
 
   async function rotate() {
@@ -143,83 +248,116 @@ export function ScanPageEditor({
     }
   }
 
-  const pointer = { onPointerMove: move, onPointerUp: up, onPointerCancel: up };
   const pct = (v: number) => `${v * 100}%`;
   const clip = `polygon(${quad.map((p) => `${pct(p.x)} ${pct(p.y)}`).join(", ")})`;
   const svgPts = quad.map((p) => `${p.x * 100},${p.y * 100}`).join(" ");
   const cursors = ["nwse-resize", "nesw-resize", "nwse-resize", "nesw-resize"];
   const isDefault = isFullQuad(quad);
 
+  // Lupa: mostra a zona à volta do canto que está a ser arrastado, ampliada.
+  const loupePoint = loupe !== null ? quad[loupe] : undefined;
+  const loupeScale = clamp((stageW / src.width) * 3, 0.6, 2);
+
   return (
     <div className="mt-5">
       <p className="text-sm text-muted-foreground">
         Arraste cada canto dourado até ao canto do papel (ou arraste a moldura inteira). Ao aplicar,
-        o documento é endireitado. Use + para ampliar e confirmar que tudo está legível.
+        o documento é endireitado. Amplie com + ou com dois dedos para confirmar que tudo está
+        legível.
       </p>
 
-      <div
-        ref={viewportRef}
-        className="mt-4 flex h-[50vh] overflow-auto rounded-2xl bg-secondary"
-        aria-label="Pré-visualização da página"
-      >
-        {base > 0 ? (
-          <div className="m-auto shrink-0" style={{ padding: PAD }}>
-            <div className="relative select-none" style={{ width: stageW, height: stageH }}>
-              <img
-                src={src.dataUrl}
-                alt="Página digitalizada"
-                draggable={false}
-                className="block h-full w-full"
-                style={filter ? { filter: FILTER_PREVIEW } : undefined}
-              />
-              {/* Escurece o que fica fora da moldura e desenha o contorno */}
-              <svg
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-                className="pointer-events-none absolute inset-0 h-full w-full"
-                aria-hidden="true"
-              >
-                <path
-                  d={`M0 0H100V100H0Z M${quad.map((p) => `${p.x * 100} ${p.y * 100}`).join(" L")}Z`}
-                  fill="rgba(0,0,0,0.45)"
-                  fillRule="evenodd"
+      <div ref={wrapperRef} className="relative mt-4">
+        <div
+          ref={viewportRef}
+          className="flex h-[50vh] select-none overflow-auto rounded-2xl bg-secondary"
+          style={{ touchAction: "none" }}
+          aria-label="Pré-visualização da página"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerEnd}
+          onPointerCancel={onPointerEnd}
+        >
+          {base > 0 ? (
+            <div className="m-auto shrink-0" style={{ padding: PAD }}>
+              <div className="relative" style={{ width: stageW, height: stageH }}>
+                <img
+                  src={src.dataUrl}
+                  alt="Página digitalizada"
+                  draggable={false}
+                  className="block h-full w-full"
+                  style={filter ? { filter: FILTER_PREVIEW } : undefined}
                 />
-                <polygon
-                  points={svgPts}
-                  fill="none"
-                  stroke="var(--color-gold, #c9a43f)"
-                  strokeWidth={2}
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-              {/* Arrastar a moldura inteira (só a 100%, para não impedir percorrer a página ampliada) */}
-              <div
-                {...pointer}
-                onPointerDown={down("move")}
-                className={`absolute inset-0 ${
-                  zoom > MIN_ZOOM ? "pointer-events-none" : "cursor-move touch-none"
-                }`}
-                style={{ clipPath: clip }}
-              />
-              {quad.map((p, i) => (
-                <div
-                  key={i}
-                  {...pointer}
-                  onPointerDown={down(i)}
-                  aria-label={`Ajustar canto ${i + 1}`}
-                  className="absolute flex touch-none items-center justify-center"
-                  style={{
-                    left: `calc(${pct(p.x)} - ${HANDLE / 2}px)`,
-                    top: `calc(${pct(p.y)} - ${HANDLE / 2}px)`,
-                    width: HANDLE,
-                    height: HANDLE,
-                    cursor: cursors[i],
-                  }}
+                {/* Escurece o que fica fora da moldura e desenha o contorno */}
+                <svg
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                  className="pointer-events-none absolute inset-0 h-full w-full"
+                  aria-hidden="true"
                 >
-                  <span className="block h-4 w-4 rounded-full border-2 border-gold bg-background shadow" />
-                </div>
-              ))}
+                  <path
+                    d={`M0 0H100V100H0Z M${quad.map((p) => `${p.x * 100} ${p.y * 100}`).join(" L")}Z`}
+                    fill="rgba(0,0,0,0.45)"
+                    fillRule="evenodd"
+                  />
+                  <polygon
+                    points={svgPts}
+                    fill="none"
+                    stroke="var(--color-gold, #c9a43f)"
+                    strokeWidth={2}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
+                {/* Arrastar a moldura inteira (só a 100%; ampliado, arrastar percorre a página) */}
+                <div
+                  data-kind={zoom > MIN_ZOOM ? undefined : "move"}
+                  className={`absolute inset-0 ${
+                    zoom > MIN_ZOOM ? "pointer-events-none" : "cursor-move"
+                  }`}
+                  style={{ clipPath: clip }}
+                />
+                {quad.map((p, i) => (
+                  <div
+                    key={i}
+                    data-kind={i}
+                    aria-label={`Ajustar canto ${i + 1}`}
+                    className="absolute flex items-center justify-center"
+                    style={{
+                      left: `calc(${pct(p.x)} - ${HANDLE / 2}px)`,
+                      top: `calc(${pct(p.y)} - ${HANDLE / 2}px)`,
+                      width: HANDLE,
+                      height: HANDLE,
+                      cursor: cursors[i],
+                    }}
+                  >
+                    <span className="block h-4 w-4 rounded-full border-2 border-gold bg-background shadow" />
+                  </div>
+                ))}
+              </div>
             </div>
+          ) : null}
+        </div>
+
+        {loupePoint ? (
+          <div
+            data-testid="loupe"
+            aria-hidden="true"
+            className={`pointer-events-none absolute top-2 z-20 overflow-hidden rounded-full border-2 border-gold bg-neutral-800 shadow-lg ${
+              loupeSide === "left" ? "left-2" : "right-2"
+            }`}
+            style={{
+              width: LOUPE,
+              height: LOUPE,
+              backgroundImage: `url("${src.dataUrl}")`,
+              backgroundRepeat: "no-repeat",
+              backgroundSize: `${src.width * loupeScale}px ${src.height * loupeScale}px`,
+              backgroundPosition: `${LOUPE / 2 - loupePoint.x * src.width * loupeScale}px ${
+                LOUPE / 2 - loupePoint.y * src.height * loupeScale
+              }px`,
+              filter: filter ? FILTER_PREVIEW : undefined,
+            }}
+          >
+            <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-gold/80" />
+            <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-gold/80" />
           </div>
         ) : null}
       </div>
@@ -227,7 +365,7 @@ export function ScanPageEditor({
       <p className="mt-2 text-xs text-muted-foreground">
         {zoom > MIN_ZOOM
           ? "Ampliado: arraste a imagem para percorrer a página. Volte a 100% para mover a moldura."
-          : "Quando ampliar, pode arrastar a imagem para ver cada zona."}
+          : "Ao arrastar um canto aparece uma lupa para o acertar com precisão."}
       </p>
 
       <div className="mt-3 flex items-center gap-3">
@@ -244,7 +382,7 @@ export function ScanPageEditor({
           type="range"
           min={MIN_ZOOM}
           max={MAX_ZOOM}
-          step={0.25}
+          step={0.05}
           value={zoom}
           onChange={(e) => changeZoom(Number(e.target.value))}
           aria-label="Ampliação"
