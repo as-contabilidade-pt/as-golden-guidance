@@ -66,12 +66,48 @@ async function monthIsSubmitted(
   return Boolean(data);
 }
 
+/** Razão concreta para um mês não aceitar documentos (para o cliente perceber o que fazer). */
+async function closedMonthReason(
+  context: { supabase: any },
+  userId: string,
+  year: number,
+  month: number,
+  action: "enviar" | "remover",
+) {
+  const { data: record } = await context.supabase
+    .from("client_records")
+    .select("folder_active")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!record || record.folder_active !== true) {
+    return "A sua pasta ainda não está ativa. Contacte o gabinete.";
+  }
+  if (await monthIsSubmitted(context, userId, year, month)) {
+    return action === "enviar"
+      ? "Este mês já foi submetido. Para enviar mais documentos, peça a reabertura do mês."
+      : "Este mês já foi submetido. Não é possível remover documentos.";
+  }
+  return action === "enviar"
+    ? "Esta pasta está bloqueada. Peça o desbloqueio do mês."
+    : "Esta pasta está bloqueada. Não é possível remover documentos.";
+}
+
 async function monthIsWritable(
   context: { supabase: any },
   userId: string,
   year: number,
   month: number,
 ) {
+  // A base de dados é quem decide (é a mesma regra que protege a tabela de
+  // documentos). Só se a função não responder é que se usa a regra local.
+  const { data: open, error: openError } = await context.supabase.rpc("month_is_open", {
+    p_user_id: userId,
+    p_year: year,
+    p_month: month,
+  });
+  if (!openError && typeof open === "boolean") return open;
+  if (openError) console.error("[monthIsWritable] month_is_open falhou:", openError.message);
+
   const pastDeadline = isMonthPastDeadline(year, month);
   const submitted = await monthIsSubmitted(context, userId, year, month);
   if (!pastDeadline && !submitted) return true;
@@ -186,7 +222,7 @@ export const reserveDocument = createServerFn({ method: "POST" })
     const target = admin && data.clientId ? data.clientId : context.userId;
 
     if (!admin && !(await monthIsWritable(context, target, data.year, data.month))) {
-      throw new Error("Esta pasta está bloqueada. Peça o desbloqueio do mês.");
+      throw new Error(await closedMonthReason(context, target, data.year, data.month, "enviar"));
     }
 
     if (!data.originalName.toLowerCase().endsWith(".pdf")) {
@@ -255,6 +291,9 @@ export const reserveDocument = createServerFn({ method: "POST" })
         .single();
 
       if (!error && inserted) return inserted;
+      if (error && /row-level security|permission denied/i.test(error.message)) {
+        throw new Error(await closedMonthReason(context, target, data.year, data.month, "enviar"));
+      }
       if (error && !error.message.includes("duplicate")) throw new Error(error.message);
     }
 
@@ -291,7 +330,7 @@ export const deleteDocument = createServerFn({ method: "POST" })
       !(await isAdmin(context)) &&
       !(await monthIsWritable(context, doc.user_id, doc.year, doc.month))
     ) {
-      throw new Error("Esta pasta está bloqueada. Não é possível remover documentos.");
+      throw new Error(await closedMonthReason(context, doc.user_id, doc.year, doc.month, "remover"));
     }
 
     await context.supabase.storage.from("documentos").remove([doc.storage_path]);
