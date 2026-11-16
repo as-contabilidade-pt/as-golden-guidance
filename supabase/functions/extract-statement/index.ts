@@ -13,7 +13,7 @@ Extrai TODOS os movimentos/transações reais. Ignora cabeçalhos, rodapés, tot
 
 Cada movimento é uma lista de 5 textos, por esta ordem:
 [data, descricao, debito, credito, saldo]
-- data: data do movimento (data valor se existir), sempre no formato DD/MM/AAAA
+- data: data do movimento (coluna "Data Mov." / data de lançamento; NUNCA a data valor), sempre no formato DD/MM/AAAA
 - descricao: descrição do movimento em texto simples e curto
 - debito: valor de saída, número decimal com ponto (ex: "1234.56"); "" se não aplicável
 - credito: valor de entrada, número decimal com ponto; "" se não aplicável

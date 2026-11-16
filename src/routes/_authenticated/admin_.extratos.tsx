@@ -319,6 +319,33 @@ function StatementConverterPage() {
     return clientName;
   }
 
+  /**
+   * Converte a data do movimento em número de série do Excel (data verdadeira).
+   * Aceita DD/MM/AAAA, DD-MM-AAAA, DD.MM.AAAA, DD/MM/AA e AAAA-MM-DD; devolve null se não reconhecer.
+   */
+  function excelDateSerial(value: string): number | null {
+    const v = value.trim();
+    let y: number, m: number, d: number;
+    let match = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/.exec(v);
+    if (match) {
+      y = Number(match[1]);
+      m = Number(match[2]);
+      d = Number(match[3]);
+    } else {
+      match = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})$/.exec(v);
+      if (!match) return null;
+      d = Number(match[1]);
+      m = Number(match[2]);
+      y = Number(match[3]);
+      if (y < 100) y += 2000;
+    }
+    if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+    const t = Date.UTC(y, m - 1, d);
+    const check = new Date(t);
+    if (check.getUTCMonth() !== m - 1 || check.getUTCDate() !== d) return null;
+    return t / 86400000 + 25569;
+  }
+
   function parseAmount(value: string): number | null {
     let cleaned = value.replace(/[€\s]/g, "");
     if (cleaned.includes(",")) cleaned = cleaned.replace(/\./g, "").replace(",", ".");
@@ -332,28 +359,31 @@ function StatementConverterPage() {
     const clientName = nameOverride ?? clientNameState();
     if (!rows || rows.length === 0) return;
     const money = "#,##0.00"; // vírgula decimal garantida pela localização portuguesa do Excel
-    const aoa: (string | number)[][] = [["Data", "Descrição", "Débito", "Crédito", "Saldo"]];
+    // Formato pedido pelo gabinete: Data | Descrição | Débito | Crédito (sem saldo),
+    // com a data como data verdadeira do Excel (dá para ordenar/filtrar e importar).
+    const aoa: (string | number)[][] = [["Data", "Descrição", "Débito", "Crédito"]];
     for (const r of rows) {
       const debito = parseAmount(r.debito);
       const credito = parseAmount(r.credito);
-      const saldo = parseAmount(r.saldo);
+      const serial = excelDateSerial(r.data);
       aoa.push([
-        r.data,
+        serial ?? r.data,
         r.descricao,
         debito === null ? "" : -Math.abs(debito),
         credito === null ? "" : Math.abs(credito),
-        saldo === null ? "" : saldo,
       ]);
     }
     const sheet = XLSX.utils.aoa_to_sheet(aoa);
     for (let i = 1; i < aoa.length; i++) {
-      for (const col of [2, 3, 4]) {
+      const dateCell = sheet[XLSX.utils.encode_cell({ r: i, c: 0 })];
+      if (dateCell && typeof dateCell.v === "number") dateCell.z = "dd/mm/yyyy";
+      for (const col of [2, 3]) {
         const ref = XLSX.utils.encode_cell({ r: i, c: col });
         const cell = sheet[ref];
         if (cell && typeof cell.v === "number") cell.z = money;
       }
     }
-    sheet["!cols"] = [{ wch: 12 }, { wch: 48 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
+    sheet["!cols"] = [{ wch: 12 }, { wch: 48 }, { wch: 14 }, { wch: 14 }];
     const book = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(book, sheet, "Extrato");
 
@@ -548,7 +578,7 @@ function StatementConverterPage() {
 
           <p className="mb-4 text-sm text-muted-foreground">
             Confirme e corrija os dados antes de exportar — as correções ficam guardadas ao gerar o Excel.
-            Datas em DD/MM/AAAA e valores com vírgula decimal no Excel.
+            No Excel: Data, Descrição, Débito e Crédito, com datas verdadeiras (DD/MM/AAAA) e valores com vírgula decimal.
           </p>
 
           <div className="soft-card overflow-x-auto p-2">
