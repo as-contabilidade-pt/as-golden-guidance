@@ -361,7 +361,7 @@ function StatementConverterPage() {
     const money = "#,##0.00"; // vírgula decimal garantida pela localização portuguesa do Excel
     // Formato pedido pelo gabinete: Data | Descrição | Débito | Crédito (sem saldo),
     // com a data como data verdadeira do Excel (dá para ordenar/filtrar e importar).
-    const aoa: (string | number)[][] = [["Data", "Descrição", "Débito", "Crédito"]];
+    const aoa: (string | number | null)[][] = [["Data", "Descrição", "Débito", "Crédito"]];
     for (const r of rows) {
       const debito = parseAmount(r.debito);
       const credito = parseAmount(r.credito);
@@ -369,8 +369,9 @@ function StatementConverterPage() {
       aoa.push([
         serial ?? r.data,
         r.descricao,
-        debito === null ? "" : -Math.abs(debito),
-        credito === null ? "" : Math.abs(credito),
+        // null = célula realmente vazia (texto vazio dá #VALOR! nas fórmulas do Excel)
+        debito === null ? null : -Math.abs(debito),
+        credito === null ? null : Math.abs(credito),
       ]);
     }
     const sheet = XLSX.utils.aoa_to_sheet(aoa);
