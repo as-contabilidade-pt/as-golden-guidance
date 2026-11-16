@@ -359,32 +359,40 @@ function StatementConverterPage() {
     const clientName = nameOverride ?? clientNameState();
     if (!rows || rows.length === 0) return;
     const money = "#,##0.00"; // vírgula decimal garantida pela localização portuguesa do Excel
-    // Formato pedido pelo gabinete: Data | Descrição | Débito | Crédito (sem saldo),
-    // com a data como data verdadeira do Excel (dá para ordenar/filtrar e importar).
-    const aoa: (string | number | null)[][] = [["Data", "Descrição", "Débito", "Crédito"]];
+    // Data | Descrição | Débito | Crédito | Saldo, com a data como data verdadeira do
+    // Excel e os valores como números (células vazias quando não há valor).
+    const aoa: (string | number | null)[][] = [["Data", "Descrição", "Débito", "Crédito", "Saldo"]];
+    let lastSaldo: number | null = null;
     for (const r of rows) {
       const debito = parseAmount(r.debito);
       const credito = parseAmount(r.credito);
       const serial = excelDateSerial(r.data);
+      // Saldo do extrato; se faltar numa linha, calcula-se a partir do saldo anterior.
+      let saldo = parseAmount(r.saldo);
+      if (saldo === null && lastSaldo !== null) {
+        saldo = Math.round((lastSaldo - Math.abs(debito ?? 0) + Math.abs(credito ?? 0)) * 100) / 100;
+      }
+      lastSaldo = saldo;
       aoa.push([
         serial ?? r.data,
         r.descricao,
         // null = célula realmente vazia (texto vazio dá #VALOR! nas fórmulas do Excel)
         debito === null ? null : -Math.abs(debito),
         credito === null ? null : Math.abs(credito),
+        saldo,
       ]);
     }
     const sheet = XLSX.utils.aoa_to_sheet(aoa);
     for (let i = 1; i < aoa.length; i++) {
       const dateCell = sheet[XLSX.utils.encode_cell({ r: i, c: 0 })];
       if (dateCell && typeof dateCell.v === "number") dateCell.z = "dd/mm/yyyy";
-      for (const col of [2, 3]) {
+      for (const col of [2, 3, 4]) {
         const ref = XLSX.utils.encode_cell({ r: i, c: col });
         const cell = sheet[ref];
         if (cell && typeof cell.v === "number") cell.z = money;
       }
     }
-    sheet["!cols"] = [{ wch: 12 }, { wch: 48 }, { wch: 14 }, { wch: 14 }];
+    sheet["!cols"] = [{ wch: 12 }, { wch: 48 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
     const book = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(book, sheet, "Extrato");
 
@@ -579,7 +587,7 @@ function StatementConverterPage() {
 
           <p className="mb-4 text-sm text-muted-foreground">
             Confirme e corrija os dados antes de exportar — as correções ficam guardadas ao gerar o Excel.
-            No Excel: Data, Descrição, Débito e Crédito, com datas verdadeiras (DD/MM/AAAA) e valores com vírgula decimal.
+            No Excel: Data, Descrição, Débito, Crédito e Saldo, com datas verdadeiras (DD/MM/AAAA) e valores com vírgula decimal.
           </p>
 
           <div className="soft-card overflow-x-auto p-2">
